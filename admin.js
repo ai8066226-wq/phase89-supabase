@@ -1296,9 +1296,18 @@ document.addEventListener("click", async event => {
   }
 });
 
-onAuthStateChanged(auth, async user => {
-  state.user = user;
-  if (state.roleUnsubscribe) { state.roleUnsubscribe(); state.roleUnsubscribe = null; }
+let adminAuthEventSequence = 0;
+
+async function handleAdminAuthState(user, sequence) {
+  // IMPORTANT: this function must run OUTSIDE Supabase onAuthStateChange.
+  // Supabase documents a deadlock when async Supabase calls are made inside
+  // the auth-state callback. The callback below only schedules this function.
+  if (sequence !== adminAuthEventSequence) return;
+
+  if (state.roleUnsubscribe) {
+    try { state.roleUnsubscribe(); } catch (_) {}
+    state.roleUnsubscribe = null;
+  }
 
   if (!user) {
     adminAccessCheckToken++;
@@ -1308,23 +1317,45 @@ onAuthStateChanged(auth, async user => {
     return;
   }
 
-  registerAdminNativePushToken(user);
-  window.setTimeout(() => registerAdminNativePushToken(user), 5000);
+  // These operations use Supabase and therefore are deliberately deferred
+  // until after the auth callback has completely returned.
+  registerAdminNativePushToken(user).catch?.(() => {});
+  window.setTimeout(() => registerAdminNativePushToken(user).catch?.(() => {}), 5000);
 
   const allowed = await enterAdminPortal(user);
-  if (!allowed) return;
+  if (sequence !== adminAuthEventSequence || !allowed) return;
 
   // Realtime document monitoring is secondary. If it briefly reports a stale
   // document, re-check the normalized profile before revoking dashboard access.
-  state.roleUnsubscribe = onSnapshot(doc(db, "users", user.uid), async snapshot => {
+  state.roleUnsubscribe = onSnapshot(doc(db, "users", user.uid), snapshot => {
     if (snapshot.exists() && snapshot.data()?.role === "admin") return;
-    const stillAdmin = await verifyAdminAccessWithRetry(user, 2);
-    if (!stillAdmin && auth.currentUser?.uid === user.uid) {
-      adminDashboardUid = "";
-      clearDashboardListeners();
-      showView("denied");
-    }
+    // Also defer the fallback check so the realtime callback remains lightweight.
+    window.setTimeout(async () => {
+      const stillAdmin = await verifyAdminAccessWithRetry(user, 2);
+      if (!stillAdmin && auth.currentUser?.uid === user.uid) {
+        adminDashboardUid = "";
+        clearDashboardListeners();
+        showView("denied");
+      }
+    }, 0);
   }, error => {
     console.warn("تعذر تحديث صلاحية الإدارة لحظيًا", error);
   });
+}
+
+onAuthStateChanged(auth, user => {
+  // Never perform a Supabase request here. Supabase's current docs warn that
+  // async API calls from onAuthStateChange can deadlock the client.
+  state.user = user;
+  const sequence = ++adminAuthEventSequence;
+  window.setTimeout(() => {
+    handleAdminAuthState(user, sequence).catch(error => {
+      console.error("Admin auth transition failed", error);
+      if (auth.currentUser?.uid === user?.uid) {
+        const status = byId("authError");
+        if (status) status.textContent = "تعذر إكمال فتح لوحة الإدارة. أعد المحاولة.";
+        showView("auth");
+      }
+    });
+  }, 0);
 });
