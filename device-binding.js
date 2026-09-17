@@ -22,18 +22,21 @@ export function nativeDeviceInfo() {
   return { key, label, native: Boolean(key && DEVICE_KEY_RE.test(key)) };
 }
 
+/**
+ * Phase 89 web + Android:
+ * Android keeps one-device binding protection.
+ * Web registration is allowed without creating an Android hardware binding.
+ */
 export function requireNativeRegistrationDevice() {
   const info = nativeDeviceInfo();
-  if (!info.native) {
-    const error = new Error("DEVICE_NATIVE_REQUIRED");
-    error.code = "device/native-required";
-    throw error;
-  }
-  return info;
+  if (info.native) return info;
+  return { key: "", label: "Web", native: false, web: true };
 }
 
 export function addDeviceRegistrationWrites(batch, db, uid, role, info) {
-  if (!uid || !info?.native) throw new Error("DEVICE_NATIVE_REQUIRED");
+  if (!uid) throw new Error("DEVICE_USER_REQUIRED");
+  if (!info?.native) return false;
+
   const family = roleFamily(role);
   batch.set(doc(db, "deviceBindings", info.key), {
     deviceKey: info.key,
@@ -57,6 +60,7 @@ export function addDeviceRegistrationWrites(batch, db, uid, role, info) {
     boundAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+  return true;
 }
 
 async function submitReplacementRequest(db, user, userData, info) {
@@ -73,87 +77,127 @@ async function submitReplacementRequest(db, user, userData, info) {
   }, { merge: true });
 }
 
+async function claimNativeDevice(db, user, userData, info) {
+  await runTransaction(db, async transaction => {
+    const bindingRef = doc(db, "deviceBindings", info.key);
+    const bindingSnap = await transaction.get(bindingRef);
+
+    if (bindingSnap.exists()) {
+      const binding = bindingSnap.data();
+      if (binding.userId !== user.uid || binding.status !== "active") {
+        throw new Error("DEVICE_IN_USE");
+      }
+    }
+
+    const family = roleFamily(userData.role);
+
+    if (!bindingSnap.exists()) {
+      transaction.set(bindingRef, {
+        deviceKey: info.key,
+        userId: user.uid,
+        roleFamily: family,
+        status: "active",
+        deviceLabel: info.label,
+        boundAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    transaction.set(doc(db, "accountDeviceLinks", user.uid), {
+      userId: user.uid,
+      deviceKey: info.key,
+      roleFamily: family,
+      deviceLabel: info.label,
+      boundAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    transaction.set(doc(db, "deviceAccess", user.uid, "devices", info.key), {
+      active: true,
+      boundAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    transaction.update(doc(db, "users", user.uid), {
+      deviceBound: true,
+      updatedAt: serverTimestamp()
+    });
+  });
+
+  return { ok: true, info, migrated: true };
+}
+
 /**
- * Enforces one active Android device per non-admin account.
- * Legacy accounts without deviceBound are bound atomically on their first native login.
+ * Enforce the one-device rule only inside the native Android app.
+ * Web sessions are valid and never replace an Android binding.
  */
 export async function enforceDeviceSession(db, user, userData) {
-  if (!user || !userData) return { ok: false, reason: "missing-profile", message: "ملف الحساب غير مكتمل." };
-  if (userData.role === "admin") return { ok: true, admin: true };
+  if (!user || !userData) {
+    return { ok: false, reason: "missing-profile", message: "ملف الحساب غير مكتمل." };
+  }
+
+  if (userData.role === "admin") {
+    return { ok: true, admin: true };
+  }
+
   const info = nativeDeviceInfo();
+
+  // GitHub Pages / normal browser session.
   if (!info.native) {
-    return {
-      ok: false,
-      reason: "native-required",
-      message: "هذا الحساب محمي ببصمة الجهاز. افتحه من تطبيق كروة على Android."
-    };
+    return { ok: true, web: true };
   }
 
   if (userData.deviceBound === true) {
     try {
       const access = await getDoc(doc(db, "deviceAccess", user.uid, "devices", info.key));
-      if (access.exists() && access.data()?.active === true) return { ok: true, info };
+      if (access.exists() && access.data()?.active === true) {
+        return { ok: true, info };
+      }
     } catch (error) {
       console.warn("device access check", error);
     }
+
+    // Web-created accounts from Phase 89 may say deviceBound=true
+    // without having a real Android link. Let the first Android device claim them.
+    let hasRealDeviceLink = false;
     try {
-      await submitReplacementRequest(db, user, userData, info);
-      return {
-        ok: false,
-        reason: "replacement-pending",
-        message: "هذا الحساب مرتبط بهاتف آخر. تم إرسال طلب استبدال الجهاز إلى الإدارة؛ بعد الموافقة سجّل الدخول مجددًا."
-      };
+      const link = await getDoc(doc(db, "accountDeviceLinks", user.uid));
+      hasRealDeviceLink = Boolean(
+        link.exists() && String(link.data()?.deviceKey || "").trim()
+      );
     } catch (error) {
-      if (String(error?.code || "").includes("permission-denied")) {
+      console.warn("device link check", error);
+    }
+
+    if (hasRealDeviceLink) {
+      try {
+        await submitReplacementRequest(db, user, userData, info);
         return {
           ok: false,
-          reason: "device-in-use",
-          message: "هذا الهاتف مرتبط بحساب كروة آخر ولا يمكن استخدامه لحساب ثانٍ."
+          reason: "replacement-pending",
+          message: "هذا الحساب مرتبط بهاتف آخر. تم إرسال طلب استبدال الجهاز إلى الإدارة؛ بعد الموافقة سجّل الدخول مجددًا."
         };
+      } catch (error) {
+        if (String(error?.code || "").includes("permission-denied")) {
+          return {
+            ok: false,
+            reason: "device-in-use",
+            message: "هذا الهاتف مرتبط بحساب كروة آخر ولا يمكن استخدامه لحساب ثانٍ."
+          };
+        }
+        throw error;
       }
-      throw error;
     }
   }
 
-  // Legacy Phase <=80 account: first native device claims the account if the device is free.
+  // Legacy or web-created account: first real Android device claims it.
   try {
-    await runTransaction(db, async transaction => {
-      const bindingRef = doc(db, "deviceBindings", info.key);
-      const bindingSnap = await transaction.get(bindingRef);
-      if (bindingSnap.exists()) {
-        const binding = bindingSnap.data();
-        if (binding.userId !== user.uid || binding.status !== "active") throw new Error("DEVICE_IN_USE");
-      }
-      const family = roleFamily(userData.role);
-      if (!bindingSnap.exists()) {
-        transaction.set(bindingRef, {
-          deviceKey: info.key,
-          userId: user.uid,
-          roleFamily: family,
-          status: "active",
-          deviceLabel: info.label,
-          boundAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-      }
-      transaction.set(doc(db, "accountDeviceLinks", user.uid), {
-        userId: user.uid,
-        deviceKey: info.key,
-        roleFamily: family,
-        deviceLabel: info.label,
-        boundAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      transaction.set(doc(db, "deviceAccess", user.uid, "devices", info.key), {
-        active: true,
-        boundAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      transaction.update(doc(db, "users", user.uid), { deviceBound: true, updatedAt: serverTimestamp() });
-    });
-    return { ok: true, info, migrated: true };
+    return await claimNativeDevice(db, user, userData, info);
   } catch (error) {
-    if (String(error?.message || "").includes("DEVICE_IN_USE") || String(error?.code || "").includes("permission-denied")) {
+    if (
+      String(error?.message || "").includes("DEVICE_IN_USE") ||
+      String(error?.code || "").includes("permission-denied")
+    ) {
       return {
         ok: false,
         reason: "device-in-use",
