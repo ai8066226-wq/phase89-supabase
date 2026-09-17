@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=89";
+import { initializeApp } from "./supabase-compat.js?v=90";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=89";
+} from "./supabase-compat.js?v=90";
 import {
   addDoc,
   collection,
@@ -28,8 +28,8 @@ import {
   writeBatch,
   karwaSensitiveAction,
   karwaDriverAutoComplete
-} from "./supabase-compat.js?v=89";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=89";
+} from "./supabase-compat.js?v=90";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=90";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -227,6 +227,7 @@ const state = {
   navigationArrivalAnnouncedFor: null,
   announcedTurnKeys: new Set(),
   mapDrivingActive: false,
+  manualDrivingMode: false,
   restaurantGps: null,
   restaurantMeals: [],
   directRegistration: new URLSearchParams(window.location.search).get("mode") === "register"
@@ -512,15 +513,21 @@ function setDriverMarkerStyle(style){
   applyDriverMapPreferences();sharePosition(state.lastPosition,true).catch(()=>{});
   toast(safe==="arrow"?"تم اختيار السهم لمؤشر القيادة":safe==="bike"?"تم اختيار الدراجة لمؤشر القيادة":"تم اختيار السيارة لمؤشر القيادة");
 }
+function driverDrivingModeActive(){return Boolean(activeDrivingOrder())||state.manualDrivingMode===true;}
+function syncDriverMapControls(){
+  const active=driverDrivingModeActive(),button=byId("driverMapDrivingMode");
+  if(button){button.classList.toggle("active",active);button.setAttribute("aria-pressed",active?"true":"false");button.title=active?"إيقاف وضع القيادة":"تشغيل وضع القيادة";}
+}
 function applyDriverCamera(point, heading){
   if(!state.map)return;
-  const driving=Boolean(activeDrivingOrder());
+  const driving=driverDrivingModeActive();
   const view=byId("driverView"),mapEl=byId("driverMap");
   if(state.mapDrivingActive!==driving){
     state.mapDrivingActive=driving;
     view?.classList.toggle("driving-navigation-active",driving);
     window.requestAnimationFrame(()=>{try{state.map?.invalidateSize({pan:false})}catch{}});
   }else view?.classList.toggle("driving-navigation-active",driving);
+  syncDriverMapControls();
   const normalized=normalizeHeading(heading);
   if(mapEl)mapEl.style.setProperty("--driver-map-bearing",driving&&normalized!==null?`${-normalized}deg`:"0deg");
   if(!state.autoFollow)return;
@@ -543,13 +550,36 @@ function updateDriverHeadingHud(heading,speed){
 
 function initializeDriverMap() {
   if (!window.L || state.map) return;
-  state.map = window.L.map("driverMap", { attributionControl: false }).setView([33.3152, 44.3661], 12);
+  state.map = window.L.map("driverMap", { attributionControl: false, zoomControl: false, touchZoom: true, doubleClickZoom: true, scrollWheelZoom: true, boxZoom: true, keyboard: true }).setView([33.3152, 44.3661], 12);
   state.baseLayer = window.L.maplibreGL({ style: DRIVER_MAP_STYLES[state.mapTheme] }).addTo(state.map);
   const maplibreMap = state.baseLayer.getMaplibreMap?.();
   maplibreMap?.on("style.load", () => window.setTimeout(applyDriverNightLabels, 0));
   applyDriverMapPreferences();
   window.setTimeout(applyDriverNightLabels, 500);
 }
+
+
+function currentDriverLatLng(){
+  const p=state.lastPosition;if(!p?.coords)return null;const lat=Number(p.coords.latitude),lng=Number(p.coords.longitude);return Number.isFinite(lat)&&Number.isFinite(lng)?[lat,lng]:null;
+}
+function setDriverAutoFollow(enabled){state.autoFollow=Boolean(enabled);writeDriverPreference("karwa.driver.autoFollow",state.autoFollow?"true":"false");applyDriverMapPreferences();}
+function recenterDriverMap(enableDriving=true){
+  initializeDriverMap();const point=currentDriverLatLng();if(!point)return toast("بانتظار موقع GPS الحالي");
+  setDriverAutoFollow(true);if(enableDriving)state.manualDrivingMode=true;applyDriverCamera(point,state.driverHeading);syncDriverMapControls();toast(enableDriving?"تمت إعادة التموضع وتفعيل وضع القيادة":"تمت إعادة التموضع على موقعك");
+}
+function setManualDrivingMode(enabled){
+  state.manualDrivingMode=Boolean(enabled);const point=currentDriverLatLng();
+  if(state.manualDrivingMode)setDriverAutoFollow(true);
+  if(point)applyDriverCamera(point,state.driverHeading);else{byId("driverView")?.classList.toggle("driving-navigation-active",driverDrivingModeActive());syncDriverMapControls();}
+}
+function setupDriverMapControls(){
+  byId("driverMapZoomIn")?.addEventListener("click",()=>{initializeDriverMap();setDriverAutoFollow(false);state.map?.zoomIn();toast("تم تكبير الخريطة — اضغط إعادة التموضع للمتابعة التلقائية");});
+  byId("driverMapZoomOut")?.addEventListener("click",()=>{initializeDriverMap();setDriverAutoFollow(false);state.map?.zoomOut();toast("تم تصغير الخريطة — اضغط إعادة التموضع للمتابعة التلقائية");});
+  byId("driverMapRecenter")?.addEventListener("click",()=>recenterDriverMap(true));
+  byId("driverMapDrivingMode")?.addEventListener("click",()=>{if(activeDrivingOrder()){setDriverAutoFollow(true);recenterDriverMap(false);toast("وضع القيادة يعمل تلقائيًا أثناء الطلب النشط");return;}setManualDrivingMode(!state.manualDrivingMode);toast(state.manualDrivingMode?"تم تشغيل وضع القيادة":"تم إيقاف وضع القيادة");});
+  syncDriverMapControls();
+}
+setupDriverMapControls();
 
 function applyDriverNightLabels() {
   if (state.mapTheme !== "night") return;

@@ -332,6 +332,10 @@ body.driver-map-mode{background:#edf3f6}
  .driver-map-credit{bottom:max(88px,calc(88px + env(safe-area-inset-bottom)))}
 }
 </style>
+
+<style id="phase90-driver-map-controls">
+.driver-map-controls{position:absolute;z-index:1320;left:14px;top:50%;display:grid;gap:7px;transform:translateY(-50%);pointer-events:auto}.driver-map-control{width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.95);border-radius:15px;color:#0a3551;background:rgba(255,255,255,.96);box-shadow:0 10px 28px rgba(10,37,64,.22);font:900 22px/1 Tahoma,Arial,sans-serif;cursor:pointer;backdrop-filter:blur(12px)}.driver-map-control:hover{background:#f4fbfa}.driver-map-control.drive{font-size:18px}.driver-map-control.drive.active{color:#fff;background:#087b75;border-color:#087b75;box-shadow:0 10px 28px rgba(8,123,117,.32)}.driver-map-control.recenter{font-size:24px}.driver-map-control small{display:none}.driver-map-control:active{transform:scale(.94)}#driverView.map-theme-night .driver-map-control{color:#dff8f5;border-color:#33536a;background:rgba(8,29,47,.95)}#driverView.map-theme-night .driver-map-control.drive.active{background:#087b75}.driver-map-mode-hint{position:absolute;z-index:1310;left:70px;top:50%;max-width:190px;padding:7px 9px;border-radius:10px;color:#fff;background:rgba(8,35,52,.8);font-size:9px;font-weight:800;opacity:0;pointer-events:none;transform:translateY(-50%) translateX(-4px);transition:.18s}.driver-map-controls:hover+.driver-map-mode-hint{opacity:1;transform:translateY(-50%)}@media(max-width:760px){.driver-map-controls{left:10px;top:48%;gap:6px}.driver-map-control{width:45px;height:45px;border-radius:14px}.driver-map-mode-hint{display:none}}@media(max-width:430px){.driver-map-controls{top:46%}.driver-map-control{width:42px;height:42px;font-size:20px}}
+</style>
 </head>
 <body>
   <header class="topbar">
@@ -528,6 +532,13 @@ body.driver-map-mode{background:#edf3f6}
           <div class="card-heading"><h3>موقعك المباشر</h3><span class="status-chip active" id="locationStatus">بانتظار الإذن</span></div>
           <div class="nav-next-turn"><span class="turn-icon" id="nextTurnIcon">⬆️</span><div><small>التوجيه التالي</small><strong id="nextTurnText">ابدأ القيادة وسيظهر التوجيه هنا</strong></div></div><div class="route-alert hidden" id="offRouteAlert">تم اكتشاف خروج محتمل عن المسار — جاري إعادة الحساب…</div>
           <div class="live-map" id="driverMap"></div>
+          <div class="driver-map-controls" aria-label="أدوات خريطة القيادة">
+            <button type="button" class="driver-map-control" id="driverMapZoomIn" aria-label="تكبير الخريطة" title="تكبير">＋</button>
+            <button type="button" class="driver-map-control" id="driverMapZoomOut" aria-label="تصغير الخريطة" title="تصغير">−</button>
+            <button type="button" class="driver-map-control recenter" id="driverMapRecenter" aria-label="إعادة التموضع على موقع الكابتن" title="إعادة التموضع">◎</button>
+            <button type="button" class="driver-map-control drive" id="driverMapDrivingMode" aria-label="وضع القيادة" aria-pressed="false" title="وضع القيادة">➤</button>
+          </div>
+          <div class="driver-map-mode-hint" id="driverMapModeHint">أعد التموضع لتفعيل المتابعة، أو شغّل وضع القيادة لتوجيه الخريطة حسب اتجاه الحركة.</div>
           <div class="driver-map-credit" aria-label="مصادر بيانات الخريطة"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><span>·</span><a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a></div>
           <p class="muted" id="locationHint">فعّل حالة الاتصال واسمح بالوصول إلى الموقع.</p>
         </div>
@@ -674,8 +685,8 @@ body.driver-map-mode{background:#edf3f6}
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
-  <script type="module" src="./driver.js?v=89"></script>
-  <script src="./pwa.js?v=89"></script>
+  <script type="module" src="./driver.js?v=90"></script>
+  <script src="./pwa.js?v=90"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
   const view=document.getElementById("driverView");

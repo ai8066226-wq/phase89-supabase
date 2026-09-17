@@ -7,6 +7,8 @@
   <meta name="description" content="لوحة إدارة تطبيق كروة">
   <title>كروة | لوحة الإدارة</title>
   <link rel="stylesheet" href="./portal.css?v=81">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon.svg" type="image/svg+xml">
@@ -19,6 +21,10 @@
 .driver-search-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:10px 0 14px}.driver-search-wrap input{width:100%;min-height:44px;padding:10px 13px;border:1px solid #d8e3e9;border-radius:12px;background:#fff;color:#173248;font:inherit;outline:none}.driver-search-wrap input:focus{border-color:#51a89f;box-shadow:0 0 0 3px rgba(8,123,117,.1)}.driver-search-count{min-width:92px;padding:9px 11px;border-radius:11px;background:#eef7f6;color:#08736d;font-size:10px;font-weight:900;text-align:center}@media(max-width:640px){.driver-search-wrap{grid-template-columns:1fr}.driver-search-count{justify-self:start}}
 
 .device-admin-list{display:grid;gap:10px}.device-admin-card{display:grid;gap:9px;padding:13px;border:1px solid #dbe5eb;border-radius:14px;background:#fff}.device-admin-card.pending{border-color:#eacb84;background:#fffaf0}.device-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.device-id{direction:ltr;text-align:left;display:block;padding:7px 9px;border-radius:9px;background:#f1f5f8;color:#173248;font:700 10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.device-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}.device-pair>div{padding:9px;border-radius:11px;background:#f8fafb}.device-pair small{display:block;color:#738496;font-size:9px;font-weight:800;margin-bottom:4px}.device-bound-summary{margin-top:14px;padding-top:14px;border-top:1px solid #e1e8ed}.device-bound-grid{display:grid;gap:7px;max-height:460px;overflow:auto}.device-bound-row{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(0,1.4fr);gap:8px;padding:9px 10px;border:1px solid #e2e9ee;border-radius:11px;background:#fbfcfd}.device-bound-row small{color:#6c7e91}@media(max-width:650px){.device-pair,.device-bound-row{grid-template-columns:1fr}}
+
+
+    /* Phase 90 — خريطة تشغيل الإدارة */
+    .admin-area-map-shell{display:grid;gap:12px}.admin-area-map-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.admin-area-map-actions,.admin-area-map-filters{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.admin-area-map-actions button{min-height:39px;padding:8px 12px;border:1px solid #d8e3ea;border-radius:11px;background:#fff;color:#173248;font-weight:900;cursor:pointer}.admin-area-map-actions button.primary{border-color:#087b75;background:#087b75;color:#fff}.admin-area-map-filters label{display:flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #dbe5eb;border-radius:999px;background:#fff;color:#51677a;font-size:10px;font-weight:900}.admin-area-map-filters input{width:auto;accent-color:#087b75}.admin-area-map-wrap{position:relative;overflow:hidden;min-height:520px;border:1px solid #d8e4e9;border-radius:20px;background:#e8eef1}.admin-area-map{position:absolute;inset:0;z-index:1}.admin-area-map-badge{position:absolute;z-index:520;top:12px;right:12px;max-width:min(420px,calc(100% - 24px));padding:10px 12px;border:1px solid rgba(255,255,255,.9);border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 10px 28px rgba(16,43,72,.16);backdrop-filter:blur(12px)}.admin-area-map-badge strong{display:block;color:#0b4f70;font-size:13px}.admin-area-map-badge small{display:block;margin-top:3px;color:#687d8e;font-size:9px}.admin-area-map-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:310px;overflow:auto}.admin-area-result{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;padding:10px 11px;border:1px solid #dfe8ed;border-radius:13px;background:#fff;text-align:right;cursor:pointer}.admin-area-result:hover{border-color:#80bbb6;background:#f5fbfa}.admin-area-result .ico{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#edf7f6;font-size:20px}.admin-area-result strong,.admin-area-result small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.admin-area-result small{margin-top:2px;color:#748596;font-size:9px}.admin-area-result b{color:#087b75;font-size:10px;white-space:nowrap}.admin-map-pin{min-width:38px;height:38px;padding:0 7px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;border-radius:13px;background:#0b4f70;color:#fff;box-shadow:0 6px 18px rgba(9,41,62,.25);font-size:19px}.admin-map-pin.service{background:#087b75}.admin-map-pin.offline{filter:grayscale(.7);opacity:.78}.admin-map-center-pin{width:28px;height:28px;border:5px solid #fff;border-radius:50%;background:#e53c53;box-shadow:0 5px 16px rgba(130,19,37,.28)}.admin-area-map-wrap .leaflet-tooltip{direction:rtl;text-align:right;border:0;border-radius:10px;box-shadow:0 7px 18px rgba(15,42,60,.18);font:800 10px/1.4 Tahoma,Arial,sans-serif}.admin-area-map-wrap .leaflet-popup-content{direction:rtl;text-align:right;margin:12px 14px;min-width:210px}.admin-area-popup{display:grid;gap:5px}.admin-area-popup strong{font-size:14px;color:#173248}.admin-area-popup small{color:#65798c}.admin-area-popup .email{direction:ltr;text-align:left;padding:5px 7px;border-radius:8px;background:#f2f6f8;font:700 10px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.admin-area-map-wrap .leaflet-control-zoom a{color:#0b4f70;background:#fff}.admin-area-map-wrap .leaflet-control-attribution,.admin-area-map-wrap .maplibregl-ctrl-attrib,.admin-area-map-wrap .maplibregl-ctrl-bottom-right{display:none!important}@media(max-width:760px){.admin-area-map-wrap{min-height:430px}.admin-area-map-results{grid-template-columns:1fr}.admin-area-map-toolbar{align-items:stretch}.admin-area-map-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}}
 </style>
   <link rel="stylesheet" href="./native-notifications.css?v=81">
 </head>
@@ -109,6 +115,12 @@
           <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0M18 4l1-2M6 4 5 2"/></svg></span>
           <span class="module-copy"><strong>إدارة الكباتن</strong><small>الحالة والتنبيهات والحظر</small></span>
           <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="teal" href="#areaMapPanel">
+          <span class="module-notification">10 كم</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg></span>
+          <span class="module-copy"><strong>خريطة المنطقة</strong><small>الكباتن والخدمات حول نقطة محددة</small></span>
+          <span class="module-open">فتح الخريطة <b>←</b></span>
         </a>
         <a class="admin-module-card" data-tone="red" href="#waitingOrdersPanel">
           <span class="module-notification" id="navOrdersCount" aria-live="polite">0</span>
@@ -228,6 +240,21 @@
           <div class="orders" id="driversList"></div>
         </div>
 
+        <div class="card admin-panel" id="areaMapPanel">
+          <div class="card-heading"><div><h2>خريطة المنطقة — نطاق 10 كم</h2><p class="muted">اضغط على أي نقطة بالخريطة لتصبح مركز البحث. تظهر الكباتن والخدمات الموجودة ضمن 10 كم مع الاسم والبريد والحالة والمسافة.</p></div><span class="status-chip active" id="adminAreaMapCount">0 موقع</span></div>
+          <div class="admin-panel-body admin-area-map-shell">
+            <div class="admin-area-map-toolbar">
+              <div class="admin-area-map-actions"><button type="button" class="primary" id="adminAreaMapLocate">⌖ موقعي</button><button type="button" id="adminAreaMapFit">◎ إظهار نطاق 10 كم</button></div>
+              <div class="admin-area-map-filters"><label><input type="checkbox" id="adminAreaDrivers" checked> الكباتن</label><label><input type="checkbox" id="adminAreaServices" checked> الخدمات والمطاعم</label></div>
+            </div>
+            <div class="admin-area-map-wrap">
+              <div class="admin-area-map" id="adminAreaMap"></div>
+              <div class="admin-area-map-badge"><strong id="adminAreaMapSummary">اختر نقطة مركزية على الخريطة</strong><small id="adminAreaMapCenterText">النطاق ثابت: 10 كم</small></div>
+            </div>
+            <div class="admin-area-map-results" id="adminAreaMapResults"><p class="muted">ستظهر المواقع القريبة هنا.</p></div>
+          </div>
+        </div>
+
         <div class="card admin-panel" id="deviceManagementPanel">
           <div class="card-heading"><div><h2>إدارة أجهزة الحسابات</h2><p class="muted">معرف الجهاز خاص بالإدارة فقط. وافق على الاستبدال عندما يفقد المستخدم هاتفه وينتقل إلى هاتف جديد.</p></div><span class="status-chip pending" id="deviceChangesBadge">0 طلب تغيير</span></div>
           <div class="admin-panel-body">
@@ -279,7 +306,11 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./native-notifications.js?v=81"></script>
-  <script type="module" src="./admin.js?v=89"></script>
-  <script src="./pwa.js?v=89"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
+  <script type="module" src="./admin.js?v=90"></script>
+  <script src="./pwa.js?v=90"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=89";
+import { initializeApp } from "./supabase-compat.js?v=90";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=89";
+} from "./supabase-compat.js?v=90";
 import {
   collection,
   doc,
@@ -19,7 +19,7 @@ import {
   updateDoc,
   writeBatch,
   karwaSensitiveAction
-} from "./supabase-compat.js?v=89";
+} from "./supabase-compat.js?v=90";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -59,6 +59,12 @@ const state = {
   deviceLinks: [],
   deviceChangeRequests: [],
   pricingSettings: {},
+  areaMap: null,
+  areaBaseLayer: null,
+  areaCenter: null,
+  areaCircle: null,
+  areaCenterMarker: null,
+  areaMarkers: new Map(),
   roleUnsubscribe: null,
   dashboardUnsubscribes: []
 };
@@ -740,14 +746,116 @@ byId("pricingSettingsForm")?.addEventListener("submit",async event=>{
   }catch(error){console.error(error);toast("تعذر حفظ الإعدادات");}finally{busy(button,false);}
 });
 
+
+const ADMIN_AREA_RADIUS_KM = 10;
+const ADMIN_MAP_STYLE = "https://tiles.openfreemap.org/styles/bright";
+function adminAreaValidPoint(value){
+  const latitude=Number(value?.latitude ?? value?.lat), longitude=Number(value?.longitude ?? value?.lng);
+  return Number.isFinite(latitude)&&Number.isFinite(longitude)&&latitude>=-90&&latitude<=90&&longitude>=-180&&longitude<=180?{latitude,longitude}:null;
+}
+function adminAreaDistanceKm(a,b){
+  const p=adminAreaValidPoint(a),q=adminAreaValidPoint(b);if(!p||!q)return Infinity;
+  const r=6371,toRad=v=>Number(v)*Math.PI/180,dLat=toRad(q.latitude-p.latitude),dLng=toRad(q.longitude-p.longitude);
+  const x=Math.sin(dLat/2)**2+Math.cos(toRad(p.latitude))*Math.cos(toRad(q.latitude))*Math.sin(dLng/2)**2;
+  return 2*r*Math.asin(Math.sqrt(x));
+}
+function adminAreaUser(uid){return state.users.find(item=>item.firestoreId===uid)||{};}
+function adminAreaIcon(kind,online=true,subtype=""){
+  const symbol=kind==="driver"?(subtype==="delivery"?"🛵":"🚕"):(subtype==="restaurant"?"🍽️":"🧰");
+  return window.L.divIcon({className:"",html:`<div class="admin-map-pin ${kind==="service"?"service":""} ${kind==="driver"&&!online?"offline":""}">${symbol}</div>`,iconSize:[44,44],iconAnchor:[22,38]});
+}
+function adminAreaEntities(){
+  const rows=[];
+  for(const driver of state.drivers){
+    const point=adminAreaValidPoint(driver);if(!point)continue;
+    const user=adminAreaUser(driver.firestoreId||driver.userId),service=normalizeCaptainServiceType(driver);
+    rows.push({key:`driver:${driver.firestoreId}`,kind:"driver",subtype:service,point,name:driver.name||user.name||"كابتن كروة",email:driver.email||user.email||"—",phone:driver.phone||user.phone||"—",online:driver.online===true&&!driver.blocked,status:driver.blocked?"محظور":driver.online?"متصل":"غير متصل",detail:captainServiceLabel(driver),updatedAt:driver.locationUpdatedAt||driver.updatedAt});
+  }
+  const seenServices=new Set();
+  for(const profile of state.serviceProfiles){
+    const point=adminAreaValidPoint(profile.location);if(!point)continue;
+    const uid=String(profile.ownerId||profile.firestoreId||"");seenServices.add(uid);
+    const user=adminAreaUser(uid),category=String(profile.category||"other");
+    rows.push({key:`service:${profile.firestoreId}`,kind:"service",subtype:category,point,name:profile.businessName||profile.ownerName||user.name||"خدمة كروة",email:user.email||profile.email||"—",phone:profile.phone||user.phone||"—",online:profile.active===true,status:profile.approvalStatus==="approved"?(profile.active?"نشط":"معتمد غير منشور"):(profile.approvalStatus||"قيد المراجعة"),detail:serviceCategoryLabels[category]||serviceCategoryLabels.other,updatedAt:profile.updatedAt});
+  }
+  for(const restaurant of state.restaurants){
+    const uid=String(restaurant.ownerId||restaurant.firestoreId||"");if(seenServices.has(uid))continue;
+    const point=adminAreaValidPoint(restaurant.location);if(!point)continue;
+    const user=adminAreaUser(uid);
+    rows.push({key:`restaurant:${restaurant.firestoreId}`,kind:"service",subtype:"restaurant",point,name:restaurant.name||user.name||"مطعم كروة",email:user.email||restaurant.email||"—",phone:restaurant.phone||user.phone||"—",online:restaurant.active===true,status:restaurant.active?"نشط":"غير نشط",detail:"مطعم ومأكولات",updatedAt:restaurant.updatedAt});
+  }
+  return rows;
+}
+function adminAreaTimeText(value){
+  const ms=value?.toMillis?.()??(Number(value?.seconds)?Number(value.seconds)*1000:new Date(value||0).getTime());
+  if(!Number.isFinite(ms)||ms<=0)return "";const min=Math.max(0,Math.round((Date.now()-ms)/60000));return min<1?"الآن":min<60?`منذ ${min} د`:`منذ ${Math.round(min/60)} س`;
+}
+function initializeAdminAreaMap(){
+  if(!window.L||state.areaMap||!byId("adminAreaMap"))return;
+  let stored=null;try{stored=JSON.parse(localStorage.getItem("karwa.admin.areaCenter")||"null")}catch{}
+  state.areaCenter=adminAreaValidPoint(stored)||{latitude:33.3152,longitude:44.3661};
+  state.areaMap=window.L.map("adminAreaMap",{zoomControl:false,attributionControl:false,preferCanvas:true}).setView([state.areaCenter.latitude,state.areaCenter.longitude],12);
+  if(window.L.maplibreGL)state.areaBaseLayer=window.L.maplibreGL({style:ADMIN_MAP_STYLE}).addTo(state.areaMap);else window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(state.areaMap);
+  window.L.control.zoom({position:"bottomleft"}).addTo(state.areaMap);
+  state.areaMap.on("click",event=>setAdminAreaCenter({latitude:event.latlng.lat,longitude:event.latlng.lng},true));
+  setAdminAreaCenter(state.areaCenter,false);
+  window.setTimeout(()=>state.areaMap?.invalidateSize(),120);
+}
+function setAdminAreaCenter(point,persist=true){
+  const safe=adminAreaValidPoint(point);if(!safe)return;state.areaCenter=safe;
+  if(persist)try{localStorage.setItem("karwa.admin.areaCenter",JSON.stringify(safe))}catch{}
+  if(state.areaMap){
+    const ll=[safe.latitude,safe.longitude];
+    if(state.areaCenterMarker)state.areaCenterMarker.setLatLng(ll);else state.areaCenterMarker=window.L.marker(ll,{icon:window.L.divIcon({className:"",html:'<div class="admin-map-center-pin"></div>',iconSize:[30,30],iconAnchor:[15,15]),zIndexOffset:1200}).addTo(state.areaMap).bindTooltip("مركز نطاق 10 كم",{direction:"top"});
+    if(state.areaCircle)state.areaCircle.setLatLng(ll);else state.areaCircle=window.L.circle(ll,{radius:ADMIN_AREA_RADIUS_KM*1000,color:"#087b75",weight:2,fillColor:"#19a69a",fillOpacity:.07,dashArray:"8 7"}).addTo(state.areaMap);
+  }
+  renderAdminAreaMap();
+}
+function clearAdminAreaMarkers(){for(const marker of state.areaMarkers.values())try{state.areaMap?.removeLayer(marker)}catch{}state.areaMarkers.clear();}
+function renderAdminAreaMap(){
+  if(!state.areaMap||!state.areaCenter)return;
+  const showDrivers=byId("adminAreaDrivers")?.checked!==false,showServices=byId("adminAreaServices")?.checked!==false;
+  const rows=adminAreaEntities().filter(x=>(x.kind==="driver"?showDrivers:showServices)).map(x=>({...x,distance:adminAreaDistanceKm(state.areaCenter,x.point)})).filter(x=>x.distance<=ADMIN_AREA_RADIUS_KM).sort((a,b)=>a.distance-b.distance);
+  clearAdminAreaMarkers();
+  for(const row of rows){
+    const marker=window.L.marker([row.point.latitude,row.point.longitude],{icon:adminAreaIcon(row.kind,row.online,row.subtype),riseOnHover:true,title:row.name}).addTo(state.areaMap);
+    const freshness=adminAreaTimeText(row.updatedAt),label=`${row.name}${row.kind==="driver"&&!row.online?" • غير متصل":""}`;
+    marker.bindTooltip(escapeHtml(label),{direction:"top",offset:[0,-30],opacity:.96});
+    marker.bindPopup(`<div class="admin-area-popup"><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.detail)} • ${escapeHtml(row.status)} • ${row.distance.toFixed(1)} كم</small><div class="email">${escapeHtml(row.email)}</div><small>الهاتف: ${escapeHtml(row.phone)}</small>${freshness?`<small>آخر تحديث: ${escapeHtml(freshness)}</small>`:""}</div>`);
+    state.areaMarkers.set(row.key,marker);
+  }
+  const count=rows.length,drivers=rows.filter(x=>x.kind==="driver").length,services=count-drivers;
+  if(byId("adminAreaMapCount"))byId("adminAreaMapCount").textContent=`${count} موقع`;
+  if(byId("adminAreaMapSummary"))byId("adminAreaMapSummary").textContent=`ضمن 10 كم: ${drivers} كابتن • ${services} خدمة`;
+  if(byId("adminAreaMapCenterText"))byId("adminAreaMapCenterText").textContent=`المركز ${state.areaCenter.latitude.toFixed(5)}, ${state.areaCenter.longitude.toFixed(5)} • اضغط الخريطة لتغييره`;
+  const host=byId("adminAreaMapResults");if(host)host.innerHTML=rows.length?rows.map(row=>`<button type="button" class="admin-area-result" data-area-key="${escapeHtml(row.key)}"><span class="ico">${row.kind==="driver"?(row.subtype==="delivery"?"🛵":"🚕"):(row.subtype==="restaurant"?"🍽️":"🧰")}</span><span><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.email)} • ${escapeHtml(row.status)}</small></span><b>${row.distance.toFixed(1)} كم</b></button>`).join(""):`<p class="muted">لا توجد كباتن أو خدمات لها موقع داخل نطاق 10 كم من النقطة المحددة.</p>`;
+}
+function fitAdminAreaRadius(){if(!state.areaMap||!state.areaCircle)return;state.areaMap.fitBounds(state.areaCircle.getBounds(),{padding:[28,28]});}
+function locateAdminArea(){
+  if(!navigator.geolocation)return toast("الموقع غير مدعوم في هذا المتصفح");
+  const button=byId("adminAreaMapLocate");busy(button,true,"جاري تحديد الموقع…");
+  navigator.geolocation.getCurrentPosition(position=>{const point={latitude:position.coords.latitude,longitude:position.coords.longitude};setAdminAreaCenter(point,true);state.areaMap?.setView([point.latitude,point.longitude],13);busy(button,false);},()=>{busy(button,false);toast("تعذر تحديد الموقع. اختر نقطة مباشرة من الخريطة.");},{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+}
+function setupAdminAreaMapControls(){
+  byId("adminAreaMapLocate")?.addEventListener("click",locateAdminArea);
+  byId("adminAreaMapFit")?.addEventListener("click",fitAdminAreaRadius);
+  byId("adminAreaDrivers")?.addEventListener("change",renderAdminAreaMap);
+  byId("adminAreaServices")?.addEventListener("change",renderAdminAreaMap);
+  byId("adminAreaMapResults")?.addEventListener("click",event=>{const button=event.target.closest?.("[data-area-key]");if(!button)return;const marker=state.areaMarkers.get(button.dataset.areaKey);if(marker){state.areaMap.setView(marker.getLatLng(),15,{animate:true});marker.openPopup();}});
+}
+setupAdminAreaMapControls();
+
 function openDashboard() {
   clearDashboardListeners();
   showView("dashboard");
+  initializeAdminAreaMap();
+  window.setTimeout(()=>{state.areaMap?.invalidateSize();renderAdminAreaMap();},80);
   const usersUnsubscribe = onSnapshot(collection(db, "users"), snapshot => {
     state.users = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderMetrics();
     renderCancellations();
     renderDeviceManagement();
+    renderAdminAreaMap();
   });
   const applicationsUnsubscribe = onSnapshot(collection(db, "driverApplications"), snapshot => {
     state.applications = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
@@ -765,10 +873,12 @@ function openDashboard() {
     state.serviceProfiles = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderServiceApplications();
     renderMetrics();
+    renderAdminAreaMap();
   });
   const restaurantsUnsubscribe = onSnapshot(collection(db, "restaurants"), snapshot => {
     state.restaurants = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderServiceApplications();
+    renderAdminAreaMap();
   });
   const ordersUnsubscribe = onSnapshot(collection(db, "orders"), snapshot => {
     state.orders = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
@@ -787,6 +897,7 @@ function openDashboard() {
     state.drivers.forEach(item => repairLegacyCaptainService("drivers", item));
     renderDrivers();
     renderMetrics();
+    renderAdminAreaMap();
   });
   const ratingsUnsubscribe = onSnapshot(collection(db, "ratings"), snapshot => {
     state.ratings = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));

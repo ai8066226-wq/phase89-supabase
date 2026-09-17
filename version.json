@@ -1,9 +1,9 @@
 {
-  "phase": 89,
-  "version": "2.7.0",
+  "phase": 90,
+  "version": "2.8.0",
   "webBasePhase": 87,
   "updateMode": "native-single-reload-web-guarded-single-attempt-server-first-local-fallback",
-  "hosting": "https://karwa0.web.app",
+  "hosting": "github-pages",
   "notifications": "android-native-sound-vibration",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
   "roadReports": "150m-warning-6s-two-driver-firestore-transaction-no-road-function-45m-gps-gate",
@@ -32,7 +32,7 @@
   "serviceImageLibrary": "45-ready-food-and-service-images",
   "imageCrop": "cover-16x9-item-1x1-auto-center-crop-webp-under-50kb",
   "database": "supabase-postgres-karwa-documents-firestore-compatible-bridge",
-  "auth": "supabase-auth-public-signup-edge-function",
+  "auth": "supabase-auth-public-signup-edge-function-v3-phone-required",
   "storage": "supabase-storage-service-assets-webp-50kb",
   "realtime": "supabase-postgres-changes-karwa-documents",
   "firebaseRemaining": "firebase-cloud-messaging-worker-only-for-push",
@@ -41,5 +41,8 @@
   "walletSecurity": "server-side-rpc-atomic-debit-topup-review-audit",
   "orderSecurity": "server-side-create-accept-advance-cancel-gps-complete",
   "serviceSecurity": "server-side-request-create-provider-accept-publish-delivery-cancel",
-  "rls": "karwa-documents-explicit-data-api-grants-protected-user-financial-fields"
+  "rls": "karwa-documents-explicit-data-api-grants-protected-user-financial-fields",
+  "adminAreaMap": "admin-selected-center-10km-live-captains-services-name-email-distance-filters",
+  "driverMapControls": "zoom-in-out-recenter-manual-driving-mode-auto-driving-on-active-order",
+  "phoneRegistration": "required-8-to-15-digits-server-enforced"
 }
