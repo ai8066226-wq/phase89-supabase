@@ -294,20 +294,28 @@ let adminAccessCheckToken = 0;
 async function verifyAdminAccess(user) {
   if (!user?.uid) return false;
 
-  // Primary source: normalized security profile. This path does not depend on
-  // the Firestore-compat realtime subscription being established first.
+  // Fast, normalized server-side check. The RPC is SECURITY INVOKER and can
+  // only read the signed-in user's own profile through the existing RLS rule.
+  try {
+    const { data, error } = await db.client.rpc("karwa_is_admin");
+    if (!error && data === true) return true;
+  } catch (error) {
+    console.warn("تعذر فحص صلاحية الإدارة عبر RPC", error);
+  }
+
+  // Direct normalized profile fallback.
   try {
     const { data, error } = await db.client
       .from("profiles")
-      .select("role")
+      .select("role,active")
       .eq("id", user.uid)
       .maybeSingle();
-    if (!error && data?.role === "admin") return true;
+    if (!error && data?.role === "admin" && data?.active !== false) return true;
   } catch (error) {
     console.warn("تعذر فحص صلاحية الإدارة من profiles", error);
   }
 
-  // Compatibility fallback for older Karwa accounts.
+  // Compatibility fallback for the document bridge.
   try {
     const snapshot = await getDoc(doc(db, "users", user.uid));
     return snapshot.exists() && snapshot.data()?.role === "admin";
@@ -315,6 +323,14 @@ async function verifyAdminAccess(user) {
     console.warn("تعذر فحص صلاحية الإدارة من users", error);
     return false;
   }
+}
+
+async function verifyAdminAccessWithRetry(user, attempts = 4) {
+  for (let i = 0; i < attempts; i++) {
+    if (await verifyAdminAccess(user)) return true;
+    if (i < attempts - 1) await new Promise(resolve => setTimeout(resolve, 250 + i * 200));
+  }
+  return false;
 }
 
 async function enterAdminPortal(user) {
@@ -326,22 +342,38 @@ async function enterAdminPortal(user) {
     return false;
   }
 
-  const allowed = await verifyAdminAccess(user);
+  const status = byId("authError");
+  if (status && !byId("authView")?.classList.contains("hidden")) status.textContent = "جاري التحقق من صلاحية الإدارة…";
+  const allowed = await verifyAdminAccessWithRetry(user);
   if (token !== adminAccessCheckToken || auth.currentUser?.uid !== user.uid) return false;
 
   if (!allowed) {
     adminDashboardUid = "";
+    if (status) status.textContent = "";
     showView("denied");
     return false;
   }
 
-  if (adminDashboardUid !== user.uid) {
-    adminDashboardUid = user.uid;
-    openDashboard();
-  } else {
+  try {
+    if (adminDashboardUid !== user.uid) {
+      adminDashboardUid = user.uid;
+      openDashboard();
+    } else {
+      showView("dashboard");
+    }
+    if (status) status.textContent = "";
+    return true;
+  } catch (error) {
+    // Never leave a valid admin on a blank page because a dashboard module failed.
+    console.error("Admin dashboard initialization failed", error);
     showView("dashboard");
+    const toastBox = byId("toast");
+    if (toastBox) {
+      toastBox.textContent = "تم الدخول للإدارة، لكن تعذر تحميل أحد أقسام اللوحة. حدّث الصفحة مرة واحدة.";
+      toastBox.classList.add("show");
+    }
+    return true;
   }
-  return true;
 }
 
 byId("loginForm").addEventListener("submit", async event => {
@@ -350,8 +382,11 @@ byId("loginForm").addEventListener("submit", async event => {
   byId("authError").textContent = "";
   busy(button, true, "جاري الدخول…");
   try {
-    const credential = await signInWithEmailAndPassword(auth, byId("email").value.trim(), byId("password").value);
-    await enterAdminPortal(credential.user);
+    // The auth observer below performs the single authorization transition.
+    // Avoid calling enterAdminPortal here as well; duplicate transitions caused
+    // a race where the login form disappeared before the dashboard opened.
+    await signInWithEmailAndPassword(auth, byId("email").value.trim(), byId("password").value);
+    byId("authError").textContent = "جاري التحقق من صلاحية الإدارة…";
   } catch (error) {
     console.error("Admin sign-in failed", { code: error?.code, message: error?.message });
     byId("authError").textContent = authMessage(error);
@@ -1266,6 +1301,7 @@ onAuthStateChanged(auth, async user => {
   if (state.roleUnsubscribe) { state.roleUnsubscribe(); state.roleUnsubscribe = null; }
 
   if (!user) {
+    adminAccessCheckToken++;
     adminDashboardUid = "";
     clearDashboardListeners();
     showView("auth");
@@ -1278,16 +1314,17 @@ onAuthStateChanged(auth, async user => {
   const allowed = await enterAdminPortal(user);
   if (!allowed) return;
 
-  // Keep watching the compatibility role document after access is granted so
-  // revoking admin access takes effect without requiring a new login.
-  state.roleUnsubscribe = onSnapshot(doc(db, "users", user.uid), snapshot => {
-    if (!snapshot.exists() || snapshot.data()?.role !== "admin") {
+  // Realtime document monitoring is secondary. If it briefly reports a stale
+  // document, re-check the normalized profile before revoking dashboard access.
+  state.roleUnsubscribe = onSnapshot(doc(db, "users", user.uid), async snapshot => {
+    if (snapshot.exists() && snapshot.data()?.role === "admin") return;
+    const stillAdmin = await verifyAdminAccessWithRetry(user, 2);
+    if (!stillAdmin && auth.currentUser?.uid === user.uid) {
       adminDashboardUid = "";
       clearDashboardListeners();
       showView("denied");
     }
   }, error => {
-    // A realtime transport error must not log out a valid normalized admin.
     console.warn("تعذر تحديث صلاحية الإدارة لحظيًا", error);
   });
 });
