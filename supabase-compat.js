@@ -36,6 +36,7 @@ function authError(error) {
   if (low.includes("invalid login") || low.includes("invalid credentials")) code = "auth/invalid-credential";
   else if (low.includes("already") || low.includes("registered")) code = "auth/email-already-in-use";
   else if (low.includes("password") && low.includes("least")) code = "auth/weak-password";
+  else if (low.includes("phone") || low.includes("invalid_phone")) code = "auth/invalid-phone";
   else if (low.includes("email")) code = "auth/invalid-email";
   const e = new Error(msg);
   e.code = code;
@@ -67,6 +68,64 @@ client.auth.onAuthStateChange((_event, session) => {
   auth._ready = true;
 });
 
+
+function normalizedSignupPhone(value) {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 8 || digits.length > 15) return "";
+  return raw.startsWith("+") ? `+${digits}` : digits;
+}
+
+function signupPhoneFromPage() {
+  for (const id of ["authPhone", "driverPhone", "registerPhone"]) {
+    const value = document.getElementById(id)?.value;
+    const phone = normalizedSignupPhone(value);
+    if (phone) return phone;
+  }
+  return "";
+}
+
+function ensureCustomerSignupPhoneField() {
+  const install = () => {
+    const form = document.getElementById("authForm");
+    const email = document.getElementById("authEmail")?.closest?.(".field");
+    if (!form || !email || document.getElementById("authPhone")) return;
+
+    const field = document.createElement("div");
+    field.className = "field";
+    field.id = "phoneField";
+    field.hidden = true;
+    field.innerHTML = '<label for="authPhone">رقم الهاتف</label><input id="authPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="مثال: 07501234567">';
+    email.before(field);
+
+    const input = field.querySelector("#authPhone");
+    const submit = document.getElementById("authSubmit");
+    const sync = () => {
+      const registering = String(submit?.textContent || "").includes("إنشاء");
+      field.hidden = !registering;
+      if (input) input.required = registering;
+    };
+    sync();
+    if (submit && globalThis.MutationObserver) {
+      new MutationObserver(sync).observe(submit, { childList: true, subtree: true, characterData: true });
+    }
+    form.addEventListener("submit", event => {
+      if (field.hidden) return;
+      if (!normalizedSignupPhone(input?.value)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const message = document.getElementById("authMessage");
+        if (message) message.textContent = "أدخل رقم هاتف صحيحًا من 8 إلى 15 رقمًا.";
+        input?.focus?.();
+      }
+    }, true);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
+  else install();
+}
+
+ensureCustomerSignupPhoneField();
+
 export const browserLocalPersistence = { type: "local" };
 export function initializeApp(_config = {}, name = "[DEFAULT]") { return { name, backend: "supabase" }; }
 export function getAuth() { return auth; }
@@ -97,18 +156,43 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
   return { user: auth.currentUser };
 }
 export async function createUserWithEmailAndPassword(_auth, email, password) {
+  let phone = signupPhoneFromPage();
+  if (!phone && typeof globalThis.prompt === "function") {
+    phone = normalizedSignupPhone(globalThis.prompt("أدخل رقم الهاتف لإنشاء حساب كروة:", "") || "");
+  }
+  if (!phone) {
+    const e = new Error("INVALID_PHONE");
+    e.code = "auth/invalid-phone";
+    throw e;
+  }
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/public-signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-      body: JSON.stringify({ email: String(email || "").trim(), password: String(password || "") })
+      body: JSON.stringify({ email: String(email || "").trim(), password: String(password || ""), phone })
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload?.error || `SIGNUP_${response.status}`);
   } catch (error) {
     throw authError(error);
   }
-  return signInWithEmailAndPassword(_auth, email, password);
+  const credential = await signInWithEmailAndPassword(_auth, email, password);
+  const { error: phoneError } = await client.rpc("karwa_set_own_phone", { p_phone: phone });
+  if (phoneError) {
+    try {
+      const { data: sessionData } = await client.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      await client.functions.invoke("delete-self", {
+        body: {},
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
+    } catch (_) {}
+    await client.auth.signOut().catch(() => {});
+    auth.currentUser = null;
+    throw authError(phoneError);
+  }
+  await client.auth.updateUser({ data: { phone } }).catch(() => {});
+  return credential;
 }
 export async function updateProfile(user, values = {}) {
   const dataPatch = {};
