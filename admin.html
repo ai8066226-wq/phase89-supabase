@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b6f75">
+  <meta name="description" content="لوحة إدارة تطبيق كروة">
+  <title>كروة | لوحة الإدارة</title>
+  <link rel="stylesheet" href="./portal.css?v=81">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0b6f75">
+  <link rel="icon" href="./karwa-icon.svg" type="image/svg+xml">
+
+  <style>
+    .admin-settings-form{display:grid;gap:12px}.admin-settings-form h3{margin:8px 0 0}.admin-settings-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}.admin-settings-grid label{display:grid;gap:6px;color:#52637a;font-size:11px;font-weight:800}.admin-settings-grid input{min-height:42px;padding:8px 10px;border:1px solid #d8e2e8;border-radius:10px;background:#fff}.wide-fields{grid-template-columns:repeat(2,minmax(180px,1fr))}.topup-admin-row{display:grid;gap:8px;padding:13px;border:1px solid #dfe7ef;border-radius:14px;background:#fff}.topup-admin-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.topup-admin-actions{display:flex;gap:8px;flex-wrap:wrap}.topup-admin-actions button{min-height:36px}.topup-admin-row.approved{border-color:#b9e5d6;background:#f5fcf9}.topup-admin-row.rejected{opacity:.72}@media(max-width:800px){.admin-settings-grid,.wide-fields{grid-template-columns:1fr 1fr}}@media(max-width:520px){.admin-settings-grid,.wide-fields{grid-template-columns:1fr}}
+  
+    .ratings-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}.ratings-overview>div{padding:12px;border:1px solid #dfe7ef;border-radius:14px;background:linear-gradient(145deg,#fff,#f6f9fb)}.ratings-overview small{display:block;color:#718196;font-size:10px;font-weight:800}.ratings-overview strong{display:block;margin-top:4px;color:#0b4f70;font-size:19px}.ratings-filter{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 12px;color:#63758a;font-size:11px;font-weight:800}.ratings-filter select{min-width:145px;padding:8px 10px;border:1px solid #d9e3ea;border-radius:10px;background:#fff;font:inherit}.review-card-pro{display:grid;gap:8px}.review-card-head,.review-stars-row,.review-meta{display:flex;align-items:center;justify-content:space-between;gap:10px}.rating-type-chip{padding:5px 9px;border-radius:999px;font-size:9px;font-weight:900;background:#e8f1f8;color:#0b4f70}.rating-type-chip.delivery{background:#e5f8f4;color:#08765b}.rating-type-chip.service{background:#fff2da;color:#8c5b00}.review-tags{display:flex;flex-wrap:wrap;gap:5px}.review-tags span{padding:4px 7px;border-radius:999px;background:#f1f5f8;color:#55697c;font-size:9px;font-weight:800}.review-meta{color:#7a8998;font-size:9px}@media(max-width:700px){.ratings-overview{grid-template-columns:1fr 1fr}}
+    .cancellation-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 14px}.cancellation-toolbar label{display:flex;align-items:center;gap:8px;color:#66798d;font-size:11px;font-weight:800}.cancellation-toolbar select{padding:8px 10px;border:1px solid #d9e3ea;border-radius:10px;background:#fff;font:inherit}.cancellation-card{display:grid;gap:9px;padding:14px;border:1px solid #f0ccd2;border-right:4px solid #b42335;border-radius:15px;background:linear-gradient(145deg,#fff,#fff7f8)}.cancellation-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.cancellation-head strong{color:#20384c}.cancellation-chip{padding:5px 8px;border-radius:999px;background:#ffeaee;color:#a51f32;font-size:9px;font-weight:900}.cancellation-reason{padding:10px 11px;border-radius:11px;background:#fff0f2;color:#92243a;font-size:11px;font-weight:800}.cancellation-user{display:grid;gap:3px;padding:9px 10px;border-radius:11px;background:#fff}.cancellation-user b{font-size:11px}.cancellation-user small{color:#75879a;font-size:9px}.cancellation-meta{display:flex;flex-wrap:wrap;gap:6px 12px;color:#6d7f90;font-size:9px}@media(max-width:620px){.cancellation-toolbar{align-items:stretch;flex-direction:column}.cancellation-toolbar label{justify-content:space-between}}
+.driver-search-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:10px 0 14px}.driver-search-wrap input{width:100%;min-height:44px;padding:10px 13px;border:1px solid #d8e3e9;border-radius:12px;background:#fff;color:#173248;font:inherit;outline:none}.driver-search-wrap input:focus{border-color:#51a89f;box-shadow:0 0 0 3px rgba(8,123,117,.1)}.driver-search-count{min-width:92px;padding:9px 11px;border-radius:11px;background:#eef7f6;color:#08736d;font-size:10px;font-weight:900;text-align:center}@media(max-width:640px){.driver-search-wrap{grid-template-columns:1fr}.driver-search-count{justify-self:start}}
+
+.device-admin-list{display:grid;gap:10px}.device-admin-card{display:grid;gap:9px;padding:13px;border:1px solid #dbe5eb;border-radius:14px;background:#fff}.device-admin-card.pending{border-color:#eacb84;background:#fffaf0}.device-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.device-id{direction:ltr;text-align:left;display:block;padding:7px 9px;border-radius:9px;background:#f1f5f8;color:#173248;font:700 10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.device-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}.device-pair>div{padding:9px;border-radius:11px;background:#f8fafb}.device-pair small{display:block;color:#738496;font-size:9px;font-weight:800;margin-bottom:4px}.device-bound-summary{margin-top:14px;padding-top:14px;border-top:1px solid #e1e8ed}.device-bound-grid{display:grid;gap:7px;max-height:460px;overflow:auto}.device-bound-row{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(0,1.4fr);gap:8px;padding:9px 10px;border:1px solid #e2e9ee;border-radius:11px;background:#fbfcfd}.device-bound-row small{color:#6c7e91}@media(max-width:650px){.device-pair,.device-bound-row{grid-template-columns:1fr}}
+</style>
+  <link rel="stylesheet" href="./native-notifications.css?v=81">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./index.html">
+      <span class="logo">ك</span>
+      <span><strong>كروة</strong><small>لوحة الإدارة</small></span>
+    </a>
+    <div class="top-actions">
+      <a class="admin-notifications-link hidden" id="adminNotificationsLink" href="#adminModules" aria-label="فتح مركز المتابعة">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+        <span>المتابعة</span>
+        <b id="globalNotificationsBadge" aria-live="polite">0</b>
+      </a>
+      <span class="role-badge">إدارة فقط</span>
+      <button class="danger hidden" id="logoutButton">خروج</button>
+    </div>
+  </header>
+
+  <section class="auth-wrap" id="authView">
+    <div class="card auth-card">
+      <h1>دخول الإدارة</h1>
+      <p>هذه الصفحة مخصصة للحسابات التي تحمل صلاحية المدير فقط.</p>
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">البريد الإلكتروني</label>
+          <input id="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="password">كلمة المرور</label>
+          <input id="password" type="password" autocomplete="current-password" minlength="6" required>
+        </div>
+        <div class="auth-error" id="authError" role="alert"></div>
+        <button class="primary wide" id="loginButton" type="submit">دخول لوحة الإدارة</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="auth-wrap hidden" id="deniedView">
+    <div class="card auth-card">
+      <h1>لا توجد صلاحية إدارة</h1>
+      <p>الحساب مسجّل، لكنه ليس مديرًا. يجب تعيين الحقل <strong>role</strong> بالقيمة <strong>admin</strong> من قاعدة Supabase بواسطة مالك المشروع أو مدير مخول.</p>
+      <button class="danger wide" id="deniedLogout">تسجيل الخروج</button>
+    </div>
+  </section>
+
+  <main class="shell hidden" id="dashboardView">
+    <section class="hero admin-hero">
+      <div>
+        <span class="hero-kicker">مركز التحكم والتشغيل</span>
+        <h1>لوحة إدارة كروة</h1>
+        <p>نظرة واضحة على التشغيل، الكباتن، الطلبات والأداء المالي لحظة بلحظة.</p>
+      </div>
+      <div class="hero-side">
+        <span class="hero-action-count" id="heroActionCount" aria-live="polite">لا توجد إجراءات معلّقة</span>
+        <span class="live-indicator"><i></i> تحديث مباشر</span>
+        <span class="role-badge">مدير النظام</span>
+      </div>
+    </section>
+
+    <section class="admin-command-center" id="adminModules" aria-labelledby="adminModulesTitle">
+      <div class="section-title">
+        <div><small>مركز المتابعة</small><h2 id="adminModulesTitle">بطاقات الإدارة</h2></div>
+        <span>الإشعارات والأقسام في مكان واحد</span>
+      </div>
+      <nav class="admin-module-grid" aria-label="أقسام لوحة الإدارة">
+        <a class="admin-module-card" data-tone="amber" href="#topupsPanel">
+          <span class="module-notification" id="navTopupsCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 10h18M16 15h2"/></svg></span>
+          <span class="module-copy"><strong>شحن الرصيد</strong><small>مراجعة التحويلات واعتمادها</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="violet" href="#servicesPanel">
+          <span class="module-notification" id="navServicesCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M9 20v-6h6v6M3 10c1 2 3 2 4 0 1 2 3 2 4 0 1 2 3 2 4 0 1 2 3 2 4 0"/></svg></span>
+          <span class="module-copy"><strong>مزودو الخدمات</strong><small>طلبات الأنشطة والمطاعم</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="blue" href="#captainApplicationsPanel">
+          <span class="module-notification" id="navCaptainsCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M8.5 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M16 11h6"/></svg></span>
+          <span class="module-copy"><strong>طلبات الكباتن</strong><small>فحص الطلبات وتفعيل الحسابات</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="teal" href="#driversPanel">
+          <span class="module-notification" id="navDriversCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0M18 4l1-2M6 4 5 2"/></svg></span>
+          <span class="module-copy"><strong>إدارة الكباتن</strong><small>الحالة والتنبيهات والحظر</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="red" href="#waitingOrdersPanel">
+          <span class="module-notification" id="navOrdersCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/><path d="M7 19h4a4 4 0 0 0 4-4V9a4 4 0 0 1 4-4"/></svg></span>
+          <span class="module-copy"><strong>الطلبات المنتظرة</strong><small>طلبات العملاء دون كابتن</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="slate" href="#pricingPanel">
+          <span class="module-notification is-status" id="navPricingCount">جاهز</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h3M11 12h9M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></svg></span>
+          <span class="module-copy"><strong>التسعير والرسوم</strong><small>إعداد الأجور والرصيد والدعوات</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="green" href="#financePanel">
+          <span class="module-notification" id="navFinanceCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
+          <span class="module-copy"><strong>التقرير المالي</strong><small>المبيعات والرسوم والأرباح</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="gold" href="#ratingsPanel">
+          <span class="module-notification" id="navRatingsCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 6 7 .9-5 4.8 1.3 7-6.3-3.4-6.3 3.4 1.3-7-5-4.8L9 8z"/></svg></span>
+          <span class="module-copy"><strong>التقييمات</strong><small>متابعة جودة تجربة العملاء</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="red" href="#cancellationsPanel">
+          <span class="module-notification" id="navCancellationsCount" aria-live="polite">0</span>
+          <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 8 8 8M16 8l-8 8"/></svg></span>
+          <span class="module-copy"><strong>سجل الإلغاءات</strong><small>السبب وهوية من ألغى العملية</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+      </nav>
+    </section>
+
+    <div class="section-title"><div><small>نظرة عامة</small><h2>مؤشرات التشغيل</h2></div><span>بيانات مباشرة من النظام</span></div>
+    <section class="stats admin-stats">
+      <div class="stat"><small>إجمالي العملاء</small><strong id="usersCount">0</strong></div>
+      <div class="stat"><small>الكباتن المعتمدون</small><strong id="driversCount">0</strong></div>
+      <div class="stat"><small>مزودو الخدمات المعتمدون</small><strong id="serviceProvidersCount">0</strong></div>
+      <div class="stat"><small>كباتن محظورون</small><strong id="blockedCount">0</strong></div>
+      <div class="stat"><small>طلبات قيد المراجعة</small><strong id="pendingCount">0</strong></div>
+      <div class="stat"><small>إجمالي الطلبات</small><strong id="ordersCount">0</strong></div>
+      <div class="stat"><small>رحلات مباشرة</small><strong id="liveTripsCount">0</strong></div>
+      <div class="stat"><small>رحلات ملغاة</small><strong id="cancelledTripsCount">0</strong></div>
+      <div class="stat"><small>كباتن متصلون</small><strong id="onlineDriversCount">0</strong></div>
+      <div class="stat"><small>إجمالي المبيعات</small><strong id="grossRevenue">0 د.ع</strong></div>
+      <div class="stat"><small>رسوم كروة الثابتة</small><strong id="commissionRevenue">0 د.ع</strong></div>
+      <div class="stat"><small>أرباح الكباتن</small><strong id="driversPayout">0 د.ع</strong></div>
+    </section>
+
+    <div class="layout admin-layout">
+      <section class="admin-main-column">
+        <div class="section-title compact"><div><small>الإدارة اليومية</small><h2>الخدمات والتشغيل والكباتن</h2></div></div>
+        <div class="card admin-panel" id="pricingPanel">
+          <div class="card-heading"><h2>التسعير والرسوم والشحن</h2><span class="status-chip approved">جاهز للتعديل</span></div>
+          <div class="admin-panel-body">
+          <p class="muted">حدد تسعيرة الكيلومتر والرسوم الثابتة التي تُخصم من محافظ المشتركين. لا توجد عمولة نسبية على قيمة الطلب.</p>
+          <form id="pricingSettingsForm" class="admin-settings-form">
+            <h3>تسعيرة التكسي لكل كيلومتر</h3>
+            <div class="admin-settings-grid">
+              <label>اقتصادي / كم (د.ع)<input id="ridePerKmEconomy" type="number" min="0" max="10000" step="50" value="650"></label>
+              <label>تكسي / كم (د.ع)<input id="ridePerKmTaxi" type="number" min="0" max="10000" step="50" value="800"></label>
+              <label>عائلي / كم (د.ع)<input id="ridePerKmFamily" type="number" min="0" max="10000" step="50" value="980"></label>
+            </div>
+            <h3>رسوم كروة الثابتة</h3>
+            <div class="admin-settings-grid">
+              <label>رسم نشر النشاط (د.ع)<input id="publishFee" type="number" min="0" max="100000" step="250" value="1000"></label>
+              <label>العميل — طلب تكسي (د.ع)<input id="customerTaxiFee" type="number" min="0" max="100000" step="250" value="250"></label>
+              <label>العميل — توصيل غرض (د.ع)<input id="customerDeliveryFee" type="number" min="0" max="100000" step="250" value="250"></label>
+              <label>العميل — مطعم/خدمة (د.ع)<input id="customerServiceFee" type="number" min="0" max="100000" step="250" value="250"></label>
+              <label>الكابتن — قبول تكسي (د.ع)<input id="captainTaxiFee" type="number" min="0" max="100000" step="250" value="250"></label>
+              <label>الكابتن — قبول توصيل (د.ع)<input id="captainDeliveryFee" type="number" min="0" max="100000" step="250" value="250"></label>
+              <label>المطعم — قبول طلب (د.ع)<input id="providerRestaurantFee" type="number" min="0" max="100000" step="250" value="250"></label>
+              <label>الخدمات الأخرى — قبول طلب (د.ع)<input id="providerServiceFee" type="number" min="0" max="100000" step="250" value="250"></label>
+            </div>
+            <p class="muted">كل عملية لها رسم مستقل تحدده الإدارة. إذا كان الرصيد المتاح أقل من الرسم المحدد، لا يستطيع العميل إنشاء الطلب ولا الكابتن قبوله ولا مزود الخدمة قبول الطلب أو نشر النشاط حتى يتم شحن المحفظة.</p>
+            <h3>الرصيد المجاني لأول تسجيل</h3>
+            <div class="admin-settings-grid">
+              <label class="toggle-setting"><span>تفعيل الرصيد المجاني</span><input id="signupBonusEnabled" type="checkbox" checked></label>
+              <label>قيمة الرصيد المجاني (د.ع)<input id="signupBonusAmount" type="number" min="0" max="100000" step="250" value="1000"></label>
+              <label>مدة الصلاحية بالساعات<input id="signupBonusHours" type="number" min="1" max="168" step="1" value="24"></label>
+            </div>
+            <p class="muted">يُمنح مرة واحدة للحساب الجديد فقط. بعد انتهاء المدة لا يدخل الرصيد المجاني في الرصيد المتاح، بينما يبقى الرصيد المشحون محفوظًا.</p>
+            <h3>Mastercard محلي والدعوات</h3>
+            <div class="admin-settings-grid wide-fields">
+              <label>اسم طريقة التحويل<input id="topupTransferLabel" maxlength="60" value="Mastercard محلي"></label>
+              <label>معرف/رقم التحويل<input id="topupTransferId" maxlength="80" placeholder="معرف تحويل أو رقم حساب مخصص"></label>
+              <label>اسم المستلم<input id="topupCardHolder" maxlength="80" placeholder="اسم حامل الحساب"></label>
+              <label>خصم الدعوة %<input id="referralDiscountPercent" type="number" min="0" max="100" step="1" value="10"></label>
+              <label>أقصى خصم دعوة (د.ع)<input id="referralMaxDiscount" type="number" min="0" max="100000" step="250" value="3000"></label>
+            </div>
+            <p class="muted">استخدم معرف تحويل أو رقم حساب مناسب للاستلام. لا تحفظ CVV أو PIN أو كلمة مرور بطاقة داخل النظام.</p>
+            <button class="primary wide" id="savePricingSettings" type="submit">حفظ إعدادات التسعير</button>
+          </form>
+          </div>
+        </div>
+
+        <div class="card admin-panel" id="topupsPanel">
+          <div class="card-heading"><h2>طلبات شحن الرصيد</h2><span class="status-chip pending" id="pendingTopupsBadge">0 بانتظار المراجعة</span></div>
+          <p class="muted admin-panel-intro">بعد التحقق من وصول التحويل، اضغط اعتماد. سيضاف نفس المبلغ إلى الرصيد المشحون مرة واحدة، ويظهر نوع الحساب: عميل أو كابتن أو خدمات أخرى.</p>
+          <div class="orders" id="topupRequestsAdmin"></div>
+        </div>
+        <div class="card admin-panel" id="servicesPanel">
+          <div class="card-heading"><h2>طلبات مزودي الخدمات</h2><span class="status-chip pending" id="serviceApplicationsBadge">0 بانتظار المراجعة</span></div>
+          <p class="muted admin-panel-intro">راجع بيانات النشاط ثم اقبل الطلب لفتح لوحة الخدمات الخاصة بالحساب.</p>
+          <div class="orders" id="serviceApplicationsList"></div>
+        </div>
+
+        <div class="card admin-panel" id="captainApplicationsPanel">
+          <div class="card-heading"><h2>طلبات انضمام الكباتن</h2><span class="status-chip pending" id="captainApplicationsBadge">0 بانتظار المراجعة</span></div>
+          <div class="orders" id="applicationsList"></div>
+        </div>
+
+        <div class="card admin-panel" id="driversPanel">
+          <div class="card-heading"><h2>إدارة الكباتن</h2><span class="status-chip active" id="driversAttentionBadge">0 يحتاج متابعة</span></div>
+          <div class="driver-search-wrap"><input id="driverSearchInput" type="search" autocomplete="off" placeholder="ابحث باسم الكابتن، الهاتف، البريد، المدينة، اللوحة أو نوع الخدمة" aria-label="البحث عن كابتن"><span class="driver-search-count" id="driverSearchCount">0 كابتن</span></div>
+          <div class="orders" id="driversList"></div>
+        </div>
+
+        <div class="card admin-panel" id="deviceManagementPanel">
+          <div class="card-heading"><div><h2>إدارة أجهزة الحسابات</h2><p class="muted">معرف الجهاز خاص بالإدارة فقط. وافق على الاستبدال عندما يفقد المستخدم هاتفه وينتقل إلى هاتف جديد.</p></div><span class="status-chip pending" id="deviceChangesBadge">0 طلب تغيير</span></div>
+          <div class="admin-panel-body">
+            <div id="deviceChangeRequestsList" class="device-admin-list"><p class="muted">لا توجد طلبات تغيير جهاز.</p></div>
+            <div class="device-bound-summary"><h3>الأجهزة المرتبطة حاليًا</h3><div id="boundDevicesList" class="device-bound-grid"><p class="muted">لا توجد أجهزة مرتبطة بعد.</p></div></div>
+          </div>
+        </div>
+
+        <div class="card admin-panel" id="waitingOrdersPanel">
+          <div class="card-heading"><h2>طلبات العملاء في الانتظار</h2><span class="status-chip pending" id="waitingOrdersBadge">0 بانتظار كابتن</span></div>
+          <div class="orders" id="ordersList"></div>
+        </div>
+
+        <div class="card admin-panel" id="cancellationsPanel">
+          <div class="card-heading"><div><h2>سجل الإلغاءات</h2><p class="muted">يعرض سبب الإلغاء واسم وبريد ونوع حساب المستخدم الذي ألغى التكسي أو التوصيل أو الخدمة.</p></div><span class="status-chip cancelled" id="cancellationsBadge">0 إلغاء</span></div>
+          <div class="cancellation-toolbar">
+            <label>من قام بالإلغاء<select id="cancellationRoleFilter"><option value="all">الجميع</option><option value="customer">العملاء</option><option value="driver">الكباتن</option><option value="serviceProvider">الخدمات</option><option value="admin">الإدارة</option></select></label>
+            <small class="muted">يتم التحديث مباشرة من Supabase Realtime</small>
+          </div>
+          <div class="orders" id="cancellationsList"></div>
+        </div>
+      </section>
+
+      <aside class="admin-sidebar">
+        <div class="section-title compact"><div><small>ملخص سريع</small><h2>التقارير والحالة</h2></div></div>
+        <div class="card finance-card" id="financePanel"><div class="card-heading"><h3>التقرير المالي</h3><span class="status-chip approved" id="financialReportBadge">0 رحلة مكتملة</span></div><div id="financialReport" class="orders"></div></div>
+        <div class="card system-status-card">
+          <div class="card-heading"><h3>حالة النظام</h3><span class="status-chip approved">متصل</span></div>
+          <p class="notice success">Supabase متصل والتحديثات مباشرة.</p>
+        </div>
+        <div class="card" id="ratingsPanel">
+          <div class="card-heading"><div><h3>تقييمات العملاء</h3><p class="muted">متابعة جودة التكسي والتوصيل والخدمات الأخرى من مكان واحد.</p></div><span class="status-chip complete" id="ratingsBadge">0 تقييم</span></div>
+          <div class="ratings-overview">
+            <div><small>المتوسط العام</small><strong><span id="ratingsAverage">—</span> ★</strong></div>
+            <div><small>تكسي</small><strong id="ratingsTaxiCount">0</strong></div>
+            <div><small>توصيل</small><strong id="ratingsDeliveryCount">0</strong></div>
+            <div><small>خدمات أخرى</small><strong id="ratingsServiceCount">0</strong></div>
+          </div>
+          <label class="ratings-filter">عرض التقييمات<select id="ratingsTypeFilter"><option value="all">الكل</option><option value="taxi">تكسي</option><option value="delivery">توصيل</option><option value="service">خدمات أخرى</option></select></label>
+          <div class="reviews-list" id="ratingsList"></div>
+        </div>
+        <div class="card permissions-card">
+          <div class="card-heading"><h3>مبدأ الصلاحيات</h3><span class="status-chip approved">محمي</span></div>
+          <p class="muted">العميل يرى طلباته، والكابتن يعمل من بوابته، ومزود الخدمة لا يدخل لوحته الخاصة إلا بعد اعتماد الإدارة.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./native-notifications.js?v=81"></script>
+  <script type="module" src="./admin.js?v=89"></script>
+  <script src="./pwa.js?v=89"></script>
+</body>
+</html>

@@ -1,0 +1,3195 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b6f75">
+  <meta name="description" content="كروة — تطبيق عربي لحجز المشاوير وتوصيل الأغراض والطعام">
+  <title>كروة | الحجز والتوصيل</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
+
+  <style>
+    :root {
+      --navy: #12243f;
+      --navy-light: #0b4f70;
+      --orange: #087b75;
+      --orange-light: #19a69a;
+      --mint: #087b75;
+      --mint-dark: #08635e;
+      --background: #f4f7fb;
+      --white: #fff;
+      --line: #dfe7ef;
+      --muted: #69798f;
+      --danger: #ae263b;
+      --shadow: 0 16px 40px rgba(16, 43, 72, .12);
+      --radius: 23px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--navy);
+      background:
+        radial-gradient(circle at 88% 5%, rgba(25,183,159,.10), transparent 28rem),
+        radial-gradient(circle at 8% 92%, rgba(255,107,53,.09), transparent 25rem),
+        var(--background);
+      font-family: Tahoma, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(25,183,159,.25);
+      outline-offset: 2px;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 235px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 100vh;
+      padding: 27px 18px;
+      color: white;
+      background: linear-gradient(180deg, #0b4f70, #073c56);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 8px 35px;
+    }
+
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      color: white;
+      background: linear-gradient(135deg, var(--orange), var(--orange-light));
+      box-shadow: 0 10px 24px rgba(255,107,53,.28);
+      font-size: 25px;
+      font-weight: 900;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 23px;
+    }
+
+    .brand small {
+      color: #bec9dd;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-button {
+      width: 100%;
+      padding: 13px 14px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      border: 0;
+      border-radius: 14px;
+      color: #cbd4e5;
+      background: transparent;
+      text-align: right;
+      font-weight: 700;
+      transition: transform .18s, background .18s, color .18s;
+    }
+
+    .nav-button:hover,
+    .nav-button.active {
+      color: white;
+      background: #203968;
+    }
+
+    .nav-button.active {
+      box-shadow: inset -4px 0 var(--orange);
+    }
+
+    .nav-button:active {
+      transform: scale(.98);
+    }
+
+    .nav-icon {
+      width: 25px;
+      text-align: center;
+      font-size: 20px;
+    }
+
+    .support-card {
+      position: absolute;
+      right: 18px;
+      bottom: 24px;
+      left: 18px;
+      padding: 15px;
+      border: 1px solid #294372;
+      border-radius: 17px;
+      background: #172d57;
+    }
+
+    .support-card p {
+      margin: 0 0 10px;
+      color: #d4dced;
+      font-size: 14px;
+    }
+
+    .support-card button {
+      width: 100%;
+      padding: 10px;
+      border: 0;
+      border-radius: 11px;
+      color: var(--navy);
+      background: white;
+      font-weight: 800;
+    }
+
+    .workspace {
+      min-width: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.36), transparent 420px);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      height: 76px;
+      padding: 0 5vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(12px);
+    }
+
+    .location-button {
+      padding: 7px 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 0;
+      color: var(--navy);
+      background: transparent;
+      text-align: right;
+    }
+
+    .location-button small,
+    .location-button strong {
+      display: block;
+    }
+
+    .location-button small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .icon-button,
+    .avatar {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+    }
+
+    .icon-button {
+      border: 1px solid var(--line);
+      color: var(--navy);
+      background: white;
+    }
+
+    .avatar {
+      color: var(--navy);
+      background: #e8efff;
+      font-weight: 900;
+      border: 0;
+      cursor: pointer;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1320px;
+      margin: auto;
+      padding: 30px 5vw 110px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+      animation: fade-in .25s ease;
+    }
+
+    @keyframes fade-in {
+      from {
+        opacity: .35;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .welcome {
+      position: relative;
+      overflow: hidden;
+      min-height: 128px;
+      margin-bottom: 22px;
+      padding: 25px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      border-radius: 26px;
+      color: white;
+      background: linear-gradient(125deg, #0c365e 0%, #0b4f70 58%, #087b75 125%);
+      box-shadow: 0 18px 45px rgba(16,32,68,.18);
+    }
+
+    .welcome::after {
+      content: "";
+      position: absolute;
+      left: -55px;
+      top: -85px;
+      width: 220px;
+      height: 220px;
+      border: 38px solid rgba(255,255,255,.055);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .welcome h1 {
+      margin: 0;
+      font-size: clamp(25px, 3vw, 37px);
+      letter-spacing: -.02em;
+    }
+
+    .welcome p {
+      margin: 5px 0 0;
+      color: #d6e0f1;
+    }
+
+    .demo-badge {
+      position: relative;
+      z-index: 1;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 999px;
+      color: white;
+      background: rgba(255,255,255,.14);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      padding: 21px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+      box-shadow: 0 10px 35px rgba(16,32,68,.06);
+      transition: transform .22s, box-shadow .22s, border-color .22s;
+    }
+
+    .card:hover {
+      border-color: #d3ddeb;
+      box-shadow: 0 16px 42px rgba(16,32,68,.09);
+    }
+
+    .service-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-bottom: 22px;
+    }
+
+    .service-button {
+      padding: 13px 7px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      color: var(--muted);
+      background: white;
+      font-weight: 800;
+      transition: transform .18s, box-shadow .18s, background .18s;
+    }
+
+    .service-button span {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 24px;
+    }
+
+    .service-button:hover {
+      transform: translateY(-2px);
+    }
+
+    .service-button.active {
+      border-color: var(--navy);
+      color: white;
+      background: linear-gradient(135deg, var(--navy), #274b84);
+      box-shadow: 0 10px 22px rgba(16,32,68,.22);
+    }
+
+    .service-panel {
+      display: none;
+    }
+
+    .service-panel.active {
+      display: block;
+    }
+
+    .panel-heading {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-heading h2 {
+      margin: 0;
+      font-size: 21px;
+    }
+
+    .text-button {
+      padding: 5px;
+      border: 0;
+      color: var(--mint-dark);
+      background: transparent;
+      font-weight: 800;
+    }
+
+    .field {
+      margin-bottom: 13px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: var(--navy);
+      background: #fbfcfe;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+
+    textarea {
+      min-height: 72px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--mint);
+      outline: 0;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(25,183,159,.10);
+    }
+
+    .location-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .secondary-button {
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      color: var(--navy);
+      background: white;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    a.secondary-button {
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .vehicle-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin: 17px 0;
+    }
+
+    .vehicle-button {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      color: var(--navy);
+      background: white;
+      text-align: right;
+      transition: transform .18s, background .18s;
+    }
+
+    .vehicle-button:hover {
+      transform: translateY(-2px);
+    }
+
+    .vehicle-button > span {
+      font-size: 23px;
+    }
+
+    .vehicle-button strong,
+    .vehicle-button small {
+      display: block;
+    }
+
+    .vehicle-button small {
+      color: var(--muted);
+    }
+
+    .vehicle-button.active {
+      padding: 11px;
+      border: 2px solid var(--orange);
+      background: #fff7f3;
+    }
+
+    .payment-list {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 3px;
+    }
+
+    .payment-button {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      background: white;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .payment-button.active {
+      border-color: var(--mint);
+      color: var(--mint-dark);
+      background: #effbf8;
+    }
+
+    .total-row {
+      margin-top: 17px;
+      padding-top: 16px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .total-row small,
+    .total-row strong {
+      display: block;
+    }
+
+    .total-row small {
+      color: var(--muted);
+    }
+
+    .total-row strong {
+      font-size: 22px;
+    }
+
+    .primary-button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 14px;
+      color: white;
+      background: linear-gradient(135deg, var(--orange), var(--orange-light));
+      box-shadow: 0 9px 20px rgba(255,107,53,.25);
+      font-weight: 900;
+      transition: transform .18s, box-shadow .18s;
+    }
+
+    .primary-button:hover {
+      box-shadow: 0 12px 25px rgba(255,107,53,.32);
+    }
+
+    .primary-button:active,
+    .secondary-button:active,
+    .service-button:active,
+    .vehicle-button:active {
+      transform: scale(.98);
+    }
+
+    .primary-button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .map-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 510px;
+      padding: 0;
+      border: 5px solid white;
+      background:
+        linear-gradient(35deg, transparent 43%, white 44%, white 50%, transparent 51%),
+        linear-gradient(145deg, transparent 38%, rgba(255,255,255,.8) 39%, rgba(255,255,255,.8) 45%, transparent 46%),
+        repeating-linear-gradient(90deg, #e8efea 0, #e8efea 27px, #dce9e2 28px),
+        #e7efe9;
+      box-shadow: 0 18px 48px rgba(16,32,68,.12);
+    }
+
+    .map-card::before {
+      content: "بغداد";
+      position: absolute;
+      right: 17px;
+      top: 17px;
+      z-index: 2;
+      padding: 7px 11px;
+      border-radius: 11px;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 8px 20px rgba(16,32,68,.12);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .map-route {
+      position: absolute;
+      top: 20%;
+      right: 30%;
+      width: 170px;
+      height: 270px;
+      border: 5px solid var(--navy-light);
+      border-right-color: transparent;
+      border-bottom-color: var(--orange);
+      border-radius: 48%;
+      transform: rotate(-20deg);
+    }
+
+    .map-pin {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 50% 50% 50% 8px;
+      color: white;
+      transform: rotate(-45deg);
+      animation: pin-pulse 2.2s ease-in-out infinite;
+    }
+
+    .map-pin span {
+      transform: rotate(45deg);
+    }
+
+    .map-pin.first {
+      top: 25%;
+      right: 43%;
+      background: var(--navy);
+    }
+
+    .map-pin.second {
+      bottom: 24%;
+      left: 27%;
+      background: var(--orange);
+      animation-delay: 1s;
+    }
+
+    @keyframes pin-pulse {
+      0%, 100% {
+        box-shadow: 0 8px 20px rgba(16,32,68,.2);
+      }
+      50% {
+        box-shadow:
+          0 8px 22px rgba(16,32,68,.25),
+          0 0 0 10px rgba(255,255,255,.42);
+      }
+    }
+
+    .map-information {
+      position: absolute;
+      right: 15px;
+      bottom: 15px;
+      left: 15px;
+      padding: 16px;
+      border-radius: 17px;
+      background: rgba(255,255,255,.94);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(9px);
+    }
+
+    .map-information strong,
+    .map-information small {
+      display: block;
+    }
+
+    .map-information small {
+      margin-top: 3px;
+      color: var(--muted);
+    }
+
+    .map-card::before {
+      display: none;
+    }
+
+    #customerMap {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      min-height: 500px;
+      background: #e7efe9;
+    }
+
+    .map-information {
+      right: 15px;
+      top: 15px;
+      bottom: auto;
+      left: auto;
+      z-index: 500;
+      width: min(275px, calc(100% - 30px));
+      pointer-events: none;
+    }
+
+    .karwa-map-marker {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 3px solid white;
+      border-radius: 50% 50% 50% 8px;
+      color: white;
+      box-shadow: 0 8px 22px rgba(16,32,68,.28);
+      font-size: 21px;
+      transform: rotate(-45deg);
+    }
+
+    .karwa-map-marker span {
+      transform: rotate(45deg);
+    }
+
+    .karwa-map-marker.customer { background: var(--orange); }
+    .karwa-map-marker.driver { background: var(--navy); }
+
+    .food-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .food-item {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      transition: transform .18s, box-shadow .18s;
+    }
+
+    .food-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(16,32,68,.08);
+    }
+
+    .food-icon {
+      height: 78px;
+      margin-bottom: 9px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #fff1e9;
+      font-size: 40px;
+      transition: transform .22s;
+    }
+
+    .food-item:hover .food-icon {
+      transform: scale(1.04);
+    }
+
+    .food-item h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .food-item p {
+      margin: 3px 0 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .food-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .add-food-button {
+      width: 35px;
+      height: 35px;
+      border: 0;
+      border-radius: 10px;
+      color: white;
+      background: var(--navy);
+      font-size: 20px;
+    }
+
+    .cart-bar {
+      display: none;
+      margin-top: 14px;
+      padding: 12px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-radius: 15px;
+      color: white;
+      background: var(--navy);
+    }
+
+    .cart-bar.show {
+      display: flex;
+    }
+
+    .cart-bar strong,
+    .cart-bar small {
+      display: block;
+    }
+
+    .cart-bar small {
+      color: #cdd8eb;
+    }
+
+    .tracking-card {
+      display: none;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+      color: white;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--navy), #294f89);
+    }
+
+    .tracking-card.show {
+      display: block;
+    }
+
+    .tracking-card::after {
+      content: "";
+      position: absolute;
+      left: -50px;
+      bottom: -80px;
+      width: 190px;
+      height: 190px;
+      border: 34px solid rgba(255,255,255,.05);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .tracking-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .tracking-header p {
+      margin: 5px 0;
+      color: #ccd7ec;
+    }
+
+    .tracking-status {
+      height: max-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: #91f2df;
+      background: rgba(25,183,159,.2);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .progress {
+      height: 8px;
+      margin: 18px 0 13px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(255,255,255,.15);
+    }
+
+    .progress span {
+      display: block;
+      width: 25%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--orange), #ffac75);
+      box-shadow: 0 0 14px rgba(255,107,53,.5);
+      transition: width .3s;
+    }
+
+    .tracking-actions {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 9px;
+    }
+
+    .tracking-actions button {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 12px;
+      color: white;
+      background: transparent;
+      font-weight: 800;
+    }
+
+    .page-heading {
+      margin-bottom: 20px;
+    }
+
+    .page-heading h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 34px);
+    }
+
+    .page-heading p {
+      margin: 5px 0 0;
+      color: var(--muted);
+    }
+
+    .orders-list {
+      display: grid;
+      gap: 11px;
+    }
+
+    .order-item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .order-icon {
+      width: 48px;
+      height: 48px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: #eaf1ff;
+      font-size: 23px;
+    }
+
+    .order-details {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .order-details strong,
+    .order-details small {
+      display: block;
+    }
+
+    .order-details small {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .order-price {
+      text-align: left;
+    }
+
+    .order-price strong,
+    .order-price small {
+      display: block;
+    }
+
+    .order-price small {
+      color: var(--mint-dark);
+    }
+
+    .empty-state {
+      padding: 45px 20px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-state span {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 48px;
+    }
+
+    .wallet-card {
+      position: relative;
+      overflow: hidden;
+      padding: 27px;
+      border-radius: 24px;
+      color: white;
+      background: linear-gradient(135deg, var(--navy), #2c508b);
+      box-shadow: var(--shadow);
+    }
+
+    .wallet-card::after {
+      content: "";
+      position: absolute;
+      left: -65px;
+      top: -95px;
+      width: 230px;
+      height: 230px;
+      border: 42px solid rgba(255,255,255,.055);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .wallet-card p {
+      margin: 0;
+      color: #ccd7eb;
+    }
+
+    .balance {
+      margin: 8px 0 20px;
+      font-size: 38px;
+      font-weight: 900;
+    }
+
+    .wallet-grid {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .payment-card {
+      padding: 13px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+
+    .payment-card + .payment-card {
+      margin-top: 9px;
+    }
+
+    .payment-card div {
+      flex: 1;
+    }
+
+    .payment-card strong,
+    .payment-card small {
+      display: block;
+    }
+
+    .payment-card small {
+      color: var(--muted);
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      gap: 18px;
+    }
+
+    .profile-main {
+      text-align: center;
+    }
+
+    .big-avatar {
+      width: 88px;
+      height: 88px;
+      margin: auto;
+      display: grid;
+      place-items: center;
+      border-radius: 27px;
+      color: var(--navy);
+      background: #eaf1ff;
+      font-size: 34px;
+      font-weight: 900;
+    }
+
+    .profile-main h2 {
+      margin: 14px 0 0;
+    }
+
+    .profile-main p {
+      color: var(--muted);
+    }
+
+    .setting {
+      padding: 15px 2px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .setting:last-child {
+      border-bottom: 0;
+    }
+
+    .setting-icon {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      background: #eaf1ff;
+    }
+
+    .setting-copy {
+      flex: 1;
+    }
+
+    .setting-copy strong,
+    .setting-copy small {
+      display: block;
+    }
+
+    .setting-copy small {
+      color: var(--muted);
+    }
+
+    .switch {
+      width: 48px;
+      height: 28px;
+      padding: 3px;
+      display: flex;
+      justify-content: flex-end;
+      border: 0;
+      border-radius: 999px;
+      background: var(--mint);
+    }
+
+    .switch span {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,.18);
+    }
+
+    .switch.off {
+      justify-content: flex-start;
+      background: #cbd3df;
+    }
+
+    .mobile-navigation {
+      display: none;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 25px;
+      z-index: 100;
+      max-width: 88vw;
+      padding: 12px 18px;
+      border-radius: 13px;
+      color: white;
+      background: var(--navy);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      text-align: center;
+      transform: translate(-50%, 20px);
+      transition: .25s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      padding: 18px;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      background: rgba(8,17,37,.58);
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(500px, 100%);
+      padding: 21px;
+      border-radius: 23px;
+      background: white;
+      box-shadow: var(--shadow);
+      animation: modal-up .22s ease;
+    }
+
+    @keyframes modal-up {
+      from {
+        opacity: .4;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .modal h2 {
+      margin: 0;
+    }
+
+    .modal > p {
+      margin: 5px 0 15px;
+      color: var(--muted);
+    }
+
+    .modal-actions {
+      margin-top: 15px;
+      display: flex;
+      gap: 9px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+    }
+
+    #authModal {
+      align-items: center;
+    }
+
+    .auth-modal {
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+    }
+
+    .auth-brand {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auth-brand .brand-logo {
+      flex: 0 0 auto;
+    }
+
+    .auth-brand h2,
+    .auth-brand p {
+      margin: 0;
+    }
+
+    .auth-brand p,
+    .auth-note {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .auth-tabs {
+      margin-bottom: 16px;
+      padding: 5px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      border-radius: 14px;
+      background: var(--background);
+    }
+
+    .auth-tab {
+      padding: 10px;
+      border: 0;
+      border-radius: 10px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 800;
+    }
+
+    .auth-tab.active {
+      color: var(--navy);
+      background: white;
+      box-shadow: 0 4px 12px rgba(16,32,68,.08);
+    }
+
+
+    .role-auth-modal{width:min(940px,calc(100vw - 28px));max-width:940px;padding:24px}.role-entry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.role-entry-card{padding:22px 18px;border:1px solid #e5eaf2;border-radius:22px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 10px 30px rgba(16,32,68,.06);text-align:center;transition:.2s}.role-entry-card:hover{transform:translateY(-3px);box-shadow:0 16px 36px rgba(16,32,68,.11)}.role-entry-icon{width:64px;height:64px;margin:0 auto 12px;display:grid;place-items:center;border-radius:20px;background:#eef3ff;font-size:30px}.role-entry-card h3{margin:0 0 7px;font-size:20px;color:var(--navy)}.role-entry-card p{min-height:42px;margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.6}.role-entry-actions{display:grid;gap:8px}.role-entry-actions button{width:100%}.auth-back-button{border:0;background:transparent;color:var(--muted);font-weight:800;margin-bottom:12px;cursor:pointer}.selected-role-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;border-radius:16px;background:#f4f7fb}.selected-role-banner>span{font-size:28px}.selected-role-banner small,.selected-role-banner strong{display:block}.selected-role-banner small{color:var(--muted);font-size:11px}.selected-role-banner strong{color:var(--navy);font-size:16px}@media(max-width:720px){.role-auth-modal{padding:18px}.role-entry-grid{grid-template-columns:1fr}.role-entry-card{display:grid;grid-template-columns:58px 1fr;column-gap:12px;text-align:right;padding:16px}.role-entry-icon{grid-row:1/3;width:54px;height:54px;margin:0;font-size:25px}.role-entry-card h3{align-self:end}.role-entry-card p{min-height:0;margin:2px 0 12px}.role-entry-actions{grid-column:1/-1;grid-template-columns:1fr 1fr}}
+
+    .auth-message {
+      min-height: 22px;
+      margin: 4px 0 8px;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .auth-submit {
+      width: 100%;
+    }
+
+    .profile-email {
+      margin: 4px 0 15px !important;
+      word-break: break-word;
+    }
+
+    .danger-button {
+      margin-top: 10px;
+      border-color: #f0caca;
+      color: var(--danger);
+      background: #fffafa;
+    }
+
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .order-review {
+      margin-top: 9px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .rate-driver-button {
+      padding: 7px 12px;
+      border: 1px solid #f3c94d;
+      border-radius: 999px;
+      color: #7b5700;
+      background: #fff9df;
+      font-weight: 900;
+    }
+
+    .rating-result {
+      direction: ltr;
+      color: #f4b400;
+      font-size: 19px;
+      letter-spacing: 2px;
+    }
+
+    .rating-modal { text-align: center; }
+    .rating-driver-card {
+      margin: 15px 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--background);
+    }
+    .rating-driver-card strong,
+    .rating-driver-card small { display: block; }
+    .rating-driver-card small { margin-top: 3px; color: var(--muted); }
+    .star-picker {
+      margin: 8px 0 3px;
+      display: flex;
+      direction: ltr;
+      justify-content: center;
+      gap: 5px;
+    }
+    .star-picker button {
+      padding: 2px;
+      border: 0;
+      color: #cbd3df;
+      background: transparent;
+      font-size: 38px;
+      line-height: 1;
+      transition: transform .15s, color .15s;
+    }
+    .star-picker button.active { color: #f4b400; transform: translateY(-2px); }
+    #ratingLabel { margin: 4px 0 13px; color: var(--muted); font-weight: 800; }
+    #ratingComment {
+      width: 100%;
+      min-height: 92px;
+      padding: 12px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      font: inherit;
+    }
+    #ratingComment:focus { border-color: var(--mint); outline: 0; box-shadow: 0 0 0 4px rgba(25,183,159,.1); }
+    .rating-tags-picker { display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin:0 0 13px; }
+    .rating-tag-button { min-height:34px; padding:7px 11px; border:1px solid #d9e3ea; border-radius:999px; color:#536579; background:#fff; font-size:10px; font-weight:900; transition:.15s ease; }
+    .rating-tag-button.active { border-color:#8fd9cf; color:#08635e; background:#e8f8f5; box-shadow:0 0 0 3px rgba(8,123,117,.07); }
+    .service-rate-button { width:100%; margin-top:10px; min-height:39px; }
+    .service-rating-result { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; padding:9px 11px; border:1px solid #f2df9d; border-radius:12px; background:#fffaf0; }
+    .service-rating-result small { color:#6b7788; font-size:10px; font-weight:800; }
+
+    .sync-badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #8cf0dc;
+      box-shadow: 0 0 0 4px rgba(140,240,220,.14);
+    }
+
+    @media (max-width: 950px) {
+      .app {
+        display: block;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        height: 70px;
+        padding: 0 18px;
+        box-shadow: 0 7px 22px rgba(16,32,68,.06);
+      }
+
+      main {
+        padding: 23px 17px 105px;
+      }
+
+      .main-grid,
+      .profile-grid,
+      .wallet-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .map-card {
+        min-height: 350px;
+      }
+
+      #customerMap {
+        min-height: 340px;
+      }
+
+      .mobile-navigation {
+        position: fixed;
+        right: 10px;
+        bottom: 9px;
+        left: 10px;
+        z-index: 50;
+        padding: 7px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border: 1px solid rgba(255,255,255,.11);
+        border-radius: 18px;
+        background: rgba(16,32,68,.97);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .mobile-navigation button {
+        padding: 7px 3px;
+        border: 0;
+        border-radius: 12px;
+        color: #cbd4e5;
+        background: transparent;
+        font-size: 12px;
+      }
+
+      .mobile-navigation button span {
+        display: block;
+        font-size: 18px;
+      }
+
+      .mobile-navigation button.active {
+        color: white;
+        background: linear-gradient(135deg, #0b4f70, #087b75);
+        box-shadow: 0 5px 14px rgba(0,0,0,.18);
+      }
+
+      .toast {
+        bottom: 88px;
+      }
+    }
+
+    @media (max-width: 550px) {
+      .welcome {
+        min-height: 0;
+        padding: 21px 19px;
+        display: block;
+        border-radius: 22px;
+      }
+
+      .demo-badge {
+        display: inline-block;
+        margin-top: 13px;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 20px;
+      }
+
+      .service-tabs {
+        position: sticky;
+        top: 77px;
+        z-index: 8;
+        margin: -5px -4px 18px;
+        padding: 6px;
+        border-radius: 18px;
+        background: rgba(255,255,255,.94);
+        backdrop-filter: blur(10px);
+      }
+
+      .vehicle-list,
+      .food-list {
+        grid-template-columns: 1fr;
+      }
+
+      .vehicle-button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .total-row {
+        position: sticky;
+        bottom: 82px;
+        z-index: 7;
+        margin-right: -5px;
+        margin-left: -5px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: rgba(255,255,255,.97);
+        box-shadow: 0 12px 28px rgba(16,32,68,.12);
+      }
+
+      .tracking-header {
+        display: block;
+      }
+
+      .tracking-status {
+        display: inline-block;
+        margin-top: 8px;
+      }
+
+      .location-row {
+        grid-template-columns: 1fr;
+      }
+
+      .top-actions .icon-button {
+        display: none;
+      }
+    }
+  
+    .map-pick-actions{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}.map-pick-button{border:1px solid #dce3ee!important;border-radius:10px;padding:8px 11px}.map-pick-button.active{background:#eaf7f5;color:#08635e;border-color:#8ccfc8!important}.route-summary{display:flex;gap:10px;flex-wrap:wrap;padding:10px 12px;margin:0 0 14px;border-radius:12px;background:#f6f8fb;color:#526078;font-size:13px}.route-summary span{font-weight:700}.karwa-map-marker.pickup span,.karwa-map-marker.destination span{font-size:22px}.karwa-map-marker.destination{background:#0b4f70!important}
+
+    .place-results{position:relative;z-index:30}.place-results:not(:empty){position:absolute;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);max-height:220px;overflow:auto;width:calc(100% - 40px)}.place-result{display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--line);background:#fff;text-align:right;cursor:pointer}.order-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.mini-action{border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 9px;font-weight:700;cursor:pointer} select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit} textarea{min-height:90px;resize:vertical}
+
+    /* Phase 12 — Maps & UI refinement */
+    .field{position:relative}.field input{min-height:52px;border-radius:15px;background:#fff;border:1px solid #d9e1ec;transition:.2s box-shadow,.2s border-color}.field input:focus{border-color:var(--mint);box-shadow:0 0 0 4px rgba(25,183,159,.12)}
+    .place-results:not(:empty){right:0;left:0;width:auto!important;margin-top:7px;max-height:310px;border-radius:16px;overflow:auto;box-shadow:0 18px 50px rgba(16,32,68,.18)}
+    .place-result{display:flex!important;align-items:flex-start;gap:10px;padding:12px 13px!important;transition:.15s background}.place-result:hover{background:#f5f8fc}.place-result:last-child{border-bottom:0}.place-result strong,.place-result small{display:block}.place-result strong{color:var(--navy);font-size:14px}.place-result small{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}.place-pin{width:31px;height:31px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:#fff0ea;color:#df5522;font-weight:900}.place-search-state{padding:14px;color:var(--muted);font-size:13px}
+    .map-card{min-height:590px!important;border:0!important;border-radius:24px!important;box-shadow:0 20px 55px rgba(16,32,68,.14)!important}.map-information{padding:12px 14px;border:1px solid rgba(223,229,238,.9);border-radius:15px;background:rgba(255,255,255,.94);box-shadow:0 10px 30px rgba(16,32,68,.13);backdrop-filter:blur(10px)}
+    #customerMap{min-height:590px!important}.leaflet-control-zoom a,.leaflet-control-layers{border:0!important;box-shadow:0 7px 22px rgba(16,32,68,.16)!important}.leaflet-control-zoom a{width:38px!important;height:38px!important;line-height:38px!important}.leaflet-control-layers{border-radius:12px!important}.leaflet-popup-content-wrapper{border-radius:14px}
+    .map-pick-actions{margin-top:9px!important}.map-pick-button{min-height:40px;background:#fff!important}.route-summary{margin-top:12px!important;border:1px solid #e5eaf1;background:#f8fafc!important}.route-summary span{display:inline-flex;align-items:center;min-height:28px}
+    .service-panel .panel-heading{margin-bottom:16px}.service-panel .panel-heading h2{font-size:22px}.main-grid{gap:22px!important}.card{border-radius:22px!important}
+    .map-confirm-bar{display:none;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 14px;padding:10px 12px;border:1px solid #dfe6ef;border-radius:14px;background:#fff}.map-confirm-bar.show{display:flex}.map-confirm-bar span{font-size:12px;color:#526078;line-height:1.5}.map-confirm-bar button{border:0;border-radius:10px;padding:9px 12px;background:#0b4f70;color:#fff;font-weight:800;white-space:nowrap}.center-pin{position:absolute;z-index:650;left:50%;top:50%;transform:translate(-50%,-100%);display:none;pointer-events:none;font-size:38px;filter:drop-shadow(0 5px 4px rgba(0,0,0,.25))}.map-card.center-pick .center-pin{display:block}.map-card.center-pick #customerMap{cursor:grab}.map-search-hint{font-size:11px;color:#748197;margin-top:5px}.place-result .distance{font-size:10px;color:#087b75;font-weight:800;margin-top:4px;display:block}.map-pick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+    @media(max-width:760px){.map-card,#customerMap{min-height:430px!important}.place-result small{max-width:250px}.service-panel .panel-heading{align-items:center}.map-pick-actions{display:grid!important;grid-template-columns:1fr 1fr}.map-pick-button{padding:9px 6px!important}.route-summary{display:grid!important;grid-template-columns:1fr 1fr}.route-summary #routeMode{grid-column:1/-1}.card{border-radius:18px!important}}
+
+  
+    /* Phase 14 — live trip experience */
+    .trip-live-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.trip-live-strip>div{background:#f7f9fc;border:1px solid #e7ebf2;border-radius:14px;padding:10px;text-align:center}.trip-live-strip small{display:block;color:var(--muted);font-size:11px}.trip-live-strip strong{display:block;margin-top:3px;color:var(--navy);font-size:14px}.trip-stage-hint{margin:10px 0 0;padding:9px 12px;border-radius:12px;background:rgba(255,107,53,.08);color:#9b431f;font-size:12px;font-weight:800}.tracking-actions a.secondary-button{text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center}.tracking-actions .hidden{display:none!important}.karwa-map-marker.driver{transition:transform .2s ease;box-shadow:0 8px 24px rgba(16,32,68,.25)}
+    @media(max-width:600px){.trip-live-strip{grid-template-columns:1fr 1fr}.trip-live-strip>div:last-child{grid-column:1/-1}.tracking-card{border-radius:22px}.tracking-actions{grid-template-columns:1fr 1fr!important}}
+
+    .map-search-button{margin:-4px 0 10px;border:0;border-radius:12px;padding:10px 16px;background:#0b4f70;color:#fff;font-weight:800;box-shadow:0 6px 16px rgba(16,43,72,.12)}
+    .maplibregl-canvas{outline:none}.maplibregl-ctrl-attrib{font-size:10px!important}.leaflet-maplibre-gl{border-radius:inherit}
+  
+    /* Phase 16: Arabic/RTL map and search fixes */
+    .place-result,.place-result *,.place-search-state{direction:rtl!important;text-align:right!important;unicode-bidi:plaintext}
+    .place-result>span:nth-child(2){min-width:0;flex:1}.place-result strong,.place-result small,.place-result .distance{direction:rtl!important;text-align:right!important}
+    #rideFrom,#rideTo{direction:rtl;text-align:right}.leaflet-tooltip,.leaflet-popup-content{direction:rtl;text-align:right}
+    .maplibregl-canvas{direction:ltr}
+  .road-report-marker{position:relative}.confirm-badge{position:absolute;top:-7px;left:-7px;min-width:18px;height:18px;border-radius:10px;background:#0b4f70;color:#fff;font:700 11px/18px Arial;text-align:center;border:2px solid #fff}
+    /* Restaurant marketplace */
+    .restaurant-create-toggle{white-space:nowrap}.restaurant-creator{margin:16px 0 20px;padding:20px;border:1px solid rgba(15,118,110,.18);border-radius:22px;background:linear-gradient(145deg,rgba(240,253,250,.95),#fff);box-shadow:0 14px 34px rgba(15,23,42,.07)}
+    .restaurant-creator-head,.meal-builder-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}.restaurant-creator-head strong,.meal-builder-title strong{font-size:18px}.restaurant-creator-head small,.meal-builder-title small{display:block;color:#64748b;margin-top:3px}.restaurant-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.restaurant-address-field{grid-column:span 1}.gps-capture-button{width:100%;min-height:46px;border:1px dashed #0f766e;border-radius:14px;background:#fff;color:#0f766e;font-weight:800;cursor:pointer}.meal-builder{margin-top:18px;padding-top:18px;border-top:1px solid #e2e8f0}.meal-fields{grid-template-columns:1fr .6fr 1.5fr auto;align-items:end}.add-meal-builder{height:46px}.draft-meals{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.draft-meal{display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:999px;background:#fff;border:1px solid #dbe4ea;font-size:13px}.draft-meal button{border:0;background:transparent;color:#dc2626;cursor:pointer;font-size:16px}.publish-restaurant{margin-top:16px;width:100%}
+    .restaurant-marketplace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0 22px}.restaurant-card{border:1px solid #e2e8f0;border-radius:22px;background:#fff;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.06)}.restaurant-card-head{padding:17px;background:linear-gradient(135deg,#0f766e,#115e59);color:#fff}.restaurant-card-head h3{margin:0 0 5px;font-size:18px}.restaurant-card-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;opacity:.92}.restaurant-card-contact{padding:10px 15px;border-bottom:1px solid #eef2f7;font-size:12px;color:#475569;display:grid;gap:4px}.restaurant-meals{padding:12px;display:grid;gap:9px}.restaurant-meal-card{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;width:100%;text-align:right;border:1px solid #edf2f7;border-radius:15px;padding:10px;background:#f8fafc;cursor:pointer;transition:.2s}.restaurant-meal-card:hover{transform:translateY(-1px);border-color:#99f6e4;background:#f0fdfa}.restaurant-meal-icon{width:52px;height:52px;overflow:hidden;display:grid;place-items:center;border-radius:13px;background:#fff;font-size:22px}.restaurant-meal-icon img,.meal-detail-icon img{width:100%;height:100%;object-fit:cover}.restaurant-meal-card strong{display:block;font-size:14px}.restaurant-meal-card small{display:block;color:#64748b;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}.restaurant-meal-price{font-weight:900;color:#0f766e;white-space:nowrap}.restaurant-empty{grid-column:1/-1;padding:25px;text-align:center;border:1px dashed #cbd5e1;border-radius:18px;color:#64748b}.food-legacy-heading{margin-top:8px}
+    .meal-detail-backdrop{position:fixed;inset:0;z-index:3000;background:rgba(2,6,23,.62);display:grid;place-items:center;padding:18px}.meal-detail-backdrop[hidden]{display:none}.meal-detail-card{position:relative;width:min(440px,100%);background:#fff;border-radius:26px;padding:28px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.25)}.meal-detail-close{position:absolute;top:12px;left:12px;width:36px;height:36px;border:0;border-radius:50%;background:#f1f5f9;font-size:24px;cursor:pointer}.meal-detail-icon{width:68px;height:68px;margin:0 auto 12px;display:grid;place-items:center;border-radius:20px;background:#f0fdfa;font-size:34px}.meal-detail-card h3{font-size:24px;margin:5px 0 8px}.meal-detail-card p{color:#64748b;line-height:1.8}.meal-detail-price{font-size:24px;font-weight:950;color:#0f766e;margin:18px 0}.meal-detail-card .primary-button{width:100%}
+    @media(max-width:760px){.restaurant-marketplace,.restaurant-form-grid{grid-template-columns:1fr}.meal-fields{grid-template-columns:1fr}.restaurant-address-field{grid-column:auto}.restaurant-creator{padding:15px}.restaurant-creator-head{align-items:flex-start}.panel-heading:has(.restaurant-create-toggle){align-items:flex-start;gap:10px}.restaurant-create-toggle{font-size:12px;padding-inline:12px}}
+
+.food-flow-note{display:flex;align-items:center;gap:12px;margin:4px 0 14px;padding:14px 16px;border:1px solid #cce8e4;border-radius:17px;background:#f0fdfa;color:#115e59}.food-flow-note strong{font-size:18px}.food-flow-note span{color:#52637a;font-size:12px}.restaurant-card-head{cursor:pointer}.restaurant-card-head:after{content:"اضغط لعرض الأكلات";display:block;margin-top:8px;font-size:11px;opacity:.82}.restaurant-card.open .restaurant-card-head:after{content:"اضغط لإخفاء الأكلات"}.restaurant-card .restaurant-card-contact,.restaurant-card .restaurant-meals{display:none}.restaurant-card.open .restaurant-card-contact,.restaurant-card.open .restaurant-meals{display:grid}.food-delivery-fields{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:7px;align-items:center}.food-delivery-fields input{min-height:42px;padding:9px 11px;border:1px solid #d5dfe8;border-radius:12px;font:inherit}.food-delivery-fields small{grid-column:1/-1;color:#64748b}.cart-bar{gap:12px;flex-wrap:wrap}.food-checkout-copy{min-width:140px}@media(max-width:700px){.food-delivery-fields{grid-template-columns:1fr;width:100%}.food-delivery-fields small{grid-column:auto}.cart-bar .primary-button{width:100%}}
+</style>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0b6f75">
+  <link rel="icon" href="./karwa-icon.svg" type="image/svg+xml">
+
+<style id="phase20-map-first">
+/* خريطة العميل بملء المساحة المرئية مع درج خدمات جانبي */
+body.customer-map-mode{overflow:hidden}
+body.customer-map-mode main{max-width:none;margin:0;padding:0}
+#home{position:relative;height:calc(100dvh - 76px);min-height:520px;overflow:hidden;isolation:isolate}
+#home .main-grid{position:absolute!important;display:block!important;inset:0;height:auto!important;min-height:0!important;margin:0!important}
+#home .main-grid>.map-card{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:#e9eef4;box-shadow:none!important;z-index:1}
+#customerMap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;border-radius:0!important}
+#home .welcome{position:absolute;z-index:720;top:14px;right:18px;left:18px;pointer-events:none}
+#home .welcome>div,#home .welcome .demo-badge{pointer-events:auto;padding:10px 14px;border:1px solid rgba(255,255,255,.78);border-radius:18px;background:rgba(255,255,255,.9);box-shadow:0 10px 32px rgba(16,32,68,.13);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+#home .welcome h1{margin:0;font-size:clamp(18px,2.3vw,27px)}#home .welcome p{margin:3px 0 0}
+#home .tracking-card{position:absolute;z-index:760;left:18px;top:92px;width:min(390px,calc(100% - 36px));max-height:calc(100% - 180px);margin:0!important;overflow:auto;border-radius:22px;background:rgba(255,255,255,.96);box-shadow:0 16px 45px rgba(16,32,68,.2);backdrop-filter:blur(18px)}
+#home .map-information{position:absolute;z-index:710;left:18px;right:auto;bottom:18px;max-width:min(360px,calc(100% - 36px));margin:0!important;border:1px solid rgba(255,255,255,.76);background:rgba(255,255,255,.9);box-shadow:0 8px 26px rgba(16,32,68,.12);backdrop-filter:blur(16px)}
+#home .map-card .leaflet-bottom.leaflet-left{bottom:78px}
+#customerOptionsPanel{position:absolute!important;z-index:950!important;top:14px;right:14px;bottom:14px;width:min(440px,calc(100% - 28px))!important;max-height:none!important;margin:0!important;padding:0 18px 20px!important;overflow:auto!important;overscroll-behavior:contain;border:1px solid rgba(255,255,255,.84)!important;border-radius:26px!important;background:rgba(255,255,255,.965)!important;box-shadow:0 24px 70px rgba(16,32,68,.3)!important;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);opacity:0;pointer-events:none;transform:translateX(calc(100% + 34px));transition:transform .3s cubic-bezier(.22,.8,.25,1),opacity .2s ease;scrollbar-width:thin}
+#home.customer-options-open #customerOptionsPanel{opacity:1;pointer-events:auto;transform:translateX(0)}
+.map-options-header{position:sticky;top:0;z-index:30;margin:0 -18px 14px;padding:14px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(223,229,238,.9);background:rgba(255,255,255,.94);backdrop-filter:blur(18px)}
+.map-options-header div{display:grid;gap:1px}.map-options-header small{color:var(--muted);font-size:11px}.map-options-header strong{font-size:17px}
+.map-options-close{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--line);border-radius:13px;color:var(--navy);background:#fff;font-size:25px;line-height:1}
+.map-options-toggle{position:absolute;z-index:900;right:14px;top:50%;min-width:112px;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:9px;border:1px solid rgba(255,255,255,.55);border-radius:16px;color:#fff;background:linear-gradient(135deg,#0b4f70,#087b75);box-shadow:0 14px 34px rgba(16,43,72,.3);font-weight:900;transform:translateY(-50%);transition:transform .2s,opacity .2s}
+.map-options-toggle span{font-size:21px;line-height:1}.map-options-toggle:hover{transform:translateY(-50%) scale(1.03)}
+#home.customer-options-open .map-options-toggle{opacity:0;pointer-events:none;transform:translateY(-50%) translateX(24px)}
+.map-options-scrim{position:absolute;z-index:925;inset:0;background:rgba(9,21,45,.28);opacity:0;pointer-events:none;transition:opacity .25s ease}
+#home.customer-options-open .map-options-scrim{opacity:1;pointer-events:auto}
+#customerOptionsPanel .service-tabs{position:sticky;top:67px;z-index:24;padding:5px 0 8px;background:rgba(255,255,255,.96)}
+.maplibregl-ctrl-top-left,.maplibregl-ctrl-top-right{top:92px!important}
+@media(max-width:950px){
+ body.customer-map-mode .workspace{height:100dvh;overflow:hidden}
+ #home{height:calc(100dvh - 70px);min-height:0}
+ #home .welcome{top:9px;right:10px;left:10px}
+ #home .welcome>div{padding:8px 11px}#home .welcome p{display:none}#home .welcome .demo-badge{padding:7px 9px}
+ #home .tracking-card{top:76px;left:10px;width:calc(100% - 20px);max-height:42dvh}
+ #home .map-information{left:10px;bottom:92px;max-width:230px;padding:8px 10px!important}
+ #home .map-information small{display:none}
+ #customerOptionsPanel{top:8px;right:8px;bottom:88px;width:min(430px,calc(100% - 16px))!important;border-radius:24px!important}
+ .map-options-toggle{right:10px;top:50%;bottom:auto;min-width:106px;padding:12px 14px}
+ #home .map-card .leaflet-bottom.leaflet-left{bottom:150px}
+ .maplibregl-ctrl-top-left,.maplibregl-ctrl-top-right{top:74px!important}
+}
+@media(max-width:550px){
+ #home{height:calc(100dvh - 70px)}
+ #home .welcome{left:84px}.welcome .demo-badge{display:none!important}
+ #home .tracking-card{right:8px;left:8px;width:auto;max-height:50dvh}
+ #customerOptionsPanel{padding-right:14px!important;padding-left:14px!important}
+ .map-options-header{margin-right:-14px;margin-left:-14px;padding-right:14px;padding-left:14px}
+ .map-options-toggle{border-radius:15px;box-shadow:0 10px 28px rgba(16,32,68,.32)}
+}
+@media(prefers-reduced-motion:reduce){#customerOptionsPanel,.map-options-toggle,.map-options-scrim{transition:none}}
+</style>
+<style id="phase21-navigation-ui">
+/* واجهة ملاحة مستوحاة من تطبيقات الخرائط الحديثة مع هوية كروة */
+body.customer-map-mode{--navy:#0a2540;--navy-light:#164b78;--orange:#d3401f;--orange-light:#c83c1d;--mint:#00746f;--mint-dark:#006b66;--line:#cbd6e2;--muted:#43536a;color:#0a2540}
+body.customer-map-mode .topbar{border-color:#d9e2eb;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(10,37,64,.1)}
+body.customer-map-mode .location-button small{color:#526278}body.customer-map-mode .location-button strong{color:#0a2540}
+#home{background:#dfe9ee}
+#home .welcome{right:16px;left:auto;width:min(390px,calc(100% - 32px))}
+#home .welcome>div{border-color:#fff;background:#fff;color:#0a2540;box-shadow:0 8px 28px rgba(10,37,64,.16)}
+#home .welcome .demo-badge{color:#064e48;background:#e2fbf6;border-color:#a9e8de;box-shadow:0 7px 22px rgba(10,37,64,.11)}
+#home .map-information{color:#0a2540;background:rgba(255,255,255,.96);border-color:#fff;border-radius:16px!important}
+#home .map-information small{color:#43536a}
+.map-options-toggle{min-width:116px;min-height:52px;border:2px solid #fff;border-radius:18px;color:#fff;background:#0a2540;box-shadow:0 10px 0 rgba(10,37,64,.12),0 18px 38px rgba(10,37,64,.28)}
+.map-options-toggle span{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;color:#0a2540;background:#7de4e1;font-size:18px}
+.map-destination-quick{position:absolute;z-index:880;right:50%;bottom:20px;width:min(520px,calc(100% - 150px));min-height:64px;padding:9px 15px;display:flex;align-items:center;gap:12px;border:2px solid #fff;border-radius:22px;color:#0a2540;background:rgba(255,255,255,.97);box-shadow:0 13px 34px rgba(10,37,64,.24);text-align:right;transform:translateX(50%);transition:transform .2s,opacity .2s}
+.map-destination-quick:hover{transform:translateX(50%) translateY(-2px)}.map-destination-quick .quick-search-icon{width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;border-radius:15px;color:#fff;background:#0a2540;font-size:22px}.map-destination-quick span{display:grid}.map-destination-quick small{color:#516176;font-size:11px;font-weight:800}.map-destination-quick strong{font-size:17px}
+.map-recenter-button{position:absolute;z-index:880;left:18px;bottom:104px;width:52px;height:52px;display:grid;place-items:center;border:2px solid #fff;border-radius:50%;color:#0a2540;background:#fff;box-shadow:0 9px 25px rgba(10,37,64,.23);font-size:24px;font-weight:900}
+#home.customer-options-open .map-destination-quick,#home.customer-options-open .map-recenter-button{opacity:0;pointer-events:none}
+#home .tracking-card.show{top:auto;right:auto;left:50%;bottom:18px;width:min(620px,calc(100% - 36px));max-height:48%;color:#fff;background:linear-gradient(135deg,#0a2540,#135e72);border:1px solid rgba(255,255,255,.2);transform:translateX(-50%)}
+#home .tracking-card.show ~ .main-grid .map-destination-quick{display:none}
+#home .tracking-card .tracking-header p,#home .tracking-card .tracking-header small{color:#e6f0f6}
+#home .tracking-card .tracking-status{color:#063f3b;background:#8df0e6}
+#home .tracking-card .trip-live-strip>div{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.1)}#home .tracking-card .trip-live-strip small{color:#dce8f0}#home .tracking-card .trip-live-strip strong{color:#fff}
+#home .tracking-card .trip-stage-hint{color:#0a2540;background:#b9f3ec}
+#home .tracking-card.show{width:min(500px,calc(100% - 36px));max-height:40%;padding:13px 14px;overflow:auto;border-radius:20px;box-shadow:0 15px 40px rgba(10,37,64,.26);transition:opacity .22s ease,transform .28s cubic-bezier(.22,.8,.25,1)}
+#home .tracking-card .tracking-header{align-items:flex-start;gap:8px}#home .tracking-card .tracking-header strong{font-size:15px}#home .tracking-card .tracking-header p{margin:3px 0;font-size:12px;line-height:1.45}#home .tracking-card .tracking-header small{display:block;font-size:10px;line-height:1.45}
+#home .tracking-card .tracking-status{padding:5px 8px;font-size:10px}#home .tracking-card .progress{height:6px;margin:9px 0 8px}
+#home .tracking-card .trip-live-strip{gap:5px;margin-top:7px}#home .tracking-card .trip-live-strip>div{padding:6px 5px;border-radius:10px}#home .tracking-card .trip-live-strip small{font-size:9px}#home .tracking-card .trip-live-strip strong{font-size:12px}
+#home .tracking-card .trip-stage-hint{margin:7px 0 0;padding:6px 9px;border-radius:9px;font-size:10px}
+#home .tracking-card #tripOtpBox{margin-top:7px!important;padding:8px 10px!important;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1)!important}#home .tracking-card #tripOtpBox>strong{font-size:12px}#home .tracking-card #tripOtpBox small{font-size:9px;color:#e6f0f6}
+#home .tracking-card .tracking-actions{margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#home .tracking-card .tracking-actions button,#home .tracking-card .tracking-actions a{min-height:38px;padding:6px 7px;border:1px solid rgba(255,255,255,.42);border-radius:10px;color:#fff;background:rgba(255,255,255,.1);font-size:11px;line-height:1.35;font-weight:800}
+#home .tracking-card .tracking-actions #sosTrip{color:#fff!important;border-color:#fb7185!important;background:#9f1239}
+.trip-panel-toggle{position:absolute;z-index:890;left:16px;top:50%;min-width:108px;min-height:50px;padding:10px 13px;display:flex;align-items:center;justify-content:center;gap:8px;border:2px solid #fff;border-radius:17px;color:#fff;background:#0a2540;box-shadow:0 12px 30px rgba(10,37,64,.3);font-weight:900;transform:translateY(-50%);transition:transform .2s,background .2s,color .2s}
+.trip-panel-toggle span{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;color:#0a2540;background:#7de4e1;font-size:16px}.trip-panel-toggle strong{font-size:12px;white-space:nowrap}
+.trip-panel-toggle[aria-expanded="false"]{color:#0a2540;background:#fff}.trip-panel-toggle[aria-expanded="false"] span{color:#fff;background:#d3401f}
+#home.trip-panel-hidden .tracking-card.show{opacity:0;pointer-events:none;transform:translate(-50%,28px) scale(.96)}
+#home.customer-options-open .trip-panel-toggle{opacity:0;pointer-events:none}
+#customerOptionsPanel{color:#0a2540;background:#f7fafc!important}
+.map-options-header{border-color:#d3dde7;background:rgba(255,255,255,.98)}.map-options-header small{color:#526278}
+#customerOptionsPanel label{color:#172f4b}#customerOptionsPanel input,#customerOptionsPanel select,#customerOptionsPanel textarea{min-height:48px;border:1.5px solid #b9c8d8;color:#0a2540;background:#fff}#customerOptionsPanel input::placeholder,#customerOptionsPanel textarea::placeholder{color:#66758a;opacity:1}
+#customerOptionsPanel input:focus,#customerOptionsPanel select:focus,#customerOptionsPanel textarea:focus{border-color:#008f88;outline:3px solid rgba(0,143,136,.16);outline-offset:1px}
+#customerOptionsPanel .service-button{min-height:74px;border-color:#c7d3df;color:#34465e;background:#fff}#customerOptionsPanel .service-button.active{border-color:#006f78;color:#fff;background:linear-gradient(135deg,#086b83,#00746f);box-shadow:0 8px 20px rgba(0,111,120,.22)}
+#customerOptionsPanel .text-button{color:#006b66}#customerOptionsPanel .primary-button{min-height:48px;background:linear-gradient(135deg,#c83c1d,#d3401f);box-shadow:0 8px 20px rgba(200,60,29,.25)}
+#customerOptionsPanel .map-pick-button.active{border-color:#e94420!important;color:#9e2d14;background:#fff0eb}
+#customerOptionsPanel .route-summary{color:#31445c;background:#eaf0f5}.map-options-close{color:#0a2540;border-color:#bfccd9;background:#fff}
+#home .leaflet-control-zoom a,#home .leaflet-control-layers-toggle{color:#0a2540!important;background-color:#fff!important}
+@media(max-width:950px){
+ #home .welcome{top:8px;right:8px;width:calc(100% - 76px)}
+ .map-destination-quick{bottom:96px;width:calc(100% - 32px);min-height:62px}
+ .map-recenter-button{left:12px;bottom:174px}
+ #home .map-information{bottom:172px;left:72px;max-width:205px}
+ #home .tracking-card.show{right:8px;left:8px;bottom:88px;width:auto;max-height:50dvh;transform:none}
+ #home .tracking-card.show{max-height:38dvh;padding:11px 12px}
+ .trip-panel-toggle{left:10px;top:50%;min-width:100px;min-height:48px;padding:9px 11px}
+ #home.trip-panel-hidden .tracking-card.show{transform:translateY(24px) scale(.97)}
+}
+@media(max-width:550px){
+ #home .welcome{left:auto;width:calc(100% - 76px)}
+ #home .welcome h1{font-size:17px}.map-destination-quick strong{font-size:15px}
+ #home .map-information{display:none}.map-options-toggle{min-width:104px;min-height:50px}
+ #home .tracking-card .tracking-actions{grid-template-columns:1fr 1fr}
+}
+/* شاشة طلباتي — تخطيط مخصص للموبايل */
+@media(max-width:700px){
+ #orders{width:100%;min-width:0}
+ #orders .page-heading{margin-bottom:13px;padding:0 2px}#orders .page-heading h1{font-size:24px}#orders .page-heading p{margin-top:2px;font-size:12px}
+ #ordersList{gap:10px}
+ #ordersList .order-item{width:100%;min-width:0;margin:0;padding:13px;display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-areas:"icon details" "price price";align-items:start;gap:10px 11px;border:1px solid #d5dee8;border-radius:18px!important;background:#fff;box-shadow:0 7px 22px rgba(10,37,64,.07)}
+ #ordersList .order-item.is-active{border-right:4px solid #00746f}#ordersList .order-item.is-completed{border-right:4px solid #164b78}#ordersList .order-item.is-cancelled{border-right:4px solid #b42335;opacity:.88}
+ #ordersList .order-icon{grid-area:icon;width:44px;height:44px;border-radius:14px;color:#0a2540;background:#e7f4f6;font-size:21px}
+ #ordersList .order-details{grid-area:details;min-width:0;padding-top:1px}#ordersList .order-details>strong{padding-left:4px;color:#0a2540;font-size:14px;line-height:1.45}
+ #ordersList .order-details>small{margin-top:3px;display:-webkit-box;color:#526278;font-size:11px;line-height:1.55;white-space:normal;overflow:hidden;text-overflow:ellipsis;word-break:break-word;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+ #ordersList .order-price{grid-area:price;margin-top:1px;padding-top:9px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #e1e7ee;text-align:initial}
+ #ordersList .order-price strong{color:#0a2540;font-size:15px;white-space:nowrap}#ordersList .order-price .order-status{padding:4px 8px;border-radius:999px;color:#006b66;background:#e2f7f3;font-size:10px;font-weight:900;white-space:nowrap}
+ #ordersList .order-item.is-completed .order-status{color:#164b78;background:#e8eff7}#ordersList .order-item.is-cancelled .order-status{color:#a61b2b!important;background:#fff0f2}
+ #ordersList .order-actions{margin-top:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#ordersList .mini-action{min-height:36px;padding:6px 7px;border:1px solid #c5d1dd;border-radius:10px;color:#0a2540;background:#f8fafc;font-size:10px;line-height:1.3}
+ #ordersList .order-review{margin-top:7px}#ordersList .rate-driver-button{min-height:36px;padding:6px 10px;font-size:10px}#ordersList .rating-result{font-size:16px}#ordersList .order-review small{font-size:10px}
+ #ordersList .empty-state{padding:36px 16px;border-radius:18px!important}#ordersList .empty-state span{font-size:38px}#ordersList .empty-state p{font-size:12px}
+}
+@media(max-width:370px){
+ #ordersList .order-item{grid-template-columns:40px minmax(0,1fr);padding:11px;gap:9px}#ordersList .order-icon{width:40px;height:40px;font-size:19px}#ordersList .order-details>strong{font-size:13px}#ordersList .order-price strong{font-size:14px}
+}
+</style>
+<style id="phase22-mobile-orders">
+.orders-mobile-summary{display:none}
+.order-card-main{min-width:0;display:flex;align-items:flex-start;gap:12px;flex:1}
+@media(max-width:950px){
+ #orders{padding-bottom:8px}
+ #orders .page-heading{margin:0 0 12px!important;display:flex;align-items:end;justify-content:space-between;gap:10px}#orders .page-heading h1{font-size:22px!important}#orders .page-heading p{max-width:210px;margin:0!important;color:#526278;font-size:11px!important;text-align:left}
+ .orders-mobile-summary{margin-bottom:12px;padding:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;border:1px solid rgba(255,255,255,.18);border-radius:18px;color:#fff;background:linear-gradient(135deg,#0a2540,#135e72);box-shadow:0 10px 28px rgba(10,37,64,.18)}
+ .orders-mobile-summary>div{min-width:0;padding:7px 5px;text-align:center;border-left:1px solid rgba(255,255,255,.17)}.orders-mobile-summary>div:last-child{border-left:0}.orders-mobile-summary small{display:block;color:#d7e5ec;font-size:9px;font-weight:700}.orders-mobile-summary strong{display:block;margin-top:2px;color:#fff;font-size:18px;line-height:1.25}
+ #ordersList{display:grid!important;gap:8px!important}
+ #ordersList .order-item{width:100%!important;min-width:0!important;margin:0!important;padding:10px 11px!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"main" "price"!important;gap:8px!important;border:1px solid #d7e0e9!important;border-right-width:4px!important;border-radius:16px!important;background:#fff!important;box-shadow:0 5px 16px rgba(10,37,64,.065)!important}
+ #ordersList .order-item.is-active{border-right-color:#00746f!important}#ordersList .order-item.is-completed{border-right-color:#164b78!important}#ordersList .order-item.is-cancelled{border-right-color:#b42335!important}
+ #ordersList .order-card-main{grid-area:main;display:grid;grid-template-columns:40px minmax(0,1fr);align-items:start;gap:9px}
+ #ordersList .order-icon{grid-area:auto!important;width:40px!important;height:40px!important;border-radius:13px!important;background:#e8f3f6!important;font-size:19px!important}
+ #ordersList .order-details{grid-area:auto!important;padding:0!important}.order-details>strong{font-size:13px!important;line-height:1.4!important}
+ #ordersList .order-details>small{margin-top:2px!important;display:-webkit-box!important;color:#526278!important;font-size:10px!important;line-height:1.5!important;white-space:normal!important;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+ #ordersList .order-price{grid-area:price!important;margin:0!important;padding:7px 49px 0 0!important;display:flex!important;align-items:center;justify-content:space-between;gap:8px;border-top:1px dashed #d9e2eb!important}
+ #ordersList .order-price strong{font-size:14px!important}#ordersList .order-price .order-status{padding:3px 8px!important;font-size:9px!important}
+ #ordersList .order-actions{margin-top:6px!important;display:flex!important;gap:5px!important}#ordersList .mini-action{width:auto!important;min-height:32px!important;padding:5px 8px!important;flex:0 1 auto;border-radius:9px!important;font-size:9px!important}
+ #ordersList .order-review{margin-top:6px!important}#ordersList .rate-driver-button{min-height:32px!important;padding:5px 9px!important;font-size:9px!important}
+ #ordersList .empty-state{padding:30px 14px!important;border-right-width:1px!important}.orders-list .empty-state strong{font-size:14px}.orders-list .empty-state p{margin:5px 0 0}
+}
+@media(max-width:380px){
+ #orders .page-heading{display:block}#orders .page-heading p{margin-top:2px!important;text-align:right}
+ .orders-mobile-summary{padding:10px 8px}.orders-mobile-summary strong{font-size:16px}
+ #ordersList .order-card-main{grid-template-columns:36px minmax(0,1fr)}#ordersList .order-icon{width:36px!important;height:36px!important;font-size:17px!important}#ordersList .order-price{padding-right:45px!important}
+}
+</style>
+<style id="phase30-customer-cockpit">
+/* خريطة العميل بملء الشاشة مع إعدادات مستقلة */
+body.customer-map-mode .topbar{display:none!important}
+body.customer-map-mode #home{height:100dvh!important}
+.customer-settings-toggle{position:absolute;z-index:920;top:max(14px,env(safe-area-inset-top));right:14px;width:54px;height:54px;display:grid;place-items:center;border:2px solid rgba(255,255,255,.96);border-radius:18px;color:#fff;background:linear-gradient(145deg,#0a2540,#164b78);box-shadow:0 13px 34px rgba(10,37,64,.32);font-size:25px;line-height:1;cursor:pointer;transition:transform .2s ease,opacity .2s ease}
+.customer-settings-toggle:hover{transform:translateY(-2px) rotate(10deg)}.customer-settings-toggle:focus-visible{outline:3px solid #7de4e1;outline-offset:3px}
+#home>.welcome{right:80px!important;left:14px!important;width:auto!important}
+#home.customer-settings-open .customer-settings-toggle,#home.customer-settings-open .map-options-toggle,#home.customer-settings-open .trip-panel-toggle,#home.customer-settings-open .map-destination-quick,#home.customer-settings-open .map-recenter-button{opacity:0;pointer-events:none}
+.customer-settings-scrim{position:absolute;z-index:965;inset:0;background:rgba(4,16,34,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .25s ease}
+#home.customer-settings-open .customer-settings-scrim{opacity:1;pointer-events:auto}
+.customer-settings-panel{position:absolute;z-index:990;top:max(10px,env(safe-area-inset-top));right:10px;bottom:max(10px,env(safe-area-inset-bottom));width:min(400px,calc(100% - 20px));display:flex;flex-direction:column;color:#0a2540;border:1px solid rgba(255,255,255,.9);border-radius:28px;background:rgba(247,250,252,.985);box-shadow:0 26px 80px rgba(4,16,34,.42);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;pointer-events:none;transform:translateX(calc(100% + 34px));transition:transform .3s cubic-bezier(.22,.8,.25,1),opacity .22s ease;overflow:hidden}
+#home.customer-settings-open .customer-settings-panel{opacity:1;pointer-events:auto;transform:translateX(0)}
+.customer-settings-header{padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #d7e0e9;background:#fff}.customer-settings-header>div{display:grid;gap:2px}.customer-settings-header small{color:#536579;font-size:11px;font-weight:800}.customer-settings-header strong{font-size:18px}
+.customer-settings-close{width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #c8d4df;border-radius:14px;color:#0a2540;background:#fff;font-size:26px;line-height:1;cursor:pointer}
+.customer-settings-body{padding:14px;display:grid;gap:12px;overflow:auto;overscroll-behavior:contain}
+.customer-profile-card{padding:14px;display:grid;grid-template-columns:52px minmax(0,1fr);gap:11px;align-items:center;border:1px solid #d6e0e9;border-radius:20px;background:linear-gradient(145deg,#fff,#edf5f8)}
+.customer-settings-avatar{width:52px;height:52px;display:grid;place-items:center;grid-row:span 2;border-radius:17px;color:#fff;background:linear-gradient(145deg,#0a2540,#177b83);box-shadow:0 8px 18px rgba(10,37,64,.2);font-size:22px;font-weight:900}.customer-profile-copy{min-width:0;display:grid;gap:2px}.customer-profile-copy strong,.customer-profile-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.customer-profile-copy strong{font-size:17px}.customer-profile-copy small{color:#526278;font-size:11px;direction:ltr;text-align:right}.customer-account-badge{grid-column:2;width:max-content;padding:5px 9px;border-radius:99px;color:#006b66;background:#dff8f3;font-size:10px;font-weight:900}
+.customer-info-grid{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}.customer-info-grid>div{min-width:0;padding:11px 12px;border:1px solid #d6e0e9;border-radius:15px;background:#fff}.customer-info-grid dt{color:#607086;font-size:10px;font-weight:800}.customer-info-grid dd{margin:3px 0 0;overflow:hidden;color:#0a2540;font-size:13px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.customer-settings-group{padding:13px;border:1px solid #d6e0e9;border-radius:18px;background:#fff}.customer-settings-group h3{margin:0 0 10px;font-size:14px}.customer-settings-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0 7px;color:#42556c;font-size:11px;font-weight:800}.customer-settings-label:first-of-type{margin-top:0}
+.customer-settings-segment{padding:4px;display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:14px;background:#e8eef4}.customer-settings-segment button{min-height:42px;border:0;border-radius:11px;color:#44566c;background:transparent;font-weight:900;cursor:pointer}.customer-settings-segment button.active{color:#fff;background:#0a2540;box-shadow:0 5px 14px rgba(10,37,64,.2)}
+.customer-setting-row{min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid #e0e7ee}.customer-setting-row:first-of-type{border-top:0}.customer-setting-row>div{display:grid;gap:2px}.customer-setting-row strong{font-size:13px}.customer-setting-row small{color:#607086;font-size:10px}
+.customer-pref-switch{position:relative;width:50px;height:29px;flex:0 0 auto;border:1px solid #aebbc9;border-radius:99px;background:#cbd5df;cursor:pointer;transition:background .2s,border-color .2s}.customer-pref-switch span{position:absolute;top:3px;right:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(10,37,64,.28);transition:transform .2s}.customer-pref-switch.on{border-color:#00746f;background:#008f88}.customer-pref-switch.on span{transform:translateX(-21px)}
+.customer-settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.customer-settings-action{min-height:46px;padding:9px 10px;display:grid;place-items:center;border:1px solid #c8d4df;border-radius:14px;color:#0a2540;background:#fff;font-size:12px;font-weight:900;text-align:center;text-decoration:none;cursor:pointer}.customer-settings-action.primary{grid-column:1/-1;color:#fff;border-color:#0a2540;background:#0a2540}.customer-settings-action.danger{grid-column:1/-1;color:#a61b2b;border-color:#edc5ca;background:#fff6f7}
+#customerMap{transform-origin:50% 62%;transition:transform .38s cubic-bezier(.22,.8,.25,1),filter .3s ease}#home.map-view-3d #customerMap{transform:perspective(1150px) rotateX(7deg) scale(1.055);filter:saturate(1.08) contrast(1.03)}
+#home.map-theme-night{background:#081827}#home.map-theme-night .map-destination-quick,#home.map-theme-night .map-recenter-button{color:#f4f8fb;border-color:rgba(255,255,255,.35);background:#0b2239}#home.map-theme-night .map-destination-quick small{color:#b7c8d5}#home.map-theme-night .map-destination-quick .quick-search-icon{color:#0a2540;background:#7de4e1}
+#home .leaflet-control-attribution,#home .maplibregl-ctrl-attrib,#home .maplibregl-ctrl-attrib-button,#home .maplibregl-ctrl-bottom-right{display:none!important}.customer-map-credit{position:absolute;z-index:690;left:12px;bottom:8px;padding:3px 7px;display:flex;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.92);border-radius:8px;color:#334155;background:rgba(255,255,255,.88);box-shadow:0 4px 14px rgba(10,37,64,.1);font:700 8px/1.2 Tahoma,Arial,sans-serif;direction:ltr;white-space:nowrap}.customer-map-credit a{color:#075985;text-decoration:none}#home.map-theme-night .customer-map-credit{color:#d7e5ef;border-color:rgba(255,255,255,.2);background:rgba(5,22,38,.88)}#home.map-theme-night .customer-map-credit a{color:#8edfe0}
+@media(max-width:950px){
+ .customer-settings-toggle{top:max(10px,env(safe-area-inset-top));right:10px;width:50px;height:50px;border-radius:16px;font-size:23px}
+ #home>.welcome{top:10px!important;right:70px!important;left:8px!important;width:auto!important}
+ .customer-settings-panel{top:max(6px,env(safe-area-inset-top));right:6px;bottom:max(88px,env(safe-area-inset-bottom));width:calc(100% - 12px);border-radius:24px}.customer-settings-body{padding:11px}.customer-info-grid>div{padding:10px}.customer-settings-group{padding:12px}
+ #home.map-view-3d #customerMap{transform:perspective(900px) rotateX(6deg) scale(1.05)}.customer-map-credit{bottom:82px}
+}
+@media(max-width:430px){.customer-settings-actions{grid-template-columns:1fr 1fr}.customer-settings-action{font-size:11px}.customer-profile-card{grid-template-columns:48px minmax(0,1fr)}.customer-settings-avatar{width:48px;height:48px}}
+@media(prefers-reduced-motion:reduce){.customer-settings-toggle,.customer-settings-scrim,.customer-settings-panel,#customerMap{transition:none}}
+</style>
+<style id="phase31-customer-map-controls">
+/* ضبط عناصر الخريطة بعد إزالة شريط التنقل من شاشة الرئيسية */
+body.customer-map-mode .mobile-navigation{display:none!important}
+#home .map-card .leaflet-bottom.leaflet-left{top:calc(50% - 162px)!important;bottom:auto!important;left:10px!important}
+#home .map-card .leaflet-control-zoom{margin:0!important;box-shadow:0 10px 28px rgba(10,37,64,.24)!important}
+.customer-map-credit{left:6px!important;bottom:2px!important;z-index:900!important;padding:2px 6px!important;border-radius:7px!important;background:rgba(255,255,255,.82)!important}
+#home.map-theme-night .customer-map-credit{background:rgba(5,22,38,.84)!important}
+@media(max-width:950px){
+ #customerOptionsPanel{bottom:8px!important}
+ .customer-settings-panel{bottom:max(6px,env(safe-area-inset-bottom))!important}
+ .map-destination-quick{bottom:24px!important}
+ .map-recenter-button{bottom:102px!important}
+ #home .tracking-card.show{bottom:24px!important}
+ #home .map-card .leaflet-bottom.leaflet-left{top:calc(50% - 158px)!important;bottom:auto!important;left:10px!important}
+ .customer-map-credit{bottom:max(2px,env(safe-area-inset-bottom))!important}
+}
+@media(max-width:550px){
+ #home .map-card .leaflet-bottom.leaflet-left{top:calc(50% - 154px)!important}
+}
+</style>
+<style id="phase32-map-place-tools">
+.map-place-tool{display:grid;gap:9px}.map-place-tool h3{margin-bottom:1px!important}.map-place-search-row{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:7px}.map-place-search-row input,.map-landmark-editor input,.map-landmark-editor select{width:100%;min-width:0;min-height:44px;padding:9px 11px;border:1.5px solid #b9c8d8;border-radius:12px;color:#0a2540;background:#fff;font:inherit;font-size:12px;box-sizing:border-box}.map-place-search-row input:focus,.map-landmark-editor input:focus,.map-landmark-editor select:focus{border-color:#008f88;outline:3px solid rgba(0,143,136,.14)}.map-place-search-row>button{min-height:44px;border:0;border-radius:12px;color:#fff;background:#0a2540;font-size:24px;font-weight:900;cursor:pointer}.map-place-results{max-height:190px;display:grid;gap:5px;overflow:auto}.map-place-results:empty{display:none}.map-place-result{width:100%;padding:9px 10px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:8px;align-items:center;border:1px solid #d5e0e8;border-radius:12px;color:#0a2540;background:#fff;text-align:right;cursor:pointer}.map-place-result:hover{border-color:#4cc9c4;background:#effcf9}.map-place-result>span:first-child{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;color:#004e4b;background:#dff8f3;font-size:17px}.map-place-result strong,.map-place-result small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.map-place-result strong{font-size:12px}.map-place-result small{margin-top:2px;color:#617186;font-size:9px}.map-place-state{padding:10px;border-radius:11px;color:#526278;background:#edf2f6;font-size:11px;text-align:center}.map-place-selection{padding:8px 10px;border:1px solid #c7e7e3;border-radius:11px;color:#006b66;background:#effcf9;font-size:10px;line-height:1.45}.map-landmark-editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.7fr);gap:7px}.map-landmark-editor>button{grid-column:1/-1;min-height:43px;border:0;border-radius:12px;color:#fff;background:linear-gradient(135deg,#00746f,#0b8e86);font-weight:900;cursor:pointer}.map-place-hint{color:#617186;font-size:9px;line-height:1.5}.map-search-marker{width:38px;height:38px;display:grid;place-items:center;border:3px solid #fff;border-radius:50% 50% 50% 8px;color:#052d35;background:#78ffd6;box-shadow:0 0 0 5px rgba(120,255,214,.2),0 8px 24px rgba(0,31,38,.35);font-size:19px;transform:rotate(-45deg)}.map-search-marker span{transform:rotate(45deg)}
+@media(max-width:430px){.map-landmark-editor{grid-template-columns:1fr}.map-landmark-editor>button{grid-column:auto}.map-place-results{max-height:160px}}
+</style>
+<style id="phase33-advanced-map-search">
+.map-place-locate{width:100%;min-height:42px;display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid #9fded8;border-radius:12px;color:#005f5b;background:#eafbf8;font:inherit;font-size:12px;font-weight:900;cursor:pointer}.map-place-locate:hover{border-color:#008f88;background:#dff8f3}.map-place-locate:disabled{opacity:.58;cursor:wait}.map-place-filters{display:grid;grid-template-columns:1fr 1fr;gap:7px}.map-place-filters select{width:100%;min-width:0;min-height:41px;padding:8px 10px;border:1.5px solid #c8d4df;border-radius:12px;color:#243d56;background:#f8fafc;font:inherit;font-size:10px;font-weight:800;box-sizing:border-box}.map-place-filters select:focus{border-color:#008f88;outline:3px solid rgba(0,143,136,.14)}.map-place-result .map-place-distance{margin-top:4px;display:block;color:#00746f;font-size:9px;font-weight:900}.map-place-result[aria-current="true"]{border-color:#008f88;background:#e7faf6}.map-place-tool .map-place-search-row>button:disabled{opacity:.58;cursor:wait}
+@media(max-width:430px){.map-place-filters{grid-template-columns:1fr}.map-place-locate{min-height:40px}}
+</style>
+<style id="phase35-unified-services-theme">
+/* هوية بصرية موحدة مع بوابة الخدمات الأخرى */
+body{color:#12243f;background:radial-gradient(circle at 85% 0,rgba(27,174,158,.14),transparent 32rem),radial-gradient(circle at 5% 35%,rgba(30,97,148,.08),transparent 28rem),#f4f7fb}
+.sidebar{background:linear-gradient(180deg,#0b4f70,#073c56)}.brand-logo{background:linear-gradient(145deg,#0b4f70,#087b75);box-shadow:0 10px 24px rgba(8,123,117,.25)}.nav-button:hover,.nav-button.active{background:rgba(8,123,117,.38)}.nav-button.active{box-shadow:inset -4px 0 #55d5c6}
+.welcome{background:linear-gradient(135deg,#0c365e,#087a74)!important}.primary-button,#customerOptionsPanel .primary-button{background:linear-gradient(135deg,#0b4f70,#087b75)!important;box-shadow:0 8px 20px rgba(8,123,117,.22)!important}.primary-button:hover{box-shadow:0 12px 26px rgba(8,123,117,.29)!important}.text-button{color:#08635e}.service-button.active,#customerOptionsPanel .service-button.active{border-color:#087b75!important;background:linear-gradient(135deg,#0b4f70,#087b75)!important;box-shadow:0 9px 21px rgba(8,123,117,.22)!important}.vehicle-button.active,.payment-button.active{border-color:#087b75!important;background:#eaf7f5!important;color:#08635e!important}.map-options-toggle{background:linear-gradient(135deg,#0b4f70,#087b75)}
+.service-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.other-services-marketplace{display:grid;gap:11px;margin:13px 0}.other-service-card{padding:15px;display:grid;grid-template-columns:54px minmax(0,1fr);gap:13px;overflow:hidden;border:1px solid #dfe7ef;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(16,43,72,.065)}.other-service-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;color:#fff;background:linear-gradient(145deg,#0b4f70,#087b75);font-size:25px}.other-service-copy small{color:#087b75;font-size:10px;font-weight:900}.other-service-copy h3{margin:3px 0;font-size:17px}.other-service-copy p{margin:5px 0;color:#69798f;font-size:12px;line-height:1.65}.other-service-location{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.other-service-location span{padding:8px;border-radius:10px;color:#506178;background:#f2f6f8;font-size:10px}.other-service-actions{display:grid;grid-template-columns:minmax(145px,1fr) minmax(110px,.72fr) auto;gap:8px;align-items:center;margin-top:12px}.other-service-actions button{min-height:41px;border-radius:11px;font-weight:900}.other-service-actions>span{color:#69798f;font-size:10px;white-space:nowrap}.other-service-actions button:disabled{opacity:.5}
+.selected-service-box{margin-top:14px;padding:15px;border:1px solid #bfe0dc;border-radius:18px;background:linear-gradient(145deg,#effaf8,#fff)}.selected-service-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.selected-service-head h3{margin:0}.selected-service-head button{width:34px;height:34px;border:1px solid #d4e0e6;border-radius:10px;color:#52637a;background:#fff;font-size:20px}.selected-service-summary{display:grid;gap:5px;margin:10px 0;padding:11px;border-radius:12px;background:#fff;color:#5a6a7e;font-size:11px}.selected-service-price{display:block;margin-top:6px;color:#087b75;font-size:13px;font-weight:900}.my-service-requests{display:grid;gap:8px;margin-top:12px}.my-service-request-card{padding:13px;border:1px solid #dfe7ef;border-radius:14px;background:#fff}.service-request-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.service-request-head h3{margin:2px 0;font-size:14px}.service-request-head small{color:#69798f;font-size:10px}.my-service-request-card>p{margin:8px 0;color:#506178;font-size:11px}.service-request-meta{display:flex;flex-wrap:wrap;gap:5px 12px;color:#69798f;font-size:9px}.service-provider-note{margin-top:9px;padding:8px 10px;border-radius:10px;color:#0b4f70;background:#edf6fa;font-size:10px}.my-service-request-card>.danger-button{margin-top:10px}.service-request-status{padding:5px 8px;border-radius:999px;color:#976000;background:#fff3cf;font-size:9px;font-weight:900;white-space:nowrap}.service-request-status.accepted,.service-request-status.completed{color:#08765b;background:#e2f7ef}.service-request-status.rejected,.service-request-status.cancelled{color:#ae263b;background:#ffebef}
+@media(max-width:760px){.other-service-actions{grid-template-columns:1fr 1fr}.other-service-actions>span{grid-column:1/-1}}@media(max-width:620px){.service-tabs{grid-template-columns:1fr 1fr}.other-service-card{grid-template-columns:1fr}.other-service-icon{width:45px;height:45px;border-radius:14px}.other-service-location,.other-service-actions{grid-template-columns:1fr}.other-service-actions>span{grid-column:auto}.selected-service-head{align-items:flex-start}}
+ .meal-restaurant-info{margin:10px 0 14px;padding:12px 14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;text-align:right;display:grid;gap:6px;font-size:12px;color:#475569}.meal-delivery-choice{margin:12px 0;text-align:right}
+</style>
+<style id="phase37-service-items-delivery">
+.other-item-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;margin-top:12px}.other-item-card{padding:0;overflow:hidden;border:1px solid #dfe7ef;border-radius:15px;background:#fff}.other-item-picture{height:118px;display:grid;place-items:center;color:#087b75;background:linear-gradient(145deg,#eaf7f5,#f4f7fb);font-size:34px}.other-item-body{padding:11px}.other-item-body h4{margin:0 0 5px;font-size:13px}.other-item-body p{min-height:34px;margin:0 0 8px;color:#69798f;font-size:10px;line-height:1.65}.other-item-price{display:flex;align-items:flex-end;justify-content:space-between;gap:7px}.other-item-price strong{color:#087b75;font-size:13px}.other-item-price small{color:#69798f;font-size:9px}.other-item-body button{width:100%;min-height:36px;margin-top:9px;border:0;border-radius:10px;color:#fff;background:linear-gradient(135deg,#0b4f70,#087b75);font-size:10px;font-weight:900}.selected-item-detail{padding:11px;display:grid;grid-template-columns:80px minmax(0,1fr);gap:11px;align-items:center;border:1px solid #dce9e7;border-radius:14px;background:#fff}.selected-item-image{width:80px;height:72px;overflow:hidden;display:grid;place-items:center;border-radius:12px;color:#087b75;background:#eaf7f5;font-size:27px}.selected-item-detail h4{margin:0 0 4px}.selected-item-detail p{margin:0;color:#69798f;font-size:10px;line-height:1.55}.quantity-delivery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch;margin-top:11px}.customer-delivery-choice{padding:10px;display:flex;align-items:center;gap:9px;border:1px solid #cfe4e1;border-radius:13px;background:#f5fbfa;cursor:pointer}.customer-delivery-choice[hidden]{display:none!important}.customer-delivery-choice input{width:18px;height:18px}.customer-delivery-choice b,.customer-delivery-choice small{display:block}.customer-delivery-choice small{margin-top:3px;color:#69798f;font-size:9px}.delivery-customer-location{margin-top:10px;padding:11px;border:1px solid #bfe0dc;border-radius:14px;background:#f4fbfa}.delivery-customer-location .field{margin:0}.delivery-customer-location small{display:block;color:#69798f;font-size:9px}.service-total-box{margin:12px 0;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:14px;color:#fff;background:linear-gradient(135deg,#0b4f70,#087b75)}.service-total-box small,.service-total-box b{display:block}.service-total-box small{opacity:.75;font-size:9px}.service-total-box b{margin-top:3px;font-size:10px}.service-total-box>strong{font-size:17px;white-space:nowrap}
+@media(max-width:620px){.other-item-grid{grid-template-columns:1fr 1fr}.other-item-picture{height:96px}.quantity-delivery-grid{grid-template-columns:1fr}.selected-item-detail{grid-template-columns:64px minmax(0,1fr)}.selected-item-image{width:64px;height:64px}}@media(max-width:420px){.other-item-grid{grid-template-columns:1fr}}
+.post-approval-delivery-note{padding:10px 12px;display:flex;flex-direction:column;justify-content:center;gap:4px;border:1px solid #cfe4e1;border-radius:13px;background:#f5fbfa}.post-approval-delivery-note b{font-size:11px;color:#087b75}.post-approval-delivery-note small{font-size:9px;color:#69798f;line-height:1.55}.service-delivery-choice-box{margin-top:10px;padding:12px;border:1px solid #bfe0dc;border-radius:14px;background:linear-gradient(145deg,#f1fbf9,#fff)}.service-delivery-choice-box>strong{display:block;color:#087b75;font-size:12px}.service-delivery-choice-box>p{margin:5px 0 9px;color:#607086;font-size:10px;line-height:1.6}.service-delivery-choice-box input{width:100%;min-height:42px;padding:9px 11px;border:1px solid #d5dfe8;border-radius:11px;background:#fff;font:inherit}.service-delivery-choice-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.service-delivery-choice-actions button{flex:1;min-width:140px}.service-delivery-location-status{display:block;margin-top:6px;color:#69798f;font-size:9px}.service-delivery-location-status.ready{color:#08765b;font-weight:800}
+
+/* Phase 49: dynamic fares, local top-up, referrals, responsive map taps */
+.ride-traffic-info{margin:-2px 0 12px;padding:9px 11px;border:1px solid #d7e9e6;border-radius:12px;background:#f3fbf9;color:#416a69;font-size:11px;font-weight:800}.vehicle-button small{display:grid;gap:2px}.vehicle-button small b{font-size:11px}.vehicle-button small span{font-size:9px;font-weight:700;opacity:.75}.wallet-note{display:block;margin-top:8px;opacity:.8}.wallet-topup-grid{align-items:start}.topup-card,.referral-card{min-height:100%}.topup-destination{display:flex;align-items:center;gap:12px;padding:13px;margin:10px 0;border:1px solid #cce5e1;border-radius:14px;background:#f3fbf9}.topup-destination>span{font-size:28px}.topup-destination div{display:grid;gap:3px}.topup-destination strong{font-size:16px;word-break:break-word}.topup-destination small{color:#63778a}.topup-form{display:grid;gap:10px;margin-top:12px}.referral-code-box{display:grid;gap:5px;padding:16px;margin:12px 0;border:1px dashed #69aaa3;border-radius:14px;background:#eefaf8;text-align:center}.referral-code-box strong{font-size:25px;letter-spacing:2px;color:#087b75}.referral-code-box span{font-size:10px;color:#5d7286}.referral-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}.topup-history{display:grid;gap:8px}.topup-history-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e0e8ee;border-radius:12px}.topup-history-row div{display:grid;gap:3px}.topup-history-row small{color:#738296}.topup-status{padding:5px 8px;border-radius:999px;background:#fff3cf;color:#976000;font-size:9px;font-weight:900}.topup-status.approved{background:#e2f7ef;color:#08765b}.topup-status.rejected{background:#ffebef;color:#ae263b}.leaflet-container{touch-action:pan-x pan-y;will-change:transform}.karwa-map-marker{pointer-events:auto}
+@media(max-width:620px){.referral-actions{grid-template-columns:1fr}.wallet-topup-grid{grid-template-columns:1fr}.topup-destination{align-items:flex-start}}
+</style>
+
+<style id="karwa-landmark-name-labels">
+.karwa-landmark-div-icon{background:transparent!important;border:0!important;overflow:visible!important}
+.karwa-landmark-label{position:relative;min-width:54px;max-width:180px;height:30px;display:flex;align-items:center;justify-content:center;padding:0 10px;border:1px solid rgba(5,58,72,.22);border-radius:10px;background:rgba(255,255,255,.96);box-shadow:0 4px 14px rgba(0,31,38,.18);color:#073f4b;font-size:11px;font-weight:900;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:center;transform:translateY(-2px);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.karwa-landmark-label span{display:block;max-width:158px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.karwa-landmark-label::after{content:"";position:absolute;left:50%;bottom:-5px;width:8px;height:8px;border-right:1px solid rgba(5,58,72,.22);border-bottom:1px solid rgba(5,58,72,.22);background:rgba(255,255,255,.96);transform:translateX(-50%) rotate(45deg)}
+.leaflet-marker-icon.karwa-landmark-div-icon:hover .karwa-landmark-label{z-index:1000;max-width:240px;box-shadow:0 6px 20px rgba(0,31,38,.26);border-color:#008f88}
+.leaflet-marker-icon.karwa-landmark-div-icon:hover .karwa-landmark-label span{max-width:218px}
+@media(max-width:480px){.karwa-landmark-label{max-width:150px;font-size:10px}.karwa-landmark-label span{max-width:128px}}
+</style>
+
+<style id="phase54-premium-customer-ui">
+/* Phase 54 — Premium customer interface. Visual overrides only; no feature markup is removed. */
+:root {
+  --navy: #0d223b;
+  --navy-light: #0b4f70;
+  --orange: #087b75;
+  --orange-light: #18a69a;
+  --mint: #087b75;
+  --mint-dark: #075f5b;
+  --background: #f3f7f9;
+  --line: #dce6eb;
+  --muted: #65768a;
+  --shadow: 0 18px 48px rgba(13,34,59,.12);
+  --radius: 24px;
+}
+body {
+  color: #0d223b;
+  background:
+    radial-gradient(circle at 92% 0, rgba(24,166,154,.13), transparent 31rem),
+    radial-gradient(circle at 5% 65%, rgba(11,79,112,.08), transparent 28rem),
+    #f3f7f9;
+  font-family: Tahoma, Arial, sans-serif;
+}
+.app { grid-template-columns: 258px minmax(0,1fr); }
+.sidebar {
+  padding: 24px 16px;
+  background:
+    radial-gradient(circle at 15% 92%, rgba(49,196,180,.2), transparent 15rem),
+    linear-gradient(180deg,#0b3553 0%,#0b4f70 55%,#08635e 130%);
+  box-shadow: -12px 0 34px rgba(9,31,52,.08);
+}
+.sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(145deg,rgba(255,255,255,.05),transparent 38%);
+}
+.brand {
+  position: relative;
+  margin: 0 3px 28px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 19px;
+  background: rgba(255,255,255,.055);
+}
+.brand-logo {
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(255,255,255,.26);
+  border-radius: 17px;
+  background: linear-gradient(145deg,#19a99c,#087b75);
+  box-shadow: 0 12px 26px rgba(1,28,44,.28);
+}
+.brand strong { font-size: 22px; letter-spacing: -.03em; }
+.brand small { color: #cbe0e7; font-size: 11px; }
+.nav-list { position: relative; gap: 7px; }
+.nav-button {
+  min-height: 51px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  color: #cfdee6;
+  font-size: 13px;
+}
+.nav-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #dff8f3;
+  background: rgba(255,255,255,.08);
+  font-size: 18px;
+}
+.nav-button:hover { border-color: rgba(255,255,255,.09); background: rgba(255,255,255,.08); }
+.nav-button.active {
+  border-color: rgba(123,229,217,.22);
+  color: #fff;
+  background: linear-gradient(135deg,rgba(17,152,142,.8),rgba(8,123,117,.55));
+  box-shadow: 0 10px 24px rgba(3,34,48,.2), inset 0 1px rgba(255,255,255,.12);
+}
+.nav-button.active .nav-icon { color: #075f5b; background: #dffaf5; }
+.support-card {
+  right: 16px;
+  bottom: 20px;
+  left: 16px;
+  padding: 16px;
+  border-color: rgba(255,255,255,.13);
+  border-radius: 19px;
+  background: rgba(4,37,57,.34);
+  box-shadow: 0 16px 34px rgba(3,28,43,.18);
+  backdrop-filter: blur(12px);
+}
+.support-card p { color: #d8e8ed; font-size: 12px; }
+.support-card button { min-height: 40px; color: #075f5b; border-radius: 12px; }
+
+.workspace { background: linear-gradient(180deg,rgba(255,255,255,.58),transparent 440px); }
+.topbar {
+  height: 80px;
+  padding: 0 clamp(22px,4vw,58px);
+  border-color: rgba(216,227,233,.9);
+  background: rgba(255,255,255,.9);
+  box-shadow: 0 8px 28px rgba(13,34,59,.055);
+  backdrop-filter: blur(20px);
+}
+.location-button {
+  min-height: 48px;
+  padding: 6px 11px;
+  border: 1px solid #e0e9ee;
+  border-radius: 15px;
+  background: rgba(248,251,252,.88);
+}
+.location-button > span:first-child { color: #087b75; font-size: 19px; }
+.location-button small { color: #788798; font-size: 10px; }
+.location-button strong { font-size: 13px; }
+.icon-button,.avatar { border-radius: 15px; }
+.icon-button { border-color: #dce6eb; color: #0b4f70; background: #fff; box-shadow: 0 6px 18px rgba(13,34,59,.06); }
+.avatar { color: #fff; background: linear-gradient(145deg,#0b4f70,#087b75); box-shadow: 0 8px 20px rgba(8,123,117,.2); }
+main { max-width: 1380px; padding: 34px clamp(22px,4vw,58px) 116px; }
+
+.page-heading { position: relative; margin-bottom: 23px; padding-right: 16px; }
+.page-heading::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 0;
+  width: 4px;
+  height: 43px;
+  border-radius: 99px;
+  background: linear-gradient(#0b4f70,#18a69a);
+}
+.page-heading h1 { color: #102a45; font-size: clamp(27px,3vw,37px); letter-spacing: -.035em; }
+.page-heading p { max-width: 780px; color: #6c7d90; font-size: 13px; }
+.card {
+  border-color: #dee7ed;
+  border-radius: 24px!important;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 12px 36px rgba(13,34,59,.065);
+}
+.card:hover { border-color: #cbdce2; box-shadow: 0 18px 44px rgba(13,34,59,.095); }
+.primary-button {
+  min-height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg,#0b4f70,#087b75)!important;
+  box-shadow: 0 9px 22px rgba(8,123,117,.22)!important;
+}
+.primary-button:hover { transform: translateY(-1px); box-shadow: 0 13px 28px rgba(8,123,117,.28)!important; }
+.secondary-button { min-height: 43px; border-color: #d2dfe6; color: #15334d; border-radius: 13px; background: #fff; }
+input,select,textarea {
+  min-height: 50px;
+  border-color: #d3dfe6;
+  border-radius: 14px;
+  color: #102a45;
+  background: #fbfdfe;
+}
+input:hover,select:hover,textarea:hover { border-color: #b9ccd5; }
+input:focus,select:focus,textarea:focus { border-color: #087b75; background: #fff; box-shadow: 0 0 0 4px rgba(8,123,117,.11); }
+label { color: #284359; font-size: 12px; }
+
+/* Map home: clear, premium floating controls without changing behavior. */
+body.customer-map-mode #home>.welcome {
+  min-height: 0!important;
+  padding: 0!important;
+  gap: 8px;
+  overflow: visible;
+  background: transparent!important;
+  box-shadow: none!important;
+}
+body.customer-map-mode #home>.welcome::after { display: none; }
+#home .welcome>div {
+  padding: 11px 15px!important;
+  border: 1px solid rgba(255,255,255,.9)!important;
+  border-radius: 19px!important;
+  background: rgba(255,255,255,.94)!important;
+  box-shadow: 0 12px 32px rgba(9,38,59,.15)!important;
+}
+#home .welcome h1 { color: #102a45; font-weight: 900; }
+#home .welcome p { color: #62768a; font-size: 11px; }
+#home .welcome .demo-badge {
+  padding: 9px 11px;
+  border-color: rgba(8,123,117,.18);
+  color: #075f5b;
+  background: rgba(230,250,246,.94);
+  box-shadow: 0 9px 23px rgba(9,38,59,.1);
+}
+.customer-settings-toggle,.map-options-toggle,.trip-panel-toggle {
+  border-color: rgba(255,255,255,.94);
+  color: #fff;
+  background: linear-gradient(145deg,#0d2944,#0b4f70)!important;
+  box-shadow: 0 14px 34px rgba(9,38,59,.27)!important;
+}
+.customer-settings-toggle { border-radius: 17px; }
+.map-options-toggle { border-radius: 17px; }
+.map-options-toggle span,.trip-panel-toggle span { color: #075f5b; background: #bdf4eb; }
+.map-destination-quick {
+  border: 1px solid rgba(255,255,255,.94);
+  border-radius: 21px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 16px 38px rgba(9,38,59,.2);
+  backdrop-filter: blur(18px);
+}
+.map-destination-quick .quick-search-icon { border-radius: 14px; background: linear-gradient(145deg,#0b4f70,#087b75); }
+.map-recenter-button { border-color: rgba(255,255,255,.92); color: #087b75; box-shadow: 0 12px 28px rgba(9,38,59,.18); }
+#customerOptionsPanel {
+  border: 1px solid rgba(255,255,255,.9)!important;
+  border-radius: 28px!important;
+  background: rgba(248,251,252,.98)!important;
+  box-shadow: 0 30px 86px rgba(4,27,45,.34)!important;
+}
+.map-options-header { border-color: #dbe5ea; background: rgba(255,255,255,.96); }
+.map-options-header strong { color: #102a45; }
+.map-options-close { border-color: #d5e1e7; color: #14334d; border-radius: 13px; }
+#customerOptionsPanel .service-tabs { gap: 7px; }
+#customerOptionsPanel .service-button {
+  min-height: 76px;
+  border-color: #d8e3e9;
+  border-radius: 15px;
+  color: #53677a;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(13,34,59,.04);
+}
+#customerOptionsPanel .service-button:hover { border-color: #9ecbc6; }
+#customerOptionsPanel .service-button.active {
+  border-color: #087b75!important;
+  color: #fff!important;
+  background: linear-gradient(145deg,#0b4f70,#087b75)!important;
+  box-shadow: 0 10px 23px rgba(8,123,117,.21)!important;
+}
+#customerOptionsPanel .panel-heading { padding-bottom: 10px; border-bottom: 1px solid #e4ebef; }
+#customerOptionsPanel .panel-heading h2 { color: #102a45; font-size: 20px; }
+#customerOptionsPanel input,#customerOptionsPanel select,#customerOptionsPanel textarea { border-color: #ccdbe3; border-radius: 13px; background: #fff; }
+#customerOptionsPanel .map-pick-button { border-radius: 11px; color: #335067; background: #fff!important; }
+#customerOptionsPanel .map-pick-button.active { border-color: #79c7bf!important; color: #075f5b!important; background: #e9f8f5!important; }
+#customerOptionsPanel .route-summary { border-color: #dce7eb; border-radius: 13px; background: #eef4f6!important; }
+#customerOptionsPanel .vehicle-button { min-height: 82px; border-color: #dce5ea; border-radius: 14px; box-shadow: 0 5px 16px rgba(13,34,59,.035); }
+#customerOptionsPanel .vehicle-button.active { border-color: #087b75!important; color: #075f5b!important; background: #eaf8f5!important; }
+#customerOptionsPanel .total-row {
+  padding: 14px;
+  border: 1px solid #d6e4e8;
+  border-radius: 17px;
+  background: linear-gradient(135deg,#f5fbfa,#fff);
+  box-shadow: 0 9px 24px rgba(13,34,59,.06);
+}
+#home .tracking-card.show {
+  border-color: rgba(255,255,255,.2);
+  background: linear-gradient(135deg,#0b2944,#0b4f70 58%,#087b75);
+  box-shadow: 0 22px 56px rgba(5,29,47,.29);
+}
+#home .tracking-card .trip-stage-hint { color: #075f5b; background: #d9faf3; }
+.customer-settings-panel {
+  border-radius: 28px;
+  background: rgba(248,251,252,.985);
+  box-shadow: 0 30px 86px rgba(4,27,45,.38);
+}
+.customer-profile-card { border-color: #d4e2e7; background: linear-gradient(145deg,#fff,#edf8f6); }
+.customer-settings-avatar { background: linear-gradient(145deg,#0b4f70,#087b75); }
+.customer-info-grid>div,.customer-settings-group { border-color: #d9e4e9; box-shadow: 0 6px 18px rgba(13,34,59,.035); }
+.customer-settings-segment button.active,.customer-settings-action.primary { background: linear-gradient(135deg,#0b4f70,#087b75); }
+
+/* Orders, wallet and profile cards. */
+#ordersList { gap: 12px; }
+#ordersList .order-item {
+  padding: 17px;
+  border: 1px solid #dce6eb;
+  border-right: 4px solid #087b75;
+  border-radius: 20px!important;
+  background: #fff;
+  box-shadow: 0 9px 28px rgba(13,34,59,.055);
+  transition: transform .18s ease,box-shadow .18s ease;
+}
+#ordersList .order-item:hover { transform: translateY(-2px); box-shadow: 0 15px 34px rgba(13,34,59,.09); }
+#ordersList .order-icon { color: #075f5b; background: linear-gradient(145deg,#e8f7f4,#eff5f8); }
+.orders-mobile-summary { background: linear-gradient(135deg,#0b3553,#087b75)!important; }
+.wallet-card {
+  min-height: 210px;
+  padding: 30px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 27px;
+  background:
+    radial-gradient(circle at 12% 12%,rgba(91,224,207,.2),transparent 13rem),
+    linear-gradient(135deg,#0b2944,#0b4f70 56%,#087b75);
+  box-shadow: 0 22px 52px rgba(8,52,72,.22);
+}
+.wallet-card::before {
+  content: "KARWA";
+  position: absolute;
+  left: 26px;
+  bottom: 22px;
+  color: rgba(255,255,255,.18);
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+.wallet-card .balance { position: relative; z-index: 1; font-size: clamp(34px,5vw,48px); }
+.wallet-grid { gap: 20px; }
+.topup-card,.referral-card { padding: 23px; }
+.topup-card h2,.referral-card h2 { margin-top: 0; color: #102a45; font-size: 20px; }
+.topup-destination { border-color: #bfe2dc; border-radius: 17px; background: linear-gradient(145deg,#eaf8f5,#f8fcfb); }
+.referral-code-box { border-color: #72b9b1; border-radius: 17px; background: linear-gradient(145deg,#eefaf8,#fff); }
+.referral-code-box strong { color: #087b75; }
+.topup-history-row { border-color: #dce6eb; border-radius: 14px; background: #fbfdfe; }
+.profile-grid { grid-template-columns: minmax(270px,330px) minmax(0,1fr); gap: 20px; }
+.profile-main { position: relative; overflow: hidden; padding: 29px; }
+.profile-main::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 82px;
+  background: linear-gradient(135deg,#0b4f70,#087b75);
+}
+.big-avatar { position: relative; z-index: 1; border: 5px solid #fff; color: #fff; background: linear-gradient(145deg,#0d2944,#087b75); box-shadow: 0 10px 24px rgba(13,34,59,.2); }
+.setting { min-height: 75px; padding: 14px 4px; border-color: #e1e9ed; }
+.setting-icon { color: #075f5b; background: linear-gradient(145deg,#e6f7f3,#eef4f7); }
+.setting-copy strong { color: #17354e; }
+
+/* Dialogs and account entry. */
+.modal-backdrop { background: rgba(6,24,40,.66); backdrop-filter: blur(7px); }
+.modal { border: 1px solid rgba(255,255,255,.72); border-radius: 25px; box-shadow: 0 32px 90px rgba(3,20,34,.32); }
+.role-auth-modal { border-radius: 29px; background: linear-gradient(155deg,#fff,#f5fafb); }
+.auth-brand { padding-bottom: 17px; border-bottom: 1px solid #e1e9ed; }
+.role-entry-card {
+  position: relative;
+  overflow: hidden;
+  border-color: #dce6eb;
+  border-radius: 23px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(13,34,59,.055);
+}
+.role-entry-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: #087b75; }
+.role-entry-card.captain::before { background: #0b4f70; }
+.role-entry-card.services::before { background: #705ba7; }
+.role-entry-icon { border: 1px solid #dfe9ed; background: linear-gradient(145deg,#eef8f6,#f3f6fa); }
+.selected-role-banner { border: 1px solid #d9e5e9; background: #f2f8f8; }
+.toast { border: 1px solid rgba(255,255,255,.14); border-radius: 14px; background: #0d2944; box-shadow: 0 16px 42px rgba(5,27,45,.26); }
+
+@media(max-width:950px) {
+  .app { display: block; }
+  .topbar { height: 70px; padding: 0 16px; }
+  main { padding: 24px 16px 108px; }
+  .profile-grid { grid-template-columns: 1fr; }
+  .mobile-navigation {
+    right: 9px;
+    bottom: max(8px,env(safe-area-inset-bottom));
+    left: 9px;
+    padding: 6px;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 20px;
+    background: rgba(10,39,62,.95);
+    box-shadow: 0 18px 45px rgba(3,24,39,.3);
+    backdrop-filter: blur(18px);
+  }
+  .mobile-navigation button { min-height: 51px; border-radius: 14px; color: #c8d9e1; }
+  .mobile-navigation button.active { background: linear-gradient(135deg,#0b6771,#087b75); }
+  .mobile-navigation button span { font-size: 19px; }
+  body.customer-map-mode #home>.welcome { top: 9px!important; right: 68px!important; left: 8px!important; width: auto!important; }
+  #customerOptionsPanel,.customer-settings-panel { border-radius: 24px!important; }
+}
+@media(max-width:620px) {
+  .page-heading { margin-bottom: 17px; }
+  .page-heading h1 { font-size: 25px; }
+  .page-heading p { font-size: 11px; }
+  .card { padding: 16px; border-radius: 19px!important; }
+  .wallet-card { min-height: 190px; padding: 23px; border-radius: 22px; }
+  .wallet-card::before { left: 20px; bottom: 17px; font-size: 18px; }
+  .topup-card,.referral-card { padding: 17px; }
+  .setting { align-items: flex-start; }
+  .setting .secondary-button { min-height: 38px; padding: 8px 11px; }
+  #customerOptionsPanel .service-tabs { grid-template-columns: 1fr 1fr; }
+  #customerOptionsPanel .service-button { min-height: 65px; }
+  #customerOptionsPanel .vehicle-button { min-height: 70px; }
+  #customerOptionsPanel .total-row { bottom: 0; margin-right: 0; margin-left: 0; }
+  .role-auth-modal { border-radius: 23px; }
+}
+@media(max-width:430px) {
+  .location-button { max-width: 230px; }
+  .location-button strong { max-width: 165px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-actions { gap: 6px; }
+  .icon-button,.avatar { width: 41px; height: 41px; border-radius: 13px; }
+  .role-entry-card { border-radius: 18px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .card,.primary-button,#ordersList .order-item { transition: none; }
+}
+</style>
+
+<style id="phase55-professional-auth-ui">
+/* Phase 55 — Professional registration and sign-in flow. */
+#authModal {
+  padding: clamp(12px,3vw,34px);
+  align-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 18%,rgba(44,201,184,.2),transparent 24rem),
+    radial-gradient(circle at 88% 86%,rgba(26,103,145,.28),transparent 28rem),
+    rgba(4,22,37,.88);
+  backdrop-filter: blur(12px);
+}
+#authModal::before,#authModal::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 50%;
+}
+#authModal::before { width: 360px; height: 360px; top: -190px; left: -120px; }
+#authModal::after { width: 260px; height: 260px; right: -120px; bottom: -120px; }
+#authModal .role-auth-modal {
+  position: relative;
+  z-index: 1;
+  width: min(1080px,100%);
+  max-width: 1080px;
+  max-height: min(780px,calc(100dvh - 32px));
+  min-height: 560px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 310px minmax(0,1fr);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.82);
+  border-radius: 32px;
+  background: #f8fbfc;
+  box-shadow: 0 42px 120px rgba(0,15,28,.42);
+}
+#authModal .auth-brand {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  min-height: 560px;
+  margin: 0;
+  padding: 38px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+  border: 0;
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 82%,rgba(63,221,203,.22),transparent 15rem),
+    linear-gradient(155deg,#0b2944,#0b4f70 58%,#087b75 128%);
+}
+#authModal .auth-brand::before {
+  content: "منصة كروة";
+  margin-bottom: 22px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  color: #c9fff6;
+  background: rgba(255,255,255,.08);
+  font-size: 10px;
+  font-weight: 900;
+}
+#authModal .auth-brand::after {
+  content: "";
+  position: absolute;
+  left: -76px;
+  bottom: -92px;
+  width: 235px;
+  height: 235px;
+  border: 38px solid rgba(255,255,255,.045);
+  border-radius: 50%;
+}
+#authModal .auth-brand .brand-logo {
+  width: 66px;
+  height: 66px;
+  margin-bottom: 19px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 21px;
+  color: #fff;
+  background: linear-gradient(145deg,#1cb2a5,#087b75);
+  box-shadow: 0 16px 34px rgba(0,24,39,.28);
+  font-size: 31px;
+}
+#authModal .auth-brand-copy h2 { margin: 0; color: #fff; font-size: 27px; line-height: 1.35; }
+#authModal .auth-brand-copy p { margin: 8px 0 0; color: #cfe1e8; font-size: 12px; line-height: 1.8; }
+.auth-brand-points { position: relative; z-index: 1; width: 100%; margin-top: 28px; display: grid; gap: 10px; }
+.auth-brand-points span { display: flex; align-items: center; gap: 9px; color: #e9f5f7; font-size: 11px; font-weight: 800; }
+.auth-brand-points b { width: 25px; height: 25px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; color: #073f4b; background: #bff6ed; }
+.auth-brand-foot { position: relative; z-index: 1; margin-top: 27px; color: #aecaD4; font-size: 9px; line-height: 1.7; }
+
+#authModal .role-entry-grid {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 34px;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  align-content: center;
+  gap: 14px;
+  overflow: auto;
+}
+#authModal .role-entry-grid[hidden],#authModal #authFormPanel[hidden] { display: none!important; }
+.role-entry-heading { grid-column: 1/-1; margin-bottom: 8px; text-align: right; }
+.role-entry-heading small { color: #087b75; font-size: 10px; font-weight: 900; }
+.role-entry-heading h3 { margin: 2px 0 4px; color: #102a45; font-size: 25px; letter-spacing: -.025em; }
+.role-entry-heading p { margin: 0; color: #6d7e90; font-size: 11px; }
+#authModal .role-entry-card {
+  position: relative;
+  min-width: 0;
+  min-height: 315px;
+  padding: 22px 16px 17px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dbe5ea;
+  border-radius: 23px;
+  background: linear-gradient(180deg,#fff,#f8fbfc);
+  box-shadow: 0 12px 30px rgba(13,34,59,.06);
+  text-align: center;
+  transition: transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+#authModal .role-entry-card:hover { transform: translateY(-4px); border-color: #9fcfc9; box-shadow: 0 20px 42px rgba(13,34,59,.11); }
+#authModal .role-entry-card::before { height: 4px; background: linear-gradient(90deg,#0b4f70,#087b75); }
+#authModal .role-entry-card.captain::before { background: linear-gradient(90deg,#175882,#0b4f70); }
+#authModal .role-entry-card.services::before { background: linear-gradient(90deg,#68569b,#8b6db8); }
+#authModal .role-entry-icon {
+  width: 68px;
+  height: 68px;
+  margin: 4px auto 15px;
+  border: 1px solid #dce8eb;
+  border-radius: 21px;
+  color: #075f5b;
+  background: linear-gradient(145deg,#e5f8f4,#f5fbfa);
+  box-shadow: 0 9px 20px rgba(8,123,117,.09);
+  font-size: 31px;
+}
+#authModal .captain .role-entry-icon { background: linear-gradient(145deg,#e7f2f8,#f7fafc); }
+#authModal .services .role-entry-icon { background: linear-gradient(145deg,#f0ebf8,#fbf9fd); }
+#authModal .role-entry-card h3 { color: #102a45; font-size: 19px; }
+#authModal .role-entry-card p { min-height: 64px; color: #68798b; font-size: 11px; line-height: 1.75; }
+#authModal .role-entry-actions { width: 100%; margin-top: auto; gap: 7px; }
+#authModal .role-entry-actions button { min-height: 42px; padding: 8px 10px; border-radius: 12px; font-size: 10px; }
+#authModal .role-entry-actions .secondary-button { border-color: #cfdee5; color: #244158; background: #fff; }
+
+#authModal #authFormPanel {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  width: min(570px,100%);
+  max-height: 100%;
+  padding: 36px;
+  overflow: auto;
+}
+#authModal .auth-back-button {
+  min-height: 38px;
+  margin: 0 0 18px;
+  padding: 7px 10px;
+  border: 1px solid #d9e4e9;
+  border-radius: 11px;
+  color: #496076;
+  background: #fff;
+  font-size: 11px;
+}
+.auth-form-heading { margin-bottom: 17px; }
+.auth-form-heading small { color: #087b75; font-size: 10px; font-weight: 900; }
+.auth-form-heading h3 { margin: 2px 0 4px; color: #102a45; font-size: 25px; }
+.auth-form-heading p { margin: 0; color: #6d7e90; font-size: 11px; }
+#authModal .selected-role-banner {
+  margin-bottom: 18px;
+  padding: 13px 14px;
+  border: 1px solid #cfe3e2;
+  border-radius: 16px;
+  background: linear-gradient(145deg,#eaf8f5,#f8fcfb);
+}
+#authModal .selected-role-banner>span { width: 43px; height: 43px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 13px; background: #fff; box-shadow: 0 6px 15px rgba(13,34,59,.06); font-size: 23px; }
+#authModal #authForm { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+#authModal #authForm .field { min-width: 0; margin: 0; }
+#authModal #authForm label { margin-bottom: 6px; color: #284359; font-size: 11px; }
+#authModal #authForm input,#authModal #authForm select {
+  min-height: 51px;
+  border: 1.5px solid #cfdae2;
+  border-radius: 14px;
+  color: #102a45;
+  background: #fff;
+}
+#authModal #authForm input::placeholder { color: #91a0ad; }
+#authModal #authForm input:focus,#authModal #authForm select:focus { border-color: #087b75; box-shadow: 0 0 0 4px rgba(8,123,117,.11); }
+#authModal .auth-message,#authModal .auth-submit,#authModal .auth-note { grid-column: 1/-1; }
+#authModal .auth-message { min-height: 18px; margin: -2px 0 0; padding: 0 3px; font-size: 11px; }
+#authModal .auth-submit { min-height: 50px; border-radius: 14px; }
+#authModal .auth-note { margin: 0; padding: 10px 12px; border-radius: 12px; color: #68798b; background: #eef4f6; font-size: 9px; text-align: center; }
+
+@media(max-width:850px) {
+  #authModal { padding: 12px; }
+  #authModal .role-auth-modal { grid-template-columns: 245px minmax(0,1fr); }
+  #authModal .auth-brand { padding: 30px 22px; }
+  #authModal .role-entry-grid { padding: 24px 20px; grid-template-columns: 1fr; align-content: start; }
+  #authModal .role-entry-card { min-height: 0; display: grid; grid-template-columns: 58px minmax(0,1fr); column-gap: 12px; text-align: right; }
+  #authModal .role-entry-icon { grid-row: 1/3; width: 54px; height: 54px; margin: 0; border-radius: 17px; font-size: 25px; }
+  #authModal .role-entry-card h3 { align-self: end; margin-bottom: 2px; }
+  #authModal .role-entry-card p { min-height: 0; margin: 0 0 12px; }
+  #authModal .role-entry-actions { grid-column: 1/-1; grid-template-columns: 1fr 1fr; }
+  #authModal #authFormPanel { padding: 28px 23px; }
+  #authModal #authForm { grid-template-columns: 1fr; }
+  #authModal .auth-message,#authModal .auth-submit,#authModal .auth-note { grid-column: auto; }
+}
+@media(max-width:620px) {
+  #authModal { padding: 7px; }
+  #authModal .role-auth-modal { max-height: calc(100dvh - 14px); min-height: 0; grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); border-radius: 24px; }
+  #authModal .auth-brand {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+    height: auto;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 48px minmax(0,1fr);
+    gap: 10px;
+    align-items: center;
+  }
+  #authModal .auth-brand::before,#authModal .auth-brand::after,.auth-brand-points,.auth-brand-foot { display: none; }
+  #authModal .auth-brand .brand-logo { width: 48px; height: 48px; margin: 0; border-radius: 15px; font-size: 23px; }
+  #authModal .auth-brand-copy h2 { font-size: 18px; }
+  #authModal .auth-brand-copy p { margin-top: 2px; font-size: 9px; line-height: 1.55; }
+  #authModal .role-entry-grid { grid-column: 1; grid-row: 2; padding: 14px; gap: 9px; }
+  .role-entry-heading { margin-bottom: 2px; }
+  .role-entry-heading h3 { font-size: 20px; }
+  .role-entry-heading p { font-size: 9px; }
+  #authModal .role-entry-card { padding: 13px; border-radius: 17px; }
+  #authModal .role-entry-card p { font-size: 9px; line-height: 1.55; }
+  #authModal .role-entry-actions button { min-height: 39px; padding: 6px 7px; font-size: 9px; }
+  #authModal #authFormPanel { grid-column: 1; grid-row: 2; align-self: start; padding: 17px 15px; }
+  #authModal .auth-back-button { margin-bottom: 12px; }
+  .auth-form-heading { margin-bottom: 12px; }
+  .auth-form-heading h3 { font-size: 21px; }
+  #authModal .selected-role-banner { margin-bottom: 13px; padding: 10px 11px; }
+  #authModal #authForm { gap: 10px; }
+  #authModal #authForm input,#authModal #authForm select { min-height: 48px; }
+}
+@media(max-width:360px) {
+  #authModal .role-entry-card { grid-template-columns: 46px minmax(0,1fr); column-gap: 9px; }
+  #authModal .role-entry-icon { width: 44px; height: 44px; border-radius: 14px; font-size: 21px; }
+  #authModal .role-entry-actions { grid-template-columns: 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  #authModal .role-entry-card { transition: none; }
+}
+</style>
+  <link rel="stylesheet" href="./native-notifications.css?v=81">
+
+<style id="phase67-service-theme-css">
+
+.service-edit-button{margin-top:10px;width:100%;border-color:#8ccfc8!important;background:linear-gradient(135deg,#f3fbfa,#e8f7f5)!important;color:#07645f!important;font-weight:850}.service-edit-note{border-color:#b7ded9!important;background:#f2fbf9!important;color:#075e5a!important}.service-edit-locked{margin-top:10px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:12px;background:#f7f8fa;color:#69798f;font-size:10px;font-weight:750}.service-edit-modal{text-align:right}.service-edit-summary{margin:10px 0;padding:12px 14px;border:1px solid #cfe4e1;border-radius:14px;background:linear-gradient(135deg,#f4fbfa,#fff)}.service-edit-summary strong,.service-edit-summary small{display:block}.service-edit-summary strong{color:#087b75;font-size:14px}.service-edit-summary small{margin-top:5px;color:#68798d;font-size:10px;line-height:1.6}.service-edit-total{margin-top:8px;padding:10px;border-radius:12px;background:#0b4f70;color:#fff;font-weight:850;text-align:center}.service-edit-modal textarea,.parcel-edit-modal textarea{width:100%;min-height:100px;resize:vertical;padding:12px;border:1px solid #d5dfe8;border-radius:13px;font:inherit;background:#fff}.service-edit-modal input[type=number],.parcel-edit-modal input{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5dfe8;border-radius:13px;font:inherit;background:#fff}.parcel-edit-modal{text-align:right}.parcel-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.parcel-edit-grid .field{margin:0}@media(max-width:560px){.parcel-edit-grid{grid-template-columns:1fr}}
+.meal-quantity-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;padding:13px 14px;border:1px solid rgba(11,79,112,.13);border-radius:17px;background:linear-gradient(135deg,rgba(11,79,112,.055),rgba(8,123,117,.035));margin:12px 0}.meal-quantity-card label{font-weight:850;color:#0b3b55;display:block}.meal-quantity-card small{display:block;margin-top:3px;color:#667784}.meal-quantity-card>strong{grid-column:1/-1;padding-top:9px;border-top:1px dashed rgba(11,79,112,.15);color:#087b75;font-size:15px}.meal-quantity-stepper{display:flex;align-items:center;border:1px solid rgba(11,79,112,.18);border-radius:14px;overflow:hidden;background:#fff}.meal-quantity-stepper button{width:40px;height:40px;border:0;background:#eef7f7;color:#075e5a;font-size:22px;font-weight:900}.meal-quantity-stepper input{width:74px;height:40px;border:0;text-align:center;font-weight:850;color:#0c3044;background:#fff}.meal-quantity-stepper input:focus{outline:2px solid rgba(8,123,117,.18);outline-offset:-2px}
+/* Phase 67 — ثيمات الأنشطة التلقائية. الصور نفسها بلا أسماء أو نصوص. */
+.restaurant-card{transition:transform .2s ease,box-shadow .2s ease}.restaurant-card:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(15,23,42,.11)}
+.restaurant-card-head{min-height:154px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;isolation:isolate;background-color:#0f4f58;background-image:linear-gradient(180deg,rgba(5,18,29,.04) 0%,rgba(5,18,29,.22) 44%,rgba(5,18,29,.9) 100%),var(--karwa-service-theme);background-size:cover;background-position:center;box-shadow:inset 0 -1px 0 rgba(255,255,255,.08)}
+.restaurant-card-head h3{font-size:20px;text-shadow:0 2px 8px rgba(0,0,0,.48)}.restaurant-card-meta{font-weight:750;text-shadow:0 1px 5px rgba(0,0,0,.55)}
+.restaurant-card-head:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(135deg,rgba(255,255,255,.07),transparent 55%);pointer-events:none}
+.other-service-card{grid-template-columns:124px minmax(0,1fr);padding:0;gap:0;border-radius:22px;box-shadow:0 11px 30px rgba(16,43,72,.085);transition:transform .2s ease,box-shadow .2s ease}.other-service-card:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(16,43,72,.13)}
+.other-service-theme{position:relative;min-height:100%;overflow:hidden;background-color:#10233f;background-image:linear-gradient(180deg,rgba(3,15,24,.02),rgba(3,15,24,.18)),var(--karwa-service-theme);background-size:cover;background-position:center}.other-service-theme:after{content:"";position:absolute;inset:auto 0 0;height:52%;background:linear-gradient(transparent,rgba(2,15,23,.45));pointer-events:none}
+.other-service-theme-icon{position:absolute;right:10px;bottom:10px;z-index:1;width:39px;height:39px;display:grid;place-items:center;border-radius:13px;color:#fff;background:var(--karwa-service-accent,#087b75);border:1px solid rgba(255,255,255,.5);box-shadow:0 8px 18px rgba(0,0,0,.2);font-size:19px}
+.other-service-copy{padding:15px}.other-service-copy>small{color:var(--karwa-service-accent,#087b75)}
+@media(max-width:620px){.restaurant-card-head{min-height:142px}.other-service-card{grid-template-columns:1fr}.other-service-theme{min-height:150px}.other-service-copy{padding:14px}.other-service-theme-icon{width:43px;height:43px;font-size:21px}}
+
+    .food-cart-items{display:grid;gap:6px;margin-top:8px;max-height:160px;overflow:auto}.food-cart-line{display:grid;grid-template-columns:minmax(0,1fr) auto 28px;gap:8px;align-items:center;padding:7px 8px;border:1px solid #dce8e7;border-radius:11px;background:#fff;color:#183247}.food-cart-line span{display:grid;gap:2px}.food-cart-line b{font-size:11px}.food-cart-line small{font-size:9px!important;color:#6b7d8e}.food-cart-line strong{font-size:10px}.food-cart-line button{width:26px;height:26px;border:0;border-radius:8px;background:#fff0f2;color:#b4233b;font-size:18px;cursor:pointer}.multi-service-cart{display:grid;gap:7px;margin:10px 0}.multi-service-cart-empty{padding:12px;border:1px dashed #b9c9d4;border-radius:12px;color:#6d7d8f;text-align:center;font-size:11px}.multi-service-line{display:grid;grid-template-columns:minmax(0,1fr) auto 30px;gap:8px;align-items:center;padding:10px;border:1px solid #d8e8e5;border-radius:12px;background:#fff}.multi-service-line span{display:grid;gap:3px}.multi-service-line b{font-size:12px}.multi-service-line small{color:#6b7d8e;font-size:10px}.multi-service-line strong{font-size:11px;color:#087b75}.multi-service-line button{width:28px;height:28px;border:0;border-radius:8px;background:#fff0f2;color:#b4233b;font-size:18px}.multi-service-cart-total{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#0f5f78;color:#fff}.multi-order-items{display:grid;gap:5px;margin:8px 0}.multi-order-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 9px;border-radius:9px;background:#f7fafc}.multi-order-line span{display:grid;gap:2px}.multi-order-line b{font-size:10px}.multi-order-line small{font-size:9px;color:#708094}.multi-order-line strong{font-size:10px;color:#087b75;white-space:nowrap}.service-edit-items{display:grid;gap:9px;margin:12px 0}.service-edit-item{display:grid;grid-template-columns:minmax(0,1fr) 110px 34px;gap:8px;align-items:end;padding:10px;border:1px solid #dce6ed;border-radius:12px;background:#f8fafc}.service-edit-item .field{margin:0}.service-edit-item strong{font-size:12px;align-self:center}.service-edit-item button{width:34px;height:38px;border:0;border-radius:9px;background:#fff0f2;color:#b4233b;font-size:18px}@media(max-width:560px){.service-edit-item{grid-template-columns:1fr 96px 32px}}
+</style>
+
+<style id="phase76-live-driver-marker">
+.karwa-live-vehicle{--vehicle-heading:0deg;width:48px;height:48px;display:grid;place-items:center;transform:rotate(var(--vehicle-heading));transform-origin:50% 50%;transition:transform .34s linear;filter:drop-shadow(0 7px 9px rgba(3,28,42,.28));will-change:transform}.karwa-live-vehicle svg{width:46px;height:46px;overflow:visible}.karwa-live-vehicle .marker-shadow{fill:#0c2940;stroke:#fff;stroke-width:2.4;stroke-linejoin:round}.karwa-live-vehicle .marker-fill{fill:#10a593;stroke:#eafffb;stroke-width:1.2;stroke-linejoin:round}.karwa-live-vehicle .marker-accent{stroke:#ffb340;stroke-width:3;stroke-linecap:round;fill:none}.karwa-live-vehicle .marker-light{fill:#fff5c6}.karwa-live-vehicle .marker-wheel{fill:#102b3d;stroke:#fff;stroke-width:2}.karwa-live-vehicle .marker-stroke{fill:none;stroke:#10a593;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}.karwa-live-vehicle .marker-accent-dot{fill:#ffb340;stroke:#fff;stroke-width:1.4}.karwa-live-vehicle.marker-arrow .marker-fill{fill:#0f9d8f}.karwa-live-vehicle.marker-bike{filter:drop-shadow(0 6px 8px rgba(3,28,42,.24))}
+</style>
+
+<style id="phase86-service-images-customer">
+.other-item-picture.has-image,.selected-item-image.has-image{padding:0;background:#edf2f4;color:transparent}
+.other-item-picture img,.selected-item-image img{width:100%;height:100%;display:block;object-fit:cover}
+.selected-item-image{position:relative}
+</style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">ك</div>
+        <div>
+          <strong>كروة</strong>
+          <small>الحجز والتوصيل</small>
+        </div>
+      </div>
+
+      <nav class="nav-list" aria-label="التنقل الرئيسي">
+        <button class="nav-button active" data-view="home">
+          <span class="nav-icon">⌂</span>الرئيسية
+        </button>
+        <button class="nav-button" data-view="orders">
+          <span class="nav-icon">▤</span>طلباتي
+        </button>
+        <button class="nav-button" data-view="wallet">
+          <span class="nav-icon">▣</span>المحفظة
+        </button>
+        <button class="nav-button" data-view="profile">
+          <span class="nav-icon">●</span>حسابي
+        </button>
+      </nav>
+
+      <div class="support-card">
+        <p>تحتاج مساعدة في طلبك؟</p>
+        <button data-open-support>مركز المساعدة</button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button class="location-button" id="headerLocation">
+          <span>⌖</span>
+          <span>
+            <small>موقعك الحالي</small>
+            <strong id="cityLabel">بغداد، العراق</strong>
+          </span>
+        </button>
+
+        <div class="top-actions">
+          <button class="icon-button" id="notificationButton" aria-label="الإشعارات">♢</button>
+          <button class="avatar" id="accountButton" aria-label="فتح الحساب">
+            <span id="smallAvatar">م</span>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="view active" id="home">
+          <div class="welcome">
+            <div>
+              <h1>هلا <span id="firstName">محمد</span>، وين نوصلك؟</h1>
+              <p>اختر الخدمة وحدد التفاصيل خلال أقل من دقيقة.</p>
+            </div>
+            <span class="demo-badge sync-badge" id="connectionBadge">جاري الاتصال…</span>
+          </div>
+
+          <div class="card tracking-card" id="trackingCard">
+            <div class="tracking-header">
+              <div>
+                <strong id="trackingTitle">طلبك في الطريق</strong>
+                <p id="trackingRoute"></p>
+                <small id="trackingCode"></small>
+                <small id="trackingDriver"></small>
+              </div>
+              <span class="tracking-status" id="trackingStatus"></span>
+            </div>
+
+            <div class="progress"><span id="progressBar"></span></div>
+            <div class="trip-live-strip">
+              <div><small>الوصول المتوقع</small><strong id="liveEta">—</strong></div>
+              <div><small>المسافة المتبقية</small><strong id="liveDistance">—</strong></div>
+              <div><small>المسار</small><strong id="liveRouteSource">بانتظار الكابتن</strong></div>
+            </div>
+            <p class="trip-stage-hint" id="tripStageHint">نبحث عن كابتن قريب</p>
+            <div id="tripOtpBox" class="hidden" style="margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,107,53,.08)">
+              <strong>رمز التحقق: <span id="tripOtp" style="font-size:1.35rem;letter-spacing:4px">—</span></strong>
+              <div id="tripBarcodeWrap" class="trip-barcode-wrap hidden">
+                <div id="tripBarcode" class="trip-barcode" role="img" aria-label="باركود رمز الوصول"></div>
+                <small>يمكن للكابتن مسح الباركود بالكاميرا بدل إدخال الرمز يدويًا.</small>
+              </div>
+              <small style="display:block;margin-top:6px">أعطِ هذا الرمز للكابتن فقط في خطوة التحقق المطلوبة. • حالة الدفع: <span id="paymentTripStatus">—</span></small>
+            </div>
+
+            <div class="tracking-actions">
+              <button id="advanceOrder" disabled>تحديث مباشر من الكابتن</button>
+              <button id="cancelOrder">إلغاء الطلب</button>
+              <a class="secondary-button hidden" id="callDriver" href="#">📞 اتصال بالكابتن</a>
+              <button class="secondary-button" id="shareTrip">🔗 مشاركة الرحلة</button>
+              <button class="secondary-button" id="sosTrip" style="border-color:#dc2626;color:#b91c1c">🆘 SOS / سلامة</button>
+            </div>
+          </div>
+
+          <button class="trip-panel-toggle hidden" id="tripPanelToggle" type="button" aria-controls="trackingCard" aria-expanded="true" aria-label="إخفاء معلومات الرحلة"><span aria-hidden="true">▤</span><strong>إخفاء الرحلة</strong></button>
+
+          <div class="main-grid">
+            <button class="map-options-toggle" id="customerOptionsToggle" type="button" aria-controls="customerOptionsPanel" aria-expanded="false"><span aria-hidden="true">☰</span><strong>الخدمات</strong></button>
+            <button class="map-destination-quick" id="customerDestinationQuick" type="button" aria-controls="customerOptionsPanel"><span class="quick-search-icon" aria-hidden="true">⌕</span><span><small>ابحث عن وجهتك</small><strong>إلى أين تريد الذهاب؟</strong></span></button>
+            <button class="map-recenter-button" id="customerRecenterButton" type="button" aria-label="العودة إلى موقعي" title="موقعي">⌖</button>
+            <div class="map-options-scrim" id="customerOptionsScrim" aria-hidden="true"></div>
+            <div class="card" id="customerOptionsPanel" role="dialog" aria-modal="true" aria-label="خيارات الحجز والخدمات">
+              <div class="map-options-header">
+                <div><small>خيارات العميل</small><strong>اختر خدمتك وحدد التفاصيل</strong></div>
+                <button class="map-options-close" id="customerOptionsClose" type="button" aria-label="إغلاق الخيارات">×</button>
+              </div>
+              <div class="service-tabs" role="tablist">
+                <button class="service-button active" data-service="ride">
+                  <span>🚕</span>مشوار
+                </button>
+                <button class="service-button" data-service="parcel">
+                  <span>📦</span>توصيل غرض
+                </button>
+                <button class="service-button" data-service="food">
+                  <span>🍽️</span>طعام
+                </button>
+                <span id="professionServiceTabs" style="display:contents"></span>
+              </div>
+
+              <div class="service-panel active" id="ridePanel">
+                <div class="panel-heading">
+                  <h2>احجز مشوارك</h2>
+                  <button class="text-button" id="useRideLocation">استخدم موقعي</button>
+                </div>
+
+                <div class="field">
+                  <label for="rideFrom">نقطة الانطلاق</label>
+                  <input id="rideFrom" placeholder="ابحث أو اختر نقطة الانطلاق من الخريطة"><div class="place-results" id="rideFromResults"></div>
+                </div>
+
+                <div class="field">
+                  <label for="rideTo">الوجهة</label>
+                  <input id="rideTo" placeholder="ابحث عن الوجهة أو اخترها من الخريطة"><div class="place-results" id="rideToResults"></div>
+                  <div class="map-pick-actions"><button class="text-button map-pick-button active" id="pickRideFrom" type="button">📍 الانطلاق</button><button class="text-button map-pick-button" id="pickRideTo" type="button">🏁 الوجهة</button><button class="text-button map-pick-button" id="mapCenterPick" type="button">🎯 حرّك الخريطة وحدد</button></div><div class="map-confirm-bar" id="mapConfirmBar"><span id="mapCenterLabel">حرّك الخريطة حتى يصبح الدبوس فوق المكان المطلوب</span><button type="button" id="confirmMapCenter">تأكيد هذا الموقع</button></div>
+                  <div class="route-summary" id="routeSummary"><span>المسافة: —</span><span>الوقت: —</span><span id="routeMode">اختر نقطتين من الخريطة</span></div>
+                </div>
+
+
+                <div class="vehicle-list" aria-label="اختيار المركبة">
+                  <button class="vehicle-button active" data-vehicle="اقتصادي" data-price="3000">
+                    <span>🚗</span>
+                    <strong>اقتصادي</strong>
+                    <small>من 3,000 د.ع</small>
+                  </button>
+
+                  <button class="vehicle-button" data-vehicle="تكسي" data-price="4000">
+                    <span>🚕</span>
+                    <strong>تكسي</strong>
+                    <small>من 4,000 د.ع</small>
+                  </button>
+
+                  <button class="vehicle-button" data-vehicle="عائلي" data-price="5000">
+                    <span>🚙</span>
+                    <strong>عائلي</strong>
+                    <small>من 5,000 د.ع</small>
+                  </button>
+                </div>
+                <div class="ride-traffic-info" id="rideTrafficInfo">يظهر تقدير الازدحام ووقت الوصول بعد تحديد المسار</div>
+
+                <div class="field">
+                  <label for="scheduleRideAt">موعد الرحلة</label>
+                  <input id="scheduleRideAt" type="datetime-local">
+                  <small>اتركه فارغًا للحجز الآن، أو اختر موعدًا لاحقًا.</small>
+                </div>
+
+                <div class="field">
+                  <label for="couponCode">كود الخصم</label>
+                  <div style="display:flex;gap:8px"><input id="couponCode" placeholder="مثال: KARWA10" style="flex:1"><button class="text-button" id="applyCoupon" type="button">تطبيق</button></div>
+                  <small id="couponStatus">تُراجع صلاحية الكوبون والتسعير الديناميكي من الخادم.</small>
+                </div>
+
+                <div class="total-row">
+                  <div>
+                    <small>السعر المحسوب تلقائيًا</small>
+                    <strong id="ridePrice">حدد المسار</strong>
+                  </div>
+                  <button class="primary-button" id="bookRide">تأكيد الحجز</button>
+                </div>
+              </div>
+
+              <div class="service-panel" id="parcelPanel">
+                <div class="panel-heading">
+                  <h2>أرسل غرضًا</h2>
+                  <button class="text-button" id="useParcelLocation">استخدم موقعي</button>
+                </div>
+
+                <div class="field">
+                  <label for="parcelFrom">عنوان الاستلام</label>
+                  <input id="parcelFrom" placeholder="من أين نستلم الغرض؟">
+                </div>
+
+                <div class="field">
+                  <label for="parcelTo">عنوان التسليم</label>
+                  <input id="parcelTo" placeholder="إلى أين نوصله؟">
+                </div>
+
+                <div class="field">
+                  <label for="recipientName">اسم المستلم</label>
+                  <input id="recipientName" placeholder="اسم المستلم">
+                </div>
+
+                <div class="field">
+                  <label for="recipientPhone">رقم الهاتف</label>
+                  <input id="recipientPhone" inputmode="tel" placeholder="07xx xxx xxxx">
+                </div>
+
+                <div class="field">
+                  <label for="parcelSize">حجم الغرض</label>
+                  <select id="parcelSize">
+                    <option value="5000">صغير — ظرف أو كيس</option>
+                    <option value="7500">متوسط — صندوق</option>
+                    <option value="10500">كبير — عدة أغراض</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="parcelNotes">ملاحظات للمندوب</label>
+                  <textarea id="parcelNotes" placeholder="وصف الغرض أو تعليمات الوصول"></textarea>
+                </div>
+
+                <div class="total-row">
+                  <div>
+                    <small>أجرة التوصيل</small>
+                    <strong id="parcelPrice">5,000 د.ع</strong>
+                  </div>
+                  <button class="primary-button" id="bookParcel">اطلب مندوبًا</button>
+                </div>
+              </div>
+
+              <div class="service-panel" id="foodPanel">
+                <div class="panel-heading">
+                  <div><h2>مطاعم ووجبات</h2><small>اختر مطعمًا ثم اضغط على الوجبة لعرض التفاصيل والسعر</small></div>
+                  
+                </div>
+
+                <div class="food-flow-note"><strong>🍽️ طعام</strong><span>اختر المطعم أولًا، ثم اختر الأكلة وشاهد التفاصيل قبل إرسال الطلب.</span></div>
+                <div class="restaurant-marketplace" id="restaurantMarketplace"><div class="restaurant-empty">جاري تحميل المطاعم…</div></div>
+
+                <div class="meal-detail-backdrop" id="mealDetailBackdrop" hidden>
+                  <div class="meal-detail-card" role="dialog" aria-modal="true" aria-labelledby="mealDetailTitle">
+                    <button class="meal-detail-close" id="closeMealDetail" type="button" aria-label="إغلاق">×</button>
+                    <div class="meal-detail-icon" id="mealDetailIcon">🍽️</div><small id="mealDetailRestaurant"></small><div class="meal-restaurant-info" id="mealRestaurantInfo"></div><h3 id="mealDetailTitle"></h3><p id="mealDetailDescription"></p>
+                    <div class="meal-detail-price" id="mealDetailPrice"></div>
+                    <div class="meal-quantity-card"><div><label id="mealQuantityLabel" for="mealQuantity">الكمية</label><small id="mealQuantityHint">حدد الكمية المطلوبة قبل الإضافة</small></div><div class="meal-quantity-stepper"><button id="mealQuantityMinus" type="button" aria-label="تقليل الكمية">−</button><input id="mealQuantity" type="number" min="1" max="100" step="1" value="1" inputmode="decimal" aria-label="الكمية المطلوبة"><button id="mealQuantityPlus" type="button" aria-label="زيادة الكمية">+</button></div><strong id="mealQuantityTotal">—</strong></div>
+                    <label class="customer-delivery-choice meal-delivery-choice" id="mealDeliveryChoice"><input id="mealDeliveryRequested" type="checkbox"><span><b>أريد توصيل هذه الوجبة</b><small id="mealDeliveryChoiceHint">يمكنك اختيار التوصيل أو الاستلام من المطعم</small></span></label><button class="primary-button" id="addDetailedMeal" type="button">اختيار هذه الأكلة</button>
+                  </div>
+                </div>
+
+                <div class="cart-bar" id="cartBar">
+                  <div class="food-checkout-copy">
+                    <strong id="cartCount"></strong>
+                    <small id="cartPrice"></small>
+                    <div class="food-cart-items" id="foodCartItems"></div>
+                  </div>
+                  <div class="food-delivery-fields">
+                    <label class="customer-delivery-choice" id="foodDeliveryChoice"><input id="foodDeliveryRequested" type="checkbox" checked><span><b>أريد توصيل الطلب</b><small id="foodDeliveryFeeLabel">يمكنك إلغاء الاختيار والاستلام من المطعم</small></span></label>
+                    <div id="foodDeliveryDetails" style="display:contents">
+                      <input id="foodCustomerAddress" maxlength="180" placeholder="عنوان العميل: الحي، الشارع، أقرب نقطة دالة">
+                      <button class="secondary-button" id="useFoodCustomerLocation" type="button">📍 تحديد موقعي للتوصيل</button>
+                      <small id="foodLocationStatus">يجب تحديد موقعك قبل إرسال طلب التوصيل للمطعم.</small>
+                    </div>
+                  </div>
+                  <button class="primary-button" id="orderFood">إرسال الطلب إلى المطعم</button>
+                </div>
+              </div>
+
+              <div class="service-panel" id="otherPanel">
+                <div class="panel-heading"><div><h2>الخدمات الأخرى</h2><small>اختر مزود خدمة معتمدًا، شاهد تفاصيل الحاجة وسعرها أولًا، ثم أرسلها للموافقة</small></div></div>
+                <div class="other-services-marketplace" id="otherServicesMarketplace"><div class="restaurant-empty">سجّل الدخول لعرض مزودي الخدمات المعتمدين.</div></div>
+
+                <section class="selected-service-box" id="selectedServiceBox" hidden>
+                  <div class="selected-service-head"><div><small id="selectedServiceCategory">خدمة معتمدة</small><h3 id="selectedServiceName">اسم النشاط</h3></div><button id="closeSelectedService" type="button" aria-label="إلغاء اختيار الخدمة">×</button></div>
+                  <div class="selected-service-summary"><span>📍 <b id="selectedServiceAddress">العنوان</b></span><span>GPS: <b id="selectedServiceGps">غير محدد</b></span><button class="text-button" id="locateSelectedService" type="button">عرض الموقع على الخريطة</button></div>
+                  <div class="field"><label for="otherServiceItem">الخدمة أو المنتج</label><select id="otherServiceItem"><option value="">اختر خدمة</option></select></div>
+                  <div class="selected-item-detail" id="selectedItemDetail"><div class="selected-item-image" id="selectedItemImage">🍽️</div><div><h4 id="selectedItemName">اختر خدمة لعرض التفاصيل</h4><p id="selectedItemDescription">سيظهر وصف الخدمة وسعر الوحدة هنا.</p><strong class="selected-service-price" id="selectedServicePrice">—</strong></div></div>
+                  <div class="quantity-delivery-grid">
+                    <div class="field"><label for="otherServiceQuantity" id="otherServiceQuantityLabel">الكمية</label><input id="otherServiceQuantity" type="number" min="1" max="100" step="1" value="1"></div>
+                    <div class="post-approval-delivery-note" id="selectedServiceDeliveryNote"><b>اختيار التوصيل بعد الموافقة</b><small>بعد موافقة النشاط سيظهر لك خيار التوصيل أو الاستلام.</small></div>
+                  </div>
+                  <div class="field"><label for="otherServiceRequest">تفاصيل الحاجة</label><textarea id="otherServiceRequest" maxlength="500" placeholder="اكتب ما تحتاجه بوضوح قبل إرسال الطلب"></textarea></div>
+                  <div class="service-total-box"><span><small>الصنف المحدد</small><b id="otherServiceTotalBreakdown">—</b></span><strong id="otherServiceGrandTotal">0 د.ع</strong></div>
+                  <button class="secondary-button service-add-to-cart" id="addOtherServiceItem" type="button" style="width:100%">＋ إضافة هذا الصنف إلى الطلب</button>
+                  <div class="multi-service-cart" id="otherServiceCart"><div class="multi-service-cart-empty">أضف صنفًا واحدًا أو عدة أصناف من هذا النشاط.</div></div>
+                  <button class="primary-button" id="bookOtherService" type="button" style="width:100%" disabled>إرسال الطلب إلى النشاط للموافقة</button>
+                </section>
+
+                <div class="panel-heading" style="margin-top:20px"><div><h3>طلباتي من الخدمات</h3><small>تابع قبول مزود الخدمة وحالة التنفيذ</small></div></div>
+                <div class="my-service-requests" id="myServiceRequests"><div class="restaurant-empty">لا توجد طلبات خدمات بعد.</div></div>
+              </div>
+            </div>
+
+            <div class="card map-card" aria-label="خريطة تتبع الرحلة">
+              <div class="center-pin" id="centerPin">📍</div><div id="customerMap"></div>
+              <div class="customer-map-credit" aria-label="مصادر بيانات الخريطة"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><span>·</span><a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a></div>
+              <div class="map-information">
+                <strong id="mapInfoTitle">خريطة كروة المباشرة</strong>
+                <small id="mapInfoText">اضغط على الخريطة لتحديد نقطة الانطلاق، ثم الوجهة.</small>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="customer-settings-toggle" id="customerSettingsToggle" aria-controls="customerSettingsPanel" aria-expanded="false" aria-label="إعدادات العميل" title="إعدادات العميل"><span aria-hidden="true">⚙</span></button>
+          <div class="customer-settings-scrim" id="customerSettingsScrim" aria-hidden="true"></div>
+          <aside class="customer-settings-panel" id="customerSettingsPanel" role="dialog" aria-modal="true" aria-label="معلومات وإعدادات العميل" aria-hidden="true">
+            <div class="customer-settings-header">
+              <div><small>كروة للعملاء</small><strong>الحساب والإعدادات</strong></div>
+              <button type="button" class="customer-settings-close" id="customerSettingsClose" aria-label="إغلاق الإعدادات">×</button>
+            </div>
+            <div class="customer-settings-body">
+              <section class="customer-profile-card" aria-label="معلومات العميل">
+                <div class="customer-settings-avatar" id="customerSettingsAvatar">م</div>
+                <div class="customer-profile-copy"><strong id="customerSettingsName">مستخدم كروة</strong><small id="customerSettingsEmail">—</small></div>
+                <span class="customer-account-badge" id="customerSettingsAccountStatus">✓ حساب متصل</span>
+              </section>
+              <dl class="customer-info-grid">
+                <div><dt>موقعك</dt><dd id="customerSettingsLocation">بغداد، العراق</dd></div>
+                <div><dt>المحفظة</dt><dd id="customerSettingsBalance">0 د.ع</dd></div>
+                <div><dt>الطلبات</dt><dd id="customerSettingsOrders">0</dd></div>
+                <div><dt>قيد التنفيذ</dt><dd id="customerSettingsActiveOrders">0</dd></div>
+              </dl>
+              <section class="customer-settings-group map-place-tool" aria-labelledby="customerPlaceToolTitle">
+                <h3 id="customerPlaceToolTitle">البحث والمعالم</h3>
+                <div class="map-place-search-row">
+                  <input id="customerMapPlaceSearch" autocomplete="off" placeholder="ابحث عن شارع، مطعم أو معلم">
+                  <button type="button" id="customerMapPlaceSearchButton" aria-label="بحث عن مكان">⌕</button>
+                </div>
+                <button type="button" class="map-place-locate" id="customerMapPlaceLocate">⌖ تحديد موقعي على الخريطة</button>
+                <div class="map-place-filters" aria-label="خيارات البحث المتقدم">
+                  <select id="customerMapPlaceCategory" aria-label="نوع المكان"><option value="">كل أنواع الأماكن</option><option value="restaurant">مطاعم ومقاهٍ</option><option value="medical">مستشفيات وصيدليات</option><option value="shop">متاجر وأسواق</option><option value="education">مدارس وجامعات</option><option value="fuel">محطات وقود</option><option value="hotel">فنادق وإقامة</option></select>
+                  <select id="customerMapPlaceScope" aria-label="نطاق البحث"><option value="nearby">قريب من الخريطة</option><option value="iraq">في كل العراق</option></select>
+                </div>
+                <div class="map-place-results" id="customerMapPlaceResults" aria-live="polite"></div>
+                <div class="map-place-selection" id="customerMapPlaceSelection">اختر نتيجة أو حرّك الخريطة إلى موقع المعلم.</div>
+                <div class="map-landmark-editor">
+                  <input id="customerMapLandmarkName" maxlength="80" placeholder="اسم المعلم الجديد">
+                  <select id="customerMapLandmarkCategory" aria-label="تصنيف المعلم"><option value="place">معلم</option><option value="shop">متجر</option><option value="restaurant">مطعم</option><option value="medical">مركز صحي</option><option value="school">مدرسة / جامعة</option><option value="other">أخرى</option></select>
+                  <button type="button" id="customerSaveMapLandmark">＋ إضافة المعلم على الخريطة</button>
+                </div>
+                <small class="map-place-hint">إذا اخترت نتيجة يُحفظ المعلم عندها، وإلا يُحفظ عند مركز الخريطة.</small>
+              </section>
+              <section class="customer-settings-group" aria-labelledby="customerMapAppearanceTitle">
+                <h3 id="customerMapAppearanceTitle">مظهر الخريطة</h3>
+                <div class="customer-settings-label"><span>الإضاءة</span><span id="customerThemeValue">نهاري</span></div>
+                <div class="customer-settings-segment" role="group" aria-label="إضاءة الخريطة">
+                  <button type="button" data-customer-map-theme="day" aria-pressed="true">☀ نهاري</button>
+                  <button type="button" data-customer-map-theme="night" aria-pressed="false">☾ ليلي</button>
+                </div>
+                <div class="customer-settings-label"><span>طريقة العرض</span><span id="customerMapViewValue">2D</span></div>
+                <div class="customer-settings-segment" role="group" aria-label="طريقة عرض الخريطة">
+                  <button type="button" data-customer-map-view="2d" aria-pressed="true">2D مسطحة</button>
+                  <button type="button" data-customer-map-view="3d" aria-pressed="false">3D منظور</button>
+                </div>
+              </section>
+              <section class="customer-settings-group" aria-label="تفضيلات العميل">
+                <div class="customer-setting-row"><div><strong>متابعة موقعي تلقائيًا</strong><small>إبقاء الخريطة مركزة على موقعك</small></div><button type="button" class="customer-pref-switch on" id="customerAutoFollowSetting" role="switch" aria-checked="true" aria-label="متابعة الموقع تلقائيًا"><span></span></button></div>
+                <div class="customer-setting-row"><div><strong>إشعارات الرحلات</strong><small>حالة الطلب والعروض المهمة</small></div><button type="button" class="customer-pref-switch on" id="customerNotificationSetting" role="switch" aria-checked="true" aria-label="إشعارات الرحلات"><span></span></button></div>
+              </section>
+              <div class="customer-settings-actions">
+                <button type="button" class="customer-settings-action primary" id="customerSettingsServices">الخدمات والحجز</button>
+                <button type="button" class="customer-settings-action" data-customer-settings-view="orders">طلباتي</button>
+                <button type="button" class="customer-settings-action" data-customer-settings-view="wallet">المحفظة</button>
+                <button type="button" class="customer-settings-action" id="customerSettingsAddresses">العناوين المحفوظة</button>
+                <button type="button" class="customer-settings-action" id="customerSettingsSupport">المساعدة والدعم</button>
+                <button type="button" class="customer-settings-action" data-customer-settings-view="profile">الملف الشخصي</button>
+                
+                <button type="button" class="customer-settings-action danger" id="customerSettingsLogout">تسجيل الخروج</button>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="view" id="orders">
+          <div class="page-heading">
+            <h1>طلباتي</h1>
+            <p>جميع رحلاتك وطلبات التوصيل.</p>
+          </div>
+
+          <div class="orders-mobile-summary" aria-label="ملخص الطلبات">
+            <div><small>إجمالي الطلبات</small><strong id="ordersTotalCount">0</strong></div>
+            <div><small>قيد التنفيذ</small><strong id="ordersActiveCount">0</strong></div>
+            <div><small>مكتملة</small><strong id="ordersCompletedCount">0</strong></div>
+          </div>
+
+          <div class="orders-list" id="ordersList"></div>
+        </section>
+
+        <section class="view" id="wallet">
+          <div class="page-heading">
+            <h1>الرصيد والشحن</h1>
+            <p>اشحن رصيدك بتحويل محلي إلى حساب Mastercard الخاص بالإدارة، ثم أرسل مرجع العملية للمراجعة.</p>
+          </div>
+
+          <div class="wallet-card">
+            <p>الرصيد المتاح</p>
+            <div class="balance"><span id="walletBalance">0</span> د.ع</div>
+            <small class="wallet-note" id="walletBonusStatus">الرصيد المتاح من الشحن. عند اعتماد 10,000 د.ع يضاف 10,000 د.ع بالكامل.</small><small class="wallet-note">رسم كروة على كل طلب: <b id="customerOrderFeeLabel">250 د.ع</b> — يجب توفر الرصيد قبل إرسال الطلب.</small>
+          </div>
+
+          <div class="wallet-grid wallet-topup-grid">
+            <div class="card topup-card">
+              <h2>شحن محلي عبر Mastercard</h2>
+              <div class="topup-destination">
+                <span>💳</span>
+                <div><small id="topupTransferLabel">Mastercard محلي</small><strong id="topupTransferId">معرف التحويل يظهر هنا</strong><small>اسم المستلم: <b id="topupCardHolder">إدارة كروة</b></small></div>
+              </div>
+              <p class="muted">حوّل المبلغ من تطبيق البنك/المحفظة التي تدعم التحويل إلى Mastercard، ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
+              <form id="topupForm" class="topup-form">
+                <div class="field"><label for="topupAmount">المبلغ المحوّل (د.ع)</label><input id="topupAmount" type="number" inputmode="numeric" min="1000" max="1000000" step="250" placeholder="مثال: 10000" required></div>
+                <div class="field"><label for="topupReference">رقم/مرجع التحويل</label><input id="topupReference" maxlength="80" placeholder="مثال: رقم العملية أو آخر أرقام المرجع" required></div>
+                <button class="primary-button" id="submitTopup" type="submit">إرسال طلب الشحن</button>
+              </form>
+            </div>
+
+            <div class="card referral-card">
+              <h2>دعوة الأصدقاء وكود الخصم</h2>
+              <p class="muted">شارك كودك مع صديق. يستطيع استخدامه ككود خصم لأول مرة بحسب النسبة التي تحددها الإدارة.</p>
+              <div class="referral-code-box"><small>كود دعوتك</small><strong id="referralCodeValue">—</strong><span id="referralDiscountValue">خصم تحدده الإدارة</span></div>
+              <div class="referral-actions"><button class="primary-button" id="shareReferral" type="button">مشاركة الدعوة</button><button class="secondary-button" id="copyReferral" type="button">نسخ الكود</button></div>
+              <h3>طلبات الشحن</h3>
+              <div id="topupRequestsList" class="topup-history"><p class="muted">لا توجد طلبات شحن بعد.</p></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="profile">
+          <div class="page-heading">
+            <h1>حسابي</h1>
+            <p>إدارة بياناتك وتفضيلاتك.</p>
+          </div>
+
+          <div class="profile-grid">
+            <div class="card profile-main">
+              <div class="big-avatar" id="bigAvatar">م</div>
+              <h2 id="profileName">محمد علي</h2>
+              <p class="profile-email" id="profileEmail">سجّل الدخول لمزامنة بياناتك</p>
+              <button class="secondary-button" id="editName">تعديل الاسم</button>
+              <button class="secondary-button danger-button" id="logoutButton">تسجيل الخروج</button>
+            </div>
+
+            <div class="card">
+              <div class="setting">
+                <div class="setting-icon">⌖</div>
+                <div class="setting-copy">
+                  <strong>العناوين المحفوظة</strong>
+                  <small>البيت والعمل والأماكن المفضلة</small>
+                </div>
+                <button class="secondary-button" id="savedAddresses">إدارة</button>
+              </div>
+
+              <div class="setting">
+                <div class="setting-icon">♢</div>
+                <div class="setting-copy">
+                  <strong>الإشعارات</strong>
+                  <small>تحديثات الطلب والعروض</small>
+                </div>
+                <button class="switch" id="notificationSwitch" aria-label="تشغيل الإشعارات">
+                  <span></span>
+                </button>
+              </div>
+
+              <div class="setting">
+                <div class="setting-icon">?</div>
+                <div class="setting-copy">
+                  <strong>المساعدة والدعم</strong>
+                  <small>تواصل معنا بخصوص أي طلب</small>
+                </div>
+                <button class="secondary-button" data-open-support>فتح</button>
+              </div>
+
+              <div class="setting">
+                <div class="setting-icon">文</div>
+                <div class="setting-copy">
+                  <strong>اللغة</strong>
+                  <small>لغة التطبيق الحالية</small>
+                </div>
+                <span>العربية</span>
+              </div>
+
+              <div class="setting">
+                <div class="setting-icon">🚕</div>
+                <div class="setting-copy">
+                  <strong>بوابة الكابتن</strong>
+                  <small>قدّم طلب الانضمام أو استلم الرحلات</small>
+                </div>
+                <span class="muted">حساب العميل مستقل عن حساب الكابتن</span>
+              </div>
+
+              <div class="setting" id="adminPortalSetting" hidden>
+                <div class="setting-icon">⚙</div>
+                <div class="setting-copy">
+                  <strong>لوحة الإدارة</strong>
+                  <small>إدارة الطلبات والكباتن</small>
+                </div>
+                <a class="secondary-button" href="./admin.html">فتح</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <nav class="mobile-navigation" aria-label="التنقل على الهاتف">
+    <button class="active" data-view="home">
+      <span>⌂</span>الرئيسية
+    </button>
+    <button data-view="orders">
+      <span>▤</span>طلباتي
+    </button>
+    <button data-view="wallet">
+      <span>▣</span>المحفظة
+    </button>
+    <button data-view="profile">
+      <span>●</span>حسابي
+    </button>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+
+
+  <div class="modal-backdrop" id="parcelEditModal" role="dialog" aria-modal="true" aria-labelledby="parcelEditTitle">
+    <div class="modal parcel-edit-modal">
+      <h2 id="parcelEditTitle">تعديل طلب التوصيل</h2>
+      <p id="parcelEditHint">يمكنك تعديل التفاصيل حتى يستلم المندوب الغرض فعليًا.</p>
+      <form id="parcelEditForm">
+        <div class="parcel-edit-grid">
+          <div class="field"><label for="parcelEditFrom">عنوان الاستلام</label><input id="parcelEditFrom" maxlength="180" required></div>
+          <div class="field"><label for="parcelEditTo">عنوان التسليم</label><input id="parcelEditTo" maxlength="180" required></div>
+          <div class="field"><label for="parcelEditRecipientName">اسم المستلم</label><input id="parcelEditRecipientName" maxlength="80" required></div>
+          <div class="field"><label for="parcelEditRecipientPhone">هاتف المستلم</label><input id="parcelEditRecipientPhone" inputmode="tel" maxlength="30" required></div>
+        </div>
+        <div class="field"><label for="parcelEditNotes">ملاحظات للمندوب</label><textarea id="parcelEditNotes" maxlength="500" placeholder="وصف الغرض أو تعليمات الوصول"></textarea></div>
+        <div class="service-edit-summary"><strong>الأجرة لا تتغير</strong><small>يمكن تعديل العناوين وبيانات المستلم والملاحظات فقط. بعد تأكيد استلام الغرض من المندوب تُقفل التعديلات نهائيًا.</small></div>
+        <div class="modal-actions"><button class="secondary-button" id="closeParcelEdit" type="button">إلغاء</button><button class="primary-button" id="saveParcelEdit" type="submit">حفظ التعديل</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="serviceEditModal" role="dialog" aria-modal="true" aria-labelledby="serviceEditTitle">
+    <div class="modal service-edit-modal">
+      <h2 id="serviceEditTitle">تعديل الطلب</h2>
+      <p id="serviceEditProvider">يمكنك تعديل الطلب قبل أن يستلمه مندوب التوصيل.</p>
+      <form id="serviceEditForm">
+        <div class="service-edit-items" id="serviceEditItems"></div>
+        <div class="field"><label for="serviceEditNote">تفاصيل وملاحظات الطلب</label><textarea id="serviceEditNote" maxlength="500" required placeholder="اكتب تفاصيل الطلب أو أي تعديل مطلوب"></textarea></div>
+        <div class="service-edit-summary"><strong>الإجمالي بعد التعديل</strong><small>لن تتغير أجرة التوصيل الحالية، ويُحدّث مزود الخدمة فور الحفظ.</small><div class="service-edit-total" id="serviceEditTotal">—</div></div>
+        <div class="modal-actions"><button class="secondary-button" id="closeServiceEdit" type="button">إلغاء</button><button class="primary-button" id="saveServiceEdit" type="submit">حفظ التعديل</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="ratingModal" role="dialog" aria-modal="true" aria-labelledby="ratingTitle">
+    <div class="modal rating-modal">
+      <h2 id="ratingTitle">قيّم تجربتك</h2>
+      <p id="ratingIntro">يساعد تقييمك في تحسين جودة خدمات كروة.</p>
+      <div class="rating-driver-card">
+        <strong id="ratingDriverName">كابتن كروة</strong>
+        <small id="ratingOrderCode"></small>
+      </div>
+      <form id="ratingForm">
+        <div class="star-picker" aria-label="اختر تقييمًا من خمس نجوم">
+          <button type="button" data-rating-score="1" aria-label="نجمة واحدة">★</button>
+          <button type="button" data-rating-score="2" aria-label="نجمتان">★</button>
+          <button type="button" data-rating-score="3" aria-label="ثلاث نجوم">★</button>
+          <button type="button" data-rating-score="4" aria-label="أربع نجوم">★</button>
+          <button type="button" data-rating-score="5" aria-label="خمس نجوم">★</button>
+        </div>
+        <div id="ratingLabel">اختر تقييمك</div>
+        <div class="rating-tags-picker" id="ratingTags" aria-label="نقاط سريعة عن التجربة"></div>
+        <textarea id="ratingComment" maxlength="300" placeholder="اكتب ملاحظة اختيارية عن تجربتك"></textarea>
+        <div class="modal-actions">
+          <button class="secondary-button" id="closeRating" type="button">إلغاء</button>
+          <button class="primary-button" id="submitRating" type="submit">إرسال التقييم</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="modal-backdrop" id="addressesModal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>العناوين المحفوظة</h2><p>احفظ البيت والعمل أو أي مكان تستخدمه باستمرار.</p>
+      <form id="addressForm"><div class="field"><label>اسم العنوان</label><input id="addressLabel" placeholder="البيت / العمل" required maxlength="40"></div>
+      <div class="field"><label>العنوان</label><input id="addressText" placeholder="اختر نقطة على الخريطة ثم احفظها" required maxlength="180"></div>
+      <div class="modal-actions"><button class="secondary-button" id="closeAddresses" type="button">إغلاق</button><button class="primary-button" type="submit">حفظ الموقع الحالي</button></div></form>
+      <div id="savedAddressList" class="orders-list" style="margin-top:14px"></div>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="supportModal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>كيف نساعدك؟</h2>
+      <p>أرسل تذكرة دعم مرتبطة بحسابك، ويمكن للإدارة متابعتها.</p><div class="field"><label>موضوع المشكلة</label><select id="supportCategory"><option>مشكلة في رحلة</option><option>الدفع والمحفظة</option><option>الكابتن</option><option>اقتراح أو ملاحظة</option></select></div><div class="field"><label>التفاصيل</label><textarea id="supportMessage" maxlength="500" placeholder="اكتب تفاصيل المشكلة"></textarea></div>
+
+      <div class="payment-card">
+        <span>💬</span>
+        <div>
+          <strong>محادثة مباشرة</strong>
+          <small>عادةً نرد خلال دقيقتين</small>
+        </div>
+      </div>
+
+      <div class="payment-card">
+        <span>☎</span>
+        <div>
+          <strong>اتصال هاتفي</strong>
+          <small>متاح على مدار الساعة</small>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-button" id="closeSupport">إغلاق</button>
+        <button class="primary-button" id="startSupportChat">إرسال التذكرة</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop show" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal auth-modal role-auth-modal">
+      <div class="auth-brand">
+        <div class="brand-logo">ك</div>
+        <div class="auth-brand-copy"><h2 id="authTitle">مرحبًا بك في كروة</h2><p>وجهتك الأقرب للرحلات والتوصيل والخدمات اليومية.</p></div>
+        <div class="auth-brand-points" aria-label="مزايا كروة">
+          <span><b>✓</b> تسجيل آمن وسريع</span>
+          <span><b>⌖</b> تتبع مباشر للطلبات</span>
+          <span><b>☆</b> خدمات موثوقة في مكان واحد</span>
+        </div>
+        <small class="auth-brand-foot">بمتابعة التسجيل فأنت تستخدم بوابة الحساب المناسبة لصلاحياتك.</small>
+      </div>
+      <div class="role-entry-grid" id="roleEntryGrid" aria-labelledby="accountTypeTitle">
+        <div class="role-entry-heading"><small>ابدأ الآن</small><h3 id="accountTypeTitle">اختر نوع حسابك</h3><p>اختر البوابة المناسبة، ثم سجّل الدخول أو أنشئ حسابًا جديدًا.</p></div>
+        <article class="role-entry-card customer"><div class="role-entry-icon">👤</div><h3>عميل</h3><p>اطلب تكسي أو توصيل وتابع طلباتك بسهولة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="customer" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="customer" data-mode="register">إنشاء حساب</button></div></article>
+        <article class="role-entry-card captain"><div class="role-entry-icon">🚕</div><h3>كابتن</h3><p>استقبل الرحلات والطلبات المناسبة لنوع خدمتك.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="driverApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="driverApplicant" data-mode="register">إنشاء حساب</button></div></article>
+        <article class="role-entry-card services"><div class="role-entry-icon">🧰</div><h3>خدمات أخرى</h3><p>سجّل نشاطك وأرسل طلب الاعتماد، ثم أدر خدماتك من لوحة مستقلة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="serviceApplicant" data-mode="login">دخول بوابة الخدمات</button><button type="button" class="secondary-button role-auth-action" data-role="serviceApplicant" data-mode="register">تسجيل خدمة جديدة</button></div></article>
+      </div>
+      <div id="authFormPanel" hidden>
+        <button type="button" class="auth-back-button" id="authBackToRoles">→ العودة لاختيار نوع الحساب</button>
+        <div class="auth-form-heading"><small>بيانات الحساب</small><h3>دخول واضح وآمن</h3><p>أدخل بياناتك لإكمال الخطوة والمتابعة إلى حسابك.</p></div>
+        <div class="selected-role-banner"><span id="selectedRoleIcon">👤</span><div><small>نوع الحساب</small><strong id="selectedRoleLabel">عميل</strong></div></div>
+        <form id="authForm">
+          <div class="field" id="nameField" hidden><label for="authName">الاسم الكامل</label><input id="authName" autocomplete="name" placeholder="مثال: محمد علي"></div>
+          <div class="field" id="inviteField" hidden><label for="authInviteCode">كود دعوة (اختياري)</label><input id="authInviteCode" maxlength="24" autocapitalize="characters" placeholder="مثال: KWABC123"></div>
+          <div class="field" id="roleField" hidden><select id="authRole"><option value="customer">عميل</option><option value="driverApplicant">كابتن</option></select></div>
+          <div class="field"><label for="authEmail">البريد الإلكتروني</label><input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" required></div>
+          <div class="field"><label for="authPassword">كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="ستة أحرف على الأقل" required></div>
+          <div class="auth-message" id="authMessage" role="alert"></div>
+          <button class="primary-button auth-submit" id="authSubmit" type="submit">تسجيل الدخول</button>
+          <p class="auth-note">نوع الحساب ثابت بعد الإنشاء، ولكل نوع بوابته وصلاحياته المستقلة.</p>
+        </form>
+      </div>
+      <button id="loginTab" type="button" hidden></button><button id="registerTab" type="button" hidden></button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
+  <script src="./precise-location.js?v=81"></script>
+  <script src="./native-notifications.js?v=81"></script>
+  <script src="./service-themes.js?v=81"></script>
+  <script type="module" src="./app.js?v=89"></script>
+  <script src="./pwa.js?v=89"></script>
+
+<script id="phase20-map-first-js">
+window.addEventListener("DOMContentLoaded",()=>{
+  const home=document.getElementById("home");
+  const toggle=document.getElementById("customerOptionsToggle");
+  const close=document.getElementById("customerOptionsClose");
+  const scrim=document.getElementById("customerOptionsScrim");
+  const panel=document.getElementById("customerOptionsPanel");
+  const destination=document.getElementById("customerDestinationQuick");
+  const recenter=document.getElementById("customerRecenterButton");
+  const tripToggle=document.getElementById("tripPanelToggle");
+  if(!home||!toggle||!close||!scrim||!panel)return;
+  const refreshMap=()=>window.setTimeout(()=>window.dispatchEvent(new Event("resize")),330);
+  const setOpen=open=>{
+    home.classList.toggle("customer-options-open",open);
+    toggle.setAttribute("aria-expanded",String(open));
+    panel.setAttribute("aria-hidden",String(!open));
+    panel.inert=!open;
+    if(open)window.setTimeout(()=>close.focus({preventScroll:true}),80);
+    refreshMap();
+  };
+  panel.setAttribute("aria-hidden","true");
+  panel.inert=true;
+  toggle.addEventListener("click",()=>setOpen(true));
+  destination?.addEventListener("click",()=>{setOpen(true);window.setTimeout(()=>document.getElementById("rideTo")?.focus(),150)});
+  recenter?.addEventListener("click",()=>document.getElementById("useRideLocation")?.click());
+  tripToggle?.addEventListener("click",()=>{
+    const hidden=home.classList.toggle("trip-panel-hidden");
+    tripToggle.setAttribute("aria-expanded",String(!hidden));
+    tripToggle.setAttribute("aria-label",hidden?"إظهار معلومات الرحلة":"إخفاء معلومات الرحلة");
+    const label=tripToggle.querySelector("strong");
+    if(label)label.textContent=hidden?"عرض الرحلة":"إخفاء الرحلة";
+  });
+  close.addEventListener("click",()=>{setOpen(false);toggle.focus({preventScroll:true})});
+  scrim.addEventListener("click",()=>setOpen(false));
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&home.classList.contains("customer-options-open"))setOpen(false)});
+});
+</script>
+</body>
+</html>
