@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="./portal.css?v=81">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
-  <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon.svg" type="image/svg+xml">
 
@@ -310,7 +309,23 @@
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
-  <script type="module" src="./admin.js?v=92"></script>
-  <script src="./pwa.js?v=92"></script>
+  <script>
+  // Admin portal is intentionally isolated from the PWA update/reload path.
+  // Old workers used to reload this page while auth was completing.
+  (() => {
+    try { sessionStorage.setItem("karwa_admin_no_pwa", "1"); } catch (_) {}
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then(registrations => Promise.all(registrations.map(reg => reg.unregister())))
+        .catch(() => {});
+    }
+    if ("caches" in window) {
+      caches.keys()
+        .then(keys => Promise.all(keys.filter(key => /^karwa-/i.test(key)).map(key => caches.delete(key))))
+        .catch(() => {});
+    }
+  })();
+</script>
+  <script type="module" src="./admin.js?v=93"></script>
 </body>
 </html>

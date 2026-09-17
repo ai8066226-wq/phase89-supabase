@@ -1,8 +1,8 @@
 {
   "phase": 90,
-  "version": "2.8.2",
+  "version": "2.8.3",
   "webBasePhase": 87,
-  "updateMode": "native-single-reload-web-guarded-single-attempt-server-first-local-fallback",
+  "updateMode": "stable-no-forced-web-reload-admin-pwa-isolated-v93",
   "hosting": "github-pages",
   "notifications": "android-native-sound-vibration",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -45,5 +45,5 @@
   "adminAreaMap": "admin-selected-center-10km-live-captains-services-name-email-distance-filters",
   "driverMapControls": "zoom-in-out-recenter-manual-driving-mode-auto-driving-on-active-order",
   "phoneRegistration": "required-8-to-15-digits-server-enforced",
-  "adminLoginFix": "single-auth-observer-rpc-admin-check-retry-no-blank-dashboard-v92"
+  "adminLoginFix": "admin-page-no-pwa-no-service-worker-cache-auth-stable-v93"
 }
