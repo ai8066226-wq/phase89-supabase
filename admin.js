@@ -843,6 +843,65 @@ byId("pricingSettingsForm")?.addEventListener("submit",async event=>{
 
 const ADMIN_AREA_RADIUS_KM = 10;
 const ADMIN_MAP_STYLE = "https://tiles.openfreemap.org/styles/bright";
+
+// Phase 90.5: map libraries must never block admin authentication.
+// Load Leaflet only after the dashboard has opened. If both CDNs fail,
+// the rest of the admin portal continues working and only the map shows an error.
+let adminLeafletPromise = null;
+function ensureAdminLeafletCss(href) {
+  if ([...document.styleSheets].some(sheet => String(sheet.href || "").includes("leaflet"))) return;
+  if (document.querySelector('link[data-karwa-leaflet-css]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  link.dataset.karwaLeafletCss = "1";
+  document.head.appendChild(link);
+}
+function loadScriptWithTimeout(src, timeout = 7000) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    let done = false;
+    const finish = (ok, error) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (!ok) script.remove();
+      ok ? resolve(true) : reject(error || new Error("SCRIPT_LOAD_FAILED"));
+    };
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.onload = () => finish(true);
+    script.onerror = () => finish(false, new Error(`تعذر تحميل ${src}`));
+    const timer = setTimeout(() => finish(false, new Error(`انتهت مهلة تحميل ${src}`)), timeout);
+    document.head.appendChild(script);
+  });
+}
+async function loadAdminLeaflet() {
+  if (window.L) return true;
+  if (adminLeafletPromise) return adminLeafletPromise;
+  adminLeafletPromise = (async () => {
+    const sources = [
+      { css: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css", js: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" },
+      { css: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", js: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" }
+    ];
+    let lastError = null;
+    for (const source of sources) {
+      try {
+        ensureAdminLeafletCss(source.css);
+        await loadScriptWithTimeout(source.js);
+        if (window.L) return true;
+      } catch (error) { lastError = error; }
+    }
+    throw lastError || new Error("LEAFLET_UNAVAILABLE");
+  })();
+  return adminLeafletPromise;
+}
+function showAdminMapLoadError() {
+  const host = byId("adminAreaMap");
+  if (host) host.innerHTML = '<div style="position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;background:#f3f7f8;color:#51677a;font-weight:800">تعذر تحميل مكتبة الخريطة الآن. بقية لوحة الإدارة تعمل بشكل طبيعي.</div>';
+}
+
 function adminAreaValidPoint(value){
   const latitude=Number(value?.latitude ?? value?.lat), longitude=Number(value?.longitude ?? value?.lng);
   return Number.isFinite(latitude)&&Number.isFinite(longitude)&&latitude>=-90&&latitude<=90&&longitude>=-180&&longitude<=180?{latitude,longitude}:null;
@@ -942,8 +1001,10 @@ setupAdminAreaMapControls();
 function openDashboard() {
   clearDashboardListeners();
   showView("dashboard");
-  initializeAdminAreaMap();
-  window.setTimeout(()=>{state.areaMap?.invalidateSize();renderAdminAreaMap();},80);
+  // Authentication and the rest of the dashboard must not depend on any map CDN.
+  loadAdminLeaflet()
+    .then(() => { initializeAdminAreaMap(); window.setTimeout(()=>{state.areaMap?.invalidateSize();renderAdminAreaMap();},80); })
+    .catch(error => { console.warn("تعذر تحميل خريطة الإدارة", error); showAdminMapLoadError(); });
   const usersUnsubscribe = onSnapshot(collection(db, "users"), snapshot => {
     state.users = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderMetrics();
