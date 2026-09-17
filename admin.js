@@ -10,6 +10,7 @@ import {
 import {
   collection,
   doc,
+  getDoc,
   getSupabase,
   increment,
   onSnapshot,
@@ -287,14 +288,72 @@ function renderAdminNotifications() {
   }
 }
 
+let adminDashboardUid = "";
+let adminAccessCheckToken = 0;
+
+async function verifyAdminAccess(user) {
+  if (!user?.uid) return false;
+
+  // Primary source: normalized security profile. This path does not depend on
+  // the Firestore-compat realtime subscription being established first.
+  try {
+    const { data, error } = await db.client
+      .from("profiles")
+      .select("role")
+      .eq("id", user.uid)
+      .maybeSingle();
+    if (!error && data?.role === "admin") return true;
+  } catch (error) {
+    console.warn("تعذر فحص صلاحية الإدارة من profiles", error);
+  }
+
+  // Compatibility fallback for older Karwa accounts.
+  try {
+    const snapshot = await getDoc(doc(db, "users", user.uid));
+    return snapshot.exists() && snapshot.data()?.role === "admin";
+  } catch (error) {
+    console.warn("تعذر فحص صلاحية الإدارة من users", error);
+    return false;
+  }
+}
+
+async function enterAdminPortal(user) {
+  const token = ++adminAccessCheckToken;
+  if (user) state.user = user;
+  if (!user) {
+    adminDashboardUid = "";
+    showView("auth");
+    return false;
+  }
+
+  const allowed = await verifyAdminAccess(user);
+  if (token !== adminAccessCheckToken || auth.currentUser?.uid !== user.uid) return false;
+
+  if (!allowed) {
+    adminDashboardUid = "";
+    showView("denied");
+    return false;
+  }
+
+  if (adminDashboardUid !== user.uid) {
+    adminDashboardUid = user.uid;
+    openDashboard();
+  } else {
+    showView("dashboard");
+  }
+  return true;
+}
+
 byId("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   const button = byId("loginButton");
   byId("authError").textContent = "";
   busy(button, true, "جاري الدخول…");
   try {
-    await signInWithEmailAndPassword(auth, byId("email").value.trim(), byId("password").value);
+    const credential = await signInWithEmailAndPassword(auth, byId("email").value.trim(), byId("password").value);
+    await enterAdminPortal(credential.user);
   } catch (error) {
+    console.error("Admin sign-in failed", { code: error?.code, message: error?.message });
     byId("authError").textContent = authMessage(error);
   } finally {
     busy(button, false);
@@ -1202,21 +1261,33 @@ document.addEventListener("click", async event => {
   }
 });
 
-onAuthStateChanged(auth, user => {
-  if(user){registerAdminNativePushToken(user);window.setTimeout(()=>registerAdminNativePushToken(user),5000);}
+onAuthStateChanged(auth, async user => {
   state.user = user;
-  if (state.roleUnsubscribe) state.roleUnsubscribe();
-  clearDashboardListeners();
+  if (state.roleUnsubscribe) { state.roleUnsubscribe(); state.roleUnsubscribe = null; }
+
   if (!user) {
+    adminDashboardUid = "";
+    clearDashboardListeners();
     showView("auth");
     return;
   }
 
+  registerAdminNativePushToken(user);
+  window.setTimeout(() => registerAdminNativePushToken(user), 5000);
+
+  const allowed = await enterAdminPortal(user);
+  if (!allowed) return;
+
+  // Keep watching the compatibility role document after access is granted so
+  // revoking admin access takes effect without requiring a new login.
   state.roleUnsubscribe = onSnapshot(doc(db, "users", user.uid), snapshot => {
-    if (snapshot.exists() && snapshot.data().role === "admin") openDashboard();
-    else showView("denied");
+    if (!snapshot.exists() || snapshot.data()?.role !== "admin") {
+      adminDashboardUid = "";
+      clearDashboardListeners();
+      showView("denied");
+    }
   }, error => {
-    console.error(error);
-    showView("denied");
+    // A realtime transport error must not log out a valid normalized admin.
+    console.warn("تعذر تحديث صلاحية الإدارة لحظيًا", error);
   });
 });
