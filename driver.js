@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=90";
+import { initializeApp } from "./supabase-compat.js?v=99";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=90";
+} from "./supabase-compat.js?v=99";
 import {
   addDoc,
   collection,
@@ -28,8 +28,8 @@ import {
   writeBatch,
   karwaSensitiveAction,
   karwaDriverAutoComplete
-} from "./supabase-compat.js?v=90";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=90";
+} from "./supabase-compat.js?v=99";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=99";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);

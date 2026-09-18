@@ -132,20 +132,39 @@ export function getAuth() { return auth; }
 export async function setPersistence() { return true; }
 export function onAuthStateChanged(_auth, callback, errorCallback) {
   let active = true;
+
+  // Supabase warns that running async API calls directly inside
+  // onAuthStateChange can deadlock the client. Always dispatch the app
+  // callback on a later task so sign-in/sign-out can finish first.
+  const dispatch = user => {
+    window.setTimeout(() => {
+      if (!active) return;
+      Promise.resolve()
+        .then(() => callback(user))
+        .catch(error => {
+          const mapped = authError(error);
+          if (errorCallback) errorCallback(mapped);
+          else console.error("Auth state callback failed", mapped);
+        });
+    }, 0);
+  };
+
   (async () => {
     try {
       const { data, error } = await client.auth.getSession();
       if (error) throw error;
       auth.currentUser = mapUser(data?.session?.user || null);
       auth._ready = true;
-      if (active) callback(auth.currentUser);
+      dispatch(auth.currentUser);
     } catch (error) {
       if (active) errorCallback?.(authError(error));
     }
   })();
+
   const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
     auth.currentUser = mapUser(session?.user || null);
-    if (active) callback(auth.currentUser);
+    auth._ready = true;
+    dispatch(auth.currentUser);
   });
   return () => { active = false; listener?.subscription?.unsubscribe?.(); };
 }

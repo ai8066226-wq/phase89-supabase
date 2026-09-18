@@ -1,8 +1,8 @@
 {
   "phase": 90,
-  "version": "2.8.7",
+  "version": "2.8.9",
   "webBasePhase": 87,
-  "updateMode": "single-transient-update-notice-no-repeat-v97",
+  "updateMode": "single-transient-update-notice-no-repeat-v99",
   "hosting": "github-pages",
   "notifications": "android-native-sound-vibration",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -11,7 +11,7 @@
   "serviceThemes": "24-preloaded-textless-auto-by-service-type",
   "ratings": "unified-customer-taxi-delivery-service-admin-analytics",
   "quantitySystem": "unit-aware-restaurant-services-piece-person-weight-liter-pack-meter-hour-day",
-  "updateFix": "version-aligned-pwa-banner-once-per-version-v97",
+  "updateFix": "auth-deadlock-shared-supabase-module-cache-bust-v99",
   "arrivalFallback": "taxi-no-otp-both-gps-near-destination-120m-8s-single-settlement",
   "cancellationAudit": "required-reason-actor-name-email-role-for-customer-driver-service-admin",
   "customerOrderEditing": "owner-edits-service-quantity-notes-and-parcel-delivery-details-until-courier-pickup-status3-atomic-guarded",
@@ -32,7 +32,7 @@
   "serviceImageLibrary": "45-ready-food-and-service-images",
   "imageCrop": "cover-16x9-item-1x1-auto-center-crop-webp-under-50kb",
   "database": "supabase-postgres-karwa-documents-firestore-compatible-bridge",
-  "auth": "supabase-auth-public-signup-edge-function-v3-phone-required",
+  "auth": "supabase-auth-public-signup-edge-function-v3-phone-required-auth-callback-deadlock-fix",
   "storage": "supabase-storage-service-assets-webp-50kb",
   "realtime": "supabase-postgres-changes-karwa-documents",
   "firebaseRemaining": "firebase-cloud-messaging-worker-only-for-push",
@@ -45,7 +45,8 @@
   "adminAreaMap": "admin-selected-center-10km-live-captains-services-name-email-distance-filters",
   "driverMapControls": "zoom-in-out-recenter-manual-driving-mode-auto-driving-on-active-order",
   "phoneRegistration": "required-8-to-15-digits-server-enforced",
-  "adminLoginFix": "map-divicon-syntax-fix-plus-form-navigation-guard-v96",
+  "adminLoginFix": "map-divicon-syntax-fix-form-guard-remembered-admin-session-v98",
   "adminMapLoading": "lazy-leaflet-after-admin-auth-jsdelivr-unpkg-fallback",
-  "pwaUpdateNotice": "hidden-when-current-shown-once-5.5s-per-new-version"
+  "pwaUpdateNotice": "hidden-when-current-shown-once-5.5s-per-new-version",
+  "adminSession": "persistent-local-supabase-session-exit-portal-without-signout"
 }
