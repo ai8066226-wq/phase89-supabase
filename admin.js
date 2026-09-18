@@ -355,6 +355,12 @@ async function enterAdminPortal(user) {
   }
 
   try {
+    // Supabase already persists the authenticated session in localStorage.
+    // Keep only a harmless marker/email for UX; never store the password ourselves.
+    try {
+      localStorage.setItem("karwa.admin.remembered", "1");
+      localStorage.setItem("karwa.admin.lastEmail", String(user.email || ""));
+    } catch (_) {}
     if (adminDashboardUid !== user.uid) {
       adminDashboardUid = user.uid;
       openDashboard();
@@ -395,8 +401,25 @@ byId("loginForm").addEventListener("submit", async event => {
   }
 });
 
-byId("logoutButton").addEventListener("click", () => signOut(auth));
-byId("deniedLogout").addEventListener("click", () => signOut(auth));
+// "خروج من الإدارة" leaves the admin page but intentionally keeps the
+// Supabase session on this device. Reopening admin.html restores it directly.
+byId("logoutButton").addEventListener("click", () => {
+  try { localStorage.setItem("karwa.admin.remembered", "1"); } catch (_) {}
+  window.location.href = "./index.html";
+});
+
+// This button is only shown on the denied-access screen and must clear the
+// invalid/non-admin session so another account can be used.
+byId("deniedLogout").addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+  } finally {
+    try {
+      localStorage.removeItem("karwa.admin.remembered");
+      localStorage.removeItem("karwa.admin.lastEmail");
+    } catch (_) {}
+  }
+});
 
 function renderMetrics() {
   const notifications = adminNotificationCounts();
