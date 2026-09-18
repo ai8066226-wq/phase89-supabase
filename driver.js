@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=101";
+import { initializeApp } from "./supabase-compat.js?v=102";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=101";
+} from "./supabase-compat.js?v=102";
 import {
   addDoc,
   collection,
@@ -17,6 +17,7 @@ import {
   getDoc,
   getSupabase,
   onSnapshot,
+  subscribeGlobalPricing,
   query,
   runTransaction,
   serverTimestamp,
@@ -28,8 +29,8 @@ import {
   writeBatch,
   karwaSensitiveAction,
   karwaDriverAutoComplete
-} from "./supabase-compat.js?v=101";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=101";
+} from "./supabase-compat.js?v=102";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=102";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -291,7 +292,7 @@ function subscribeDriverTopups(user){
     renderDriverTopupRequests();
   },error=>console.warn("تعذر تحميل طلبات شحن الكابتن",error));
 }
-onSnapshot(doc(db,"appSettings","pricing"),snapshot=>{driverPricingSettings=snapshot.exists()?snapshot.data():{};renderDriverWallet();},error=>console.warn("تعذر تحميل إعدادات الرسوم",error));
+const unsubscribeDriverPricing=subscribeGlobalPricing(settings=>{driverPricingSettings=settings||{};renderDriverWallet();},error=>console.warn("تعذر تحميل إعدادات الرسوم العامة",error));
 
 const money = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({
@@ -1699,7 +1700,7 @@ byId("driverTopupForm")?.addEventListener("submit",async event=>{
   if(transferReference.length<3)return toast("اكتب مرجع التحويل");
   if(driverHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
   const button=event.submitter||byId("driverTopupSubmit");busy(button,true,"جاري الإرسال…");
-  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.userData?.name||state.user.displayName||"كابتن",email:state.user.email||"",accountType:"captain"});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);toast(error?.code==="permission-denied"?"يوجد طلب شحن قيد المراجعة بالفعل أو إعدادات Supabase الأمنية غير محدثة.":"تعذر إرسال طلب الشحن");}finally{busy(button,false);updateDriverTopupFormState();}
+  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.userData?.name||state.user.displayName||"كابتن",email:state.user.email||"",accountType:"captain"});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);toast((["permission-denied","failed-precondition","already-exists"].includes(error?.code)||String(error?.message||"").toUpperCase().includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{busy(button,false);updateDriverTopupFormState();}
 });
 
 onAuthStateChanged(auth, user => {

@@ -1,10 +1,10 @@
 {
   "phase": 90,
-  "version": "2.8.11",
+  "version": "2.8.12",
   "webBasePhase": 87,
-  "updateMode": "single-transient-update-notice-no-repeat-v101",
+  "updateMode": "single-transient-update-notice-no-repeat-v102",
   "hosting": "github-pages",
-  "notifications": "android-native-sound-vibration",
+  "notifications": "topup-status-and-admin-action-notifications-individually-deletable-v102",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
   "roadReports": "150m-warning-6s-two-driver-firestore-transaction-no-road-function-45m-gps-gate",
   "backgroundConnection": "android-special-use-foreground-session-until-task-removed",
@@ -19,7 +19,7 @@
   "barcodeVerification": "customer-code128-under-otp-driver-camera-scan-with-manual-fallback",
   "walletFeeGuard": "admin-per-operation-fixed-fees-customer-taxi-delivery-service-captain-taxi-delivery-provider-restaurant-service-publish",
   "driverNavigation": "waze-inspired-cockpit-bright-colored-map-side-roads-heading-rotating-map-offroute-auto-reroute-arrival-persistent-no-bottom-summary-card-100m-arabic-turn-audio",
-  "singlePendingTopup": "atomic-topup-lock-one-pending-per-user-until-admin-review",
+  "singlePendingTopup": "database-unique-pending-per-user-plus-atomic-lock-v102",
   "captainNotifications": "customer-name-in-matching-order-notifications-plus-delete-controls",
   "adminCaptainSearch": "name-phone-email-city-plate-service-live-filter",
   "backendMode": "supabase-secure-rpc-document-compat-realtime-storage",
@@ -49,5 +49,6 @@
   "adminMapLoading": "lazy-leaflet-after-admin-auth-jsdelivr-unpkg-fallback",
   "pwaUpdateNotice": "hidden-when-current-shown-once-5.5s-per-new-version",
   "adminSession": "persistent-local-supabase-session-exit-portal-without-signout",
-  "registrationForms": "unified-customer-driver-service-email-password-confirm-name-phone-single-field-v101"
+  "registrationForms": "unified-customer-driver-service-email-password-confirm-name-phone-single-field-v101",
+  "globalPricing": "realtime-plus-12s-fallback-all-portals-synced-app-settings-v102"
 }

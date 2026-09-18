@@ -2,7 +2,7 @@
   const KEY='karwa.notification.center.v2';
   const ENABLED_KEY='karwa.notifications.enabled';
   const MAX=60;
-  const labels={order:'طلب',wallet:'محفظة',service:'خدمة',driver:'كابتن',admin:'إدارة',system:'النظام'};
+  const labels={order:'طلب',wallet:'شحن ومحفظة',service:'خدمة',driver:'كابتن',admin:'إدارة',system:'النظام'};
   let items=[];
   const now=()=>Date.now();
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +20,7 @@
     const drawer=document.createElement('aside');drawer.id='karwaNotificationDrawer';drawer.setAttribute('aria-hidden','true');drawer.innerHTML=`
       <div class="kn-head"><div><h2>مركز الإشعارات</h2><p id="karwaNotificationSummary">آخر تحديثات حسابك وطلباتك</p></div><div class="kn-head-actions"><button class="kn-icon-btn" id="karwaNotificationClose" type="button" aria-label="إغلاق">✕</button></div></div>
       <div class="kn-permission" id="karwaNotificationPermission"><div><strong>فعّل إشعارات الجهاز</strong><small>لتصلك تحديثات الطلب والمحفظة بشكل أسرع.</small></div><button id="karwaNotificationPermissionButton" type="button">تفعيل</button></div>
-      <div class="kn-toolbar"><button class="kn-chip primary" id="karwaNotificationReadAll" type="button">تحديد الكل كمقروء</button><button class="kn-chip" id="karwaNotificationClear" type="button">مسح السجل</button></div>
+      <div class="kn-toolbar"><button class="kn-chip primary" id="karwaNotificationReadAll" type="button">تحديد الكل كمقروء</button><button class="kn-chip" id="karwaNotificationClear" type="button">حذف كل الإشعارات</button></div>
       <div id="karwaNotificationList"></div>`;
     document.body.append(scrim,drawer);
     document.getElementById('karwaNotificationClose').onclick=close;

@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=101";
+import { initializeApp } from "./supabase-compat.js?v=102";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=101";
+} from "./supabase-compat.js?v=102";
 import {
   collection,
   doc,
@@ -14,13 +14,14 @@ import {
   getSupabase,
   increment,
   onSnapshot,
+  subscribeGlobalPricing,
   runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
   writeBatch,
   karwaSensitiveAction
-} from "./supabase-compat.js?v=101";
+} from "./supabase-compat.js?v=102";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -69,6 +70,12 @@ const state = {
   roleUnsubscribe: null,
   dashboardUnsubscribes: []
 };
+
+
+function adminNotify(input={}){
+  try{return window.KarwaNotify?.push?.({...input,native:input.native!==false});}catch(error){console.warn("تعذر إنشاء إشعار الإدارة",error);return null;}
+}
+function changedToPending(previous,item){return (!previous||previous.status!=="pending")&&(item?.status||"pending")==="pending";}
 
 const money = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
 
@@ -1024,6 +1031,8 @@ setupAdminAreaMapControls();
 function openDashboard() {
   clearDashboardListeners();
   showView("dashboard");
+  let captainAppsReady=false, serviceAppsReady=false, topupsReady=false;
+  let previousCaptainApps=new Map(), previousServiceApps=new Map(), previousTopups=new Map();
   // Authentication and the rest of the dashboard must not depend on any map CDN.
   loadAdminLeaflet()
     .then(() => { initializeAdminAreaMap(); window.setTimeout(()=>{state.areaMap?.invalidateSize();renderAdminAreaMap();},80); })
@@ -1036,14 +1045,26 @@ function openDashboard() {
     renderAdminAreaMap();
   });
   const applicationsUnsubscribe = onSnapshot(collection(db, "driverApplications"), snapshot => {
-    state.applications = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    const incoming=snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    if(captainAppsReady)incoming.forEach(item=>{
+      const old=previousCaptainApps.get(item.firestoreId);
+      if(changedToPending(old,item))adminNotify({title:"طلب تسجيل كابتن جديد",body:`${item.fullName||item.name||"كابتن جديد"} أرسل طلب انضمام يحتاج المراجعة.`,type:"admin",route:"#captainApplicationsPanel",tag:`admin-captain-${item.firestoreId}`});
+    });
+    state.applications=incoming;
+    previousCaptainApps=new Map(incoming.map(item=>[item.firestoreId,item]));captainAppsReady=true;
     state.applications.forEach(item => repairLegacyCaptainService("driverApplications", item));
     renderApplications();
     renderServiceApplications();
     renderMetrics();
   });
   const serviceApplicationsUnsubscribe = onSnapshot(collection(db, "serviceApplications"), snapshot => {
-    state.serviceApplications = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    const incoming=snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    if(serviceAppsReady)incoming.forEach(item=>{
+      const old=previousServiceApps.get(item.firestoreId);
+      if(changedToPending(old,item))adminNotify({title:"طلب خدمة جديد",body:`${item.businessName||item.ownerName||"مزود خدمة"} أرسل طلب تفعيل يحتاج المراجعة.`,type:"admin",route:"#servicesPanel",tag:`admin-service-${item.firestoreId}`});
+    });
+    state.serviceApplications=incoming;
+    previousServiceApps=new Map(incoming.map(item=>[item.firestoreId,item]));serviceAppsReady=true;
     renderServiceApplications();
     renderMetrics();
   });
@@ -1084,7 +1105,13 @@ function openDashboard() {
     renderRatings();
   });
   const topupsUnsubscribe = onSnapshot(collection(db,"topupRequests"), snapshot => {
-    state.topupRequests = snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+    const incoming=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+    if(topupsReady)incoming.forEach(item=>{
+      const old=previousTopups.get(item.firestoreId);
+      if(changedToPending(old,item))adminNotify({title:"طلب شحن رصيد جديد",body:`${item.customerName||"مستخدم كروة"} طلب شحن ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`});
+    });
+    state.topupRequests=incoming;
+    previousTopups=new Map(incoming.map(item=>[item.firestoreId,item]));topupsReady=true;
     renderTopupRequests();
   });
   const deviceBindingsUnsubscribe = onSnapshot(collection(db,"deviceBindings"), snapshot => {
@@ -1100,10 +1127,10 @@ function openDashboard() {
     renderDeviceManagement();
     renderMetrics();
   });
-  const pricingUnsubscribe = onSnapshot(doc(db,"appSettings","pricing"), snapshot => {
-    state.pricingSettings = snapshot.exists()?snapshot.data():{};
+  const pricingUnsubscribe = subscribeGlobalPricing(settings => {
+    state.pricingSettings = settings || {};
     renderPricingSettings();
-  });
+  }, error => console.warn("تعذر مزامنة التسعيرة العامة", error));
   state.dashboardUnsubscribes.push(
     usersUnsubscribe,
     applicationsUnsubscribe,

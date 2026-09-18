@@ -104,6 +104,8 @@ function firebaseLikeError(error, fallback = "unknown") {
   const upper = message.toUpperCase();
   let code = fallback;
   if (upper.includes("PERMISSION") || upper.includes("ROW-LEVEL") || upper.includes("RLS")) code = "permission-denied";
+  else if (upper.includes("TOPUP_PENDING") || upper.includes("UQ_KARWA_DOCUMENTS_ONE_PENDING_TOPUP") || upper.includes("UQ_TOPUP_REQUESTS_ONE_PENDING")) code = "failed-precondition";
+  else if (upper.includes("DUPLICATE KEY") || upper.includes("UNIQUE CONSTRAINT")) code = "already-exists";
   else if (upper.includes("NOT_FOUND") || upper.includes("0 ROWS")) code = "not-found";
   else if (upper.includes("ABORTED") || upper.includes("CONFLICT")) code = "aborted";
   else if (upper.includes("NETWORK") || upper.includes("FETCH")) code = "unavailable";
@@ -563,6 +565,80 @@ export function onSnapshot(target, next, errorCallback) {
     active = false;
     clearTimeout(timer);
     client.removeChannel(channel).catch?.(() => {});
+  };
+}
+
+
+// Pricing is global for the whole Karwa system. Realtime is the fast path,
+// while polling/focus refresh is a deliberate fallback for Android WebView or
+// temporarily disconnected Realtime sockets so every signed-in user converges
+// on the same price configuration without needing to sign out or reload.
+export function subscribeGlobalPricing(next, errorCallback, options = {}) {
+  let active = true;
+  let lastSignature = "";
+  let pollTimer = null;
+  let channel = null;
+  const pollMs = Math.max(5000, Number(options.pollMs || 12000));
+
+  const deliver = value => {
+    if (!active) return;
+    const data = isObject(value) ? hydrateValue(value) : {};
+    let signature = "";
+    try { signature = JSON.stringify(data); } catch (_) { signature = String(Date.now()); }
+    if (signature === lastSignature) return;
+    lastSignature = signature;
+    next?.(cloneJson(data));
+  };
+
+  const refresh = async () => {
+    if (!active) return;
+    try {
+      const { data, error } = await client
+        .from("karwa_documents")
+        .select("data,version,updated_at")
+        .eq("path", "appSettings/pricing")
+        .maybeSingle();
+      if (error) throw error;
+      deliver(data?.data || {});
+    } catch (error) {
+      if (active) errorCallback?.(firebaseLikeError(error));
+    }
+  };
+
+  const scheduleRefresh = () => {
+    if (!active) return;
+    globalThis.setTimeout(refresh, 20);
+  };
+
+  refresh();
+  channel = client.channel(`karwa:global-pricing:${Math.random().toString(36).slice(2)}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "karwa_documents", filter: "path=eq.appSettings/pricing" }, payload => {
+      if (payload?.new?.data) deliver(payload.new.data);
+      else scheduleRefresh();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: "key=eq.pricing" }, payload => {
+      if (payload?.new?.value) deliver(payload.new.value);
+      else scheduleRefresh();
+    })
+    .subscribe(status => {
+      if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT") && active) {
+        errorCallback?.(firebaseLikeError(new Error(`Pricing Realtime ${status}`), "unavailable"));
+      }
+    });
+
+  pollTimer = globalThis.setInterval(refresh, pollMs);
+  const onWake = () => { if (!globalThis.document || document.visibilityState !== "hidden") refresh(); };
+  globalThis.addEventListener?.("focus", onWake);
+  globalThis.addEventListener?.("online", onWake);
+  globalThis.document?.addEventListener?.("visibilitychange", onWake);
+
+  return () => {
+    active = false;
+    if (pollTimer) globalThis.clearInterval(pollTimer);
+    globalThis.removeEventListener?.("focus", onWake);
+    globalThis.removeEventListener?.("online", onWake);
+    globalThis.document?.removeEventListener?.("visibilitychange", onWake);
+    if (channel) client.removeChannel(channel).catch?.(() => {});
   };
 }
 

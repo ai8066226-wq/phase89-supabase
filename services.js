@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=101";
+import { initializeApp } from "./supabase-compat.js?v=102";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,13 +9,14 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=101";
+} from "./supabase-compat.js?v=102";
 import {
   collection,
   doc,
   getDoc,
   getSupabase,
   onSnapshot,
+  subscribeGlobalPricing,
   query,
   serverTimestamp,
   setDoc,
@@ -25,9 +26,9 @@ import {
   karwaSensitiveAction,
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp
-} from "./supabase-compat.js?v=101";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=101";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=101";
+} from "./supabase-compat.js?v=102";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=102";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=102";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -83,6 +84,7 @@ let contentUnsubscribe = null;
 let requestsUnsubscribe = null;
 let topupUnsubscribe = null;
 let serviceTopupRequests = [];
+let serviceTopupSnapshotReady = false;
 const pickupOtpBackfillIds = new Set();
 let pricingSettings = {};
 
@@ -130,11 +132,28 @@ function renderServiceTopupRequests(){
 }
 function subscribeServiceTopups(user){
   topupUnsubscribe?.();
-  topupUnsubscribe=onSnapshot(query(collection(db,"topupRequests"),where("userId","==",user.uid)),snapshot=>{serviceTopupRequests=snapshot.docs.map(d=>({...d.data(),firestoreId:d.id})).sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));renderServiceTopupRequests();},error=>console.warn("تعذر تحميل طلبات شحن مزود الخدمة",error));
+  serviceTopupSnapshotReady=false;
+  topupUnsubscribe=onSnapshot(query(collection(db,"topupRequests"),where("userId","==",user.uid)),snapshot=>{
+    const previous=new Map(serviceTopupRequests.map(item=>[item.firestoreId,item]));
+    const incoming=snapshot.docs.map(d=>({...d.data(),firestoreId:d.id})).sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
+    if(serviceTopupSnapshotReady)incoming.forEach(item=>{
+      const old=previous.get(item.firestoreId);
+      if(!old||old.status===item.status||!["approved","rejected"].includes(item.status))return;
+      const approved=item.status==="approved";
+      window.KarwaNotify?.push?.({
+        title:approved?"تم اعتماد شحن الرصيد":"تم رفض طلب الشحن",
+        body:approved?`أضيف ${Number(item.amount||0).toLocaleString("ar-IQ")} د.ع إلى رصيد الخدمة.`:`طلب الشحن بقيمة ${Number(item.amount||0).toLocaleString("ar-IQ")} د.ع لم يعتمد.`,
+        type:"wallet",route:"#providerView",tag:`service-topup-${item.firestoreId}-${item.status}`
+      });
+    });
+    serviceTopupRequests=incoming;
+    serviceTopupSnapshotReady=true;
+    renderServiceTopupRequests();
+  },error=>console.warn("تعذر تحميل طلبات شحن مزود الخدمة",error));
 }
 function serviceCommissionRate(){return 0;}
 
-onSnapshot(doc(db,"appSettings","pricing"),snapshot=>{pricingSettings=snapshot.exists()?snapshot.data():{};renderServiceWallet();},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم",error));
+const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
 
 function showView(id) {
   views.forEach(view => byId(view)?.classList.toggle("hidden", view !== id));
@@ -1225,7 +1244,7 @@ byId("serviceTopupForm")?.addEventListener("submit",async event=>{
   if(transferReference.length<3)return toast("اكتب مرجع التحويل");
   if(serviceHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
   const button=event.submitter||byId("serviceTopupSubmit");setBusy(button,true,"جاري الإرسال…");
-  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:currentUserData?.name||currentUser.displayName||"مزود خدمة",email:currentUser.email||"",accountType:"service"});serviceTopupRequests=[{firestoreId:result?.requestId||"",userId:currentUser.uid,amount,transferReference,status:"pending",createdAt:null},...serviceTopupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderServiceTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);toast(error?.code==="permission-denied"?"يوجد طلب شحن قيد المراجعة بالفعل أو إعدادات Supabase الأمنية غير محدثة.":"تعذر إرسال طلب الشحن");}finally{setBusy(button,false);updateServiceTopupFormState();}
+  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:currentUserData?.name||currentUser.displayName||"مزود خدمة",email:currentUser.email||"",accountType:"service"});serviceTopupRequests=[{firestoreId:result?.requestId||"",userId:currentUser.uid,amount,transferReference,status:"pending",createdAt:null},...serviceTopupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderServiceTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);toast((["permission-denied","failed-precondition","already-exists"].includes(error?.code)||String(error?.message||"").toUpperCase().includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setBusy(button,false);updateServiceTopupFormState();}
 });
 
 function clearRoleContent() {
@@ -1236,6 +1255,7 @@ function clearRoleContent() {
   topupUnsubscribe?.();
   topupUnsubscribe = null;
   serviceTopupRequests = [];
+  serviceTopupSnapshotReady = false;
   providerRequests = [];
 }
 

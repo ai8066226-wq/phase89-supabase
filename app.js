@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=101";
+import { initializeApp } from "./supabase-compat.js?v=102";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=101";
+} from "./supabase-compat.js?v=102";
 import {
   addDoc,
   collection,
@@ -17,6 +17,7 @@ import {
   getDoc,
   getSupabase,
   onSnapshot,
+  subscribeGlobalPricing,
   query,
   serverTimestamp,
   setDoc,
@@ -28,8 +29,8 @@ import {
   karwaSensitiveAux,
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest
-} from "./supabase-compat.js?v=101";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=101";
+} from "./supabase-compat.js?v=102";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=102";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -186,6 +187,7 @@ const state = {
   profileRetryTimer: null,
   appSettings: {},
   topupRequests: [],
+  topupSnapshotReady: false,
   unsubscribeTopups: null,
   referralCode: "",
   appliedCoupon: null,
@@ -802,7 +804,12 @@ function renderTopupDestination(){
   if(byId("topupCardHolder"))byId("topupCardHolder").textContent=cfg.topupCardHolder||"إدارة كروة";
 }
 function subscribeToAppSettings(){
-  onSnapshot(doc(db,"appSettings","pricing"),snap=>{state.appSettings=snap.exists()?snap.data():{};calculateRidePrice();renderReferralCard();renderTopupDestination();},error=>console.warn("تعذر تحميل إعدادات التسعير",error));
+  return subscribeGlobalPricing(settings=>{
+    state.appSettings=settings||{};
+    calculateRidePrice();
+    renderReferralCard();
+    renderTopupDestination();
+  },error=>console.warn("تعذر تحميل إعدادات التسعير العامة",error));
 }
 function customerHasPendingTopup(){return state.topupRequests.some(x=>(x.status||"pending")==="pending");}
 function updateCustomerTopupFormState(){
@@ -821,7 +828,24 @@ function renderTopupRequests(){
 }
 function subscribeToTopups(user){
   if(state.unsubscribeTopups)state.unsubscribeTopups();
-  state.unsubscribeTopups=onSnapshot(query(collection(db,"topupRequests"),where("userId","==",user.uid)),snap=>{state.topupRequests=snap.docs.map(d=>({...d.data(),firestoreId:d.id})).sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));renderTopupRequests();},error=>console.warn("تعذر تحميل طلبات الشحن",error));
+  state.topupSnapshotReady=false;
+  state.unsubscribeTopups=onSnapshot(query(collection(db,"topupRequests"),where("userId","==",user.uid)),snap=>{
+    const previous=new Map(state.topupRequests.map(item=>[item.firestoreId,item]));
+    const incoming=snap.docs.map(d=>({...d.data(),firestoreId:d.id})).sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
+    if(state.topupSnapshotReady)incoming.forEach(item=>{
+      const old=previous.get(item.firestoreId);
+      if(!old||old.status===item.status||!["approved","rejected"].includes(item.status))return;
+      const approved=item.status==="approved";
+      window.KarwaNotify?.push?.({
+        title:approved?"تم اعتماد شحن الرصيد":"تم رفض طلب الشحن",
+        body:approved?`أضيف ${formatMoney(item.amount)} إلى رصيدك.`:`طلب الشحن بقيمة ${formatMoney(item.amount)} لم يعتمد. راجع التفاصيل أو أرسل طلبًا جديدًا.`,
+        type:"wallet",route:"#wallet",tag:`customer-topup-${item.firestoreId}-${item.status}`
+      });
+    });
+    state.topupRequests=incoming;
+    state.topupSnapshotReady=true;
+    renderTopupRequests();
+  },error=>console.warn("تعذر تحميل طلبات الشحن",error));
 }
 
 async function saveUserData(values) {
@@ -2728,7 +2752,7 @@ byId("topupForm")?.addEventListener("submit",async event=>{
     const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.name,email:state.user.email||"",accountType:"customer"});
     state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];
     renderTopupRequests();event.currentTarget.reset();showToast("تم إرسال طلب الشحن مرة واحدة. لا يمكن إرسال طلب جديد حتى تراجعه الإدارة.");
-  }catch(error){console.error(error);showToast(error?.code==="permission-denied"?"يوجد طلب شحن قيد المراجعة بالفعل أو إعدادات Supabase الأمنية غير محدثة.":"تعذر إرسال طلب الشحن");}finally{setButtonBusy(button,false);updateCustomerTopupFormState();}
+  }catch(error){console.error(error);showToast((["permission-denied","failed-precondition","already-exists"].includes(error?.code)||String(error?.message||"").toUpperCase().includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setButtonBusy(button,false);updateCustomerTopupFormState();}
 });
 byId("shareReferral")?.addEventListener("click",async()=>{
   if(!requireUser())return; const code=state.referralCode||await ensureReferralCode(state.user);
@@ -3152,6 +3176,7 @@ onAuthStateChanged(auth, async user => {
     state.balance = 0;
     state.referralCode = "";
     state.topupRequests = [];
+    state.topupSnapshotReady = false;
     state.orders = [];
     state.ratings = [];
     state.restaurants = [];
