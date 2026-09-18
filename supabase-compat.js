@@ -539,8 +539,10 @@ export async function runTransaction(_db, updateFunction, options = {}) {
 export function onSnapshot(target, next, errorCallback) {
   let active = true;
   let timer = null;
+  let fallbackPoll = null;
   const isDoc = target?.type === "document";
   const refTarget = target?.type === "query" ? target.collection : target;
+  const liveCollection = !isDoc && ["orders", "serviceRequests", "topupRequests", "driverApplications", "serviceApplications", "deviceChangeRequests"].includes(String(refTarget?.path || ""));
   const emit = async () => {
     if (!active) return;
     try {
@@ -554,16 +556,29 @@ export function onSnapshot(target, next, errorCallback) {
     clearTimeout(timer);
     timer = setTimeout(emit, 25);
   };
+  const onWake = () => { if (globalThis.document?.visibilityState !== "hidden") schedule(); };
   emit();
   const filter = isDoc ? `path=eq.${target.path}` : `parent_path=eq.${refTarget.path}`;
   const channel = client.channel(`karwa:${Math.random().toString(36).slice(2)}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "karwa_documents", filter }, schedule)
     .subscribe(status => {
+      // Re-read immediately after the backend confirms the listener so writes that
+      // happened during the subscription handshake cannot be missed.
+      if (status === "SUBSCRIBED") schedule();
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") errorCallback?.(firebaseLikeError(new Error(`Realtime ${status}`), "unavailable"));
     });
+  // Realtime remains the instant path. A 4-second safety refresh is only used for
+  // request/dispatch queues so Android WebView network transitions cannot
+  // leave a captain/provider screen stale.
+  if (liveCollection) fallbackPoll = setInterval(emit, 4000);
+  globalThis.document?.addEventListener?.("visibilitychange", onWake);
+  globalThis.addEventListener?.("focus", onWake);
   return () => {
     active = false;
     clearTimeout(timer);
+    if (fallbackPoll) clearInterval(fallbackPoll);
+    globalThis.document?.removeEventListener?.("visibilitychange", onWake);
+    globalThis.removeEventListener?.("focus", onWake);
     client.removeChannel(channel).catch?.(() => {});
   };
 }
@@ -652,6 +667,15 @@ export async function karwaSensitiveAction(action, payload = {}) {
 }
 export async function karwaSensitiveAux(action, payload = {}) {
   return karwaRpc("karwa_sensitive_aux", { p_action: String(action || ""), p_payload: resolveValue(payload, undefined) || {} });
+}
+export async function karwaCreateTopupCard(amount) {
+  return karwaRpc("karwa_topup_card_create", { p_amount: Math.round(Number(amount || 0)) });
+}
+export async function karwaRedeemTopupCard(code) {
+  return karwaRpc("karwa_topup_card_redeem", { p_code: String(code || "") });
+}
+export async function karwaListTopupCards(limit = 100) {
+  return karwaRpc("karwa_topup_card_list", { p_limit: Math.max(1, Math.min(250, Math.round(Number(limit || 100)))) });
 }
 export async function karwaDriverAutoComplete(orderId) { return karwaRpc("karwa_driver_auto_complete_order", { p_order_id: String(orderId || "") }); }
 export async function karwaProviderCancelRequest(requestId, reason) { return karwaRpc("karwa_provider_cancel_request", { p_request_id: String(requestId || ""), p_reason: String(reason || "") }); }

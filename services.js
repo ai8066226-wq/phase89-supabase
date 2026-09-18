@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=102";
+import { initializeApp } from "./supabase-compat.js?v=106";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=102";
+} from "./supabase-compat.js?v=106";
 import {
   collection,
   doc,
@@ -25,10 +25,11 @@ import {
   writeBatch,
   karwaSensitiveAction,
   karwaProviderCancelRequest,
-  karwaProviderBackfillPickupOtp
-} from "./supabase-compat.js?v=102";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=102";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=102";
+  karwaProviderBackfillPickupOtp,
+  karwaRedeemTopupCard
+} from "./supabase-compat.js?v=106";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=106";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=106";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -99,6 +100,16 @@ function activeBonusAmount(data={}){const amount=Math.max(0,Number(data.bonusBal
 function walletAvailable(data=currentUserData||{}){return Math.max(0,Number(data?.balance||0))+activeBonusAmount(data||{});}
 function walletDebitPatch(data,amount){const fee=Math.max(0,Math.round(Number(amount||0)));const paid=Math.max(0,Number(data?.balance||0));const bonus=activeBonusAmount(data||{});if(paid+bonus<fee)return null;const useBonus=Math.min(bonus,fee);return {balance:paid-(fee-useBonus),bonusBalance:Math.max(0,Number(data?.bonusBalance||0)-useBonus),updatedAt:serverTimestamp()};}
 function signupBonusFields(settings=pricingSettings||{}){const enabled=settings.signupBonusEnabled!==false;const amount=enabled?Math.max(0,Math.round(Number(settings.signupBonusAmount??1000))):0;const hours=Math.max(1,Math.min(168,Math.round(Number(settings.signupBonusHours??24))));return {bonusBalance:amount,bonusExpiresAt:amount?new Date(Date.now()+hours*3600000):null,welcomeBonusGranted:amount>0,welcomeBonusEvaluated:true};}
+function serviceTransferTopupEnabled(){return pricingSettings?.topupTransferEnabled!==false;}
+function serviceCardTopupEnabled(){return pricingSettings?.topupCardEnabled!==false;}
+function renderServiceTopupMethods(){
+  const transfer=serviceTransferTopupEnabled(),card=serviceCardTopupEnabled();
+  if(byId("serviceTransferTopupMethod"))byId("serviceTransferTopupMethod").hidden=!transfer;
+  if(byId("serviceCardTopupMethod"))byId("serviceCardTopupMethod").hidden=!card;
+  if(byId("serviceTopupMethodsDisabled"))byId("serviceTopupMethodsDisabled").hidden=transfer||card;
+  [byId("serviceTopupCardCode"),byId("serviceRedeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
+  updateServiceTopupFormState();
+}
 function renderServiceWallet(){
   const value=`${walletAvailable().toLocaleString("ar-IQ")} د.ع`;
   if(byId("serviceWalletBalance"))byId("serviceWalletBalance").textContent=value;
@@ -108,6 +119,7 @@ function renderServiceWallet(){
   if(byId("serviceTopupTransferLabel"))byId("serviceTopupTransferLabel").textContent=pricingSettings.topupTransferLabel||"Mastercard محلي";
   if(byId("serviceTopupTransferId"))byId("serviceTopupTransferId").textContent=pricingSettings.topupTransferId||"أضف معرف التحويل من الإدارة";
   if(byId("serviceTopupCardHolder"))byId("serviceTopupCardHolder").textContent=pricingSettings.topupCardHolder||"إدارة كروة";
+  renderServiceTopupMethods();
   if(byId("serviceFeeSummary")){
     const publish=fixedFee("publishFee",1000).toLocaleString("ar-IQ");
     const restaurant=providerOperationFee("restaurant").toLocaleString("ar-IQ");
@@ -118,9 +130,9 @@ function renderServiceWallet(){
 }
 function serviceHasPendingTopup(){return serviceTopupRequests.some(x=>(x.status||"pending")==="pending");}
 function updateServiceTopupFormState(){
-  const pending=serviceHasPendingTopup();
-  [byId("serviceTopupAmount"),byId("serviceTopupReference"),byId("serviceTopupSubmit")].forEach(el=>{if(el)el.disabled=pending;});
-  const submit=byId("serviceTopupSubmit");if(submit)submit.textContent=pending?"طلب الشحن قيد المراجعة":"إرسال طلب الشحن";
+  const pending=serviceHasPendingTopup(),enabled=serviceTransferTopupEnabled();
+  [byId("serviceTopupAmount"),byId("serviceTopupReference"),byId("serviceTopupSubmit")].forEach(el=>{if(el)el.disabled=pending||!enabled;});
+  const submit=byId("serviceTopupSubmit");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"طلب الشحن قيد المراجعة":"إرسال طلب الشحن";
 }
 function renderServiceTopupRequests(){
   const box=byId("serviceTopupRequestsList");if(!box)return;
@@ -153,7 +165,7 @@ function subscribeServiceTopups(user){
 }
 function serviceCommissionRate(){return 0;}
 
-const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
+const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();if(providerRequests.length)renderProviderRequests(providerRequests);},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
 
 function showView(id) {
   views.forEach(view => byId(view)?.classList.toggle("hidden", view !== id));
@@ -1049,7 +1061,7 @@ function renderProviderRequests(requests) {
         const deliveryAvailable = request.itemDeliveryAvailable === true || request.deliveryRequested === true || Number(request.itemDeliveryFee || request.deliveryFee || 0) > 0;
         const deliveryStatus = request.deliveryStatus || (request.deliveryRequested ? "awaitingCaptain" : "notRequested");
         const actions = status === "pending"
-          ? `<div class="request-actions"><button class="button primary" type="button" data-request-action="accepted" data-request-id="${request.firestoreId}">موافقة على الحاجة</button><button class="button danger" type="button" data-request-action="rejected" data-request-id="${request.firestoreId}">رفض</button></div>`
+          ? `<div class="request-actions"><button class="button primary" type="button" data-request-action="accepted" data-request-id="${request.firestoreId}">موافقة على الحاجة • ${money(providerOperationFee(request))}</button><button class="button danger" type="button" data-request-action="rejected" data-request-id="${request.firestoreId}">رفض</button></div>`
           : status === "accepted"
             ? `<div class="request-actions">${deliveryStatus !== "awaitingCustomerChoice" ? `<button class="button primary" type="button" data-request-action="completed" data-request-id="${request.firestoreId}">تم إكمال الخدمة</button>` : ""}<button class="button danger" type="button" data-request-action="cancelled" data-request-id="${request.firestoreId}">إلغاء الطلب</button></div>`
             : "";
@@ -1088,12 +1100,19 @@ byId("providerRequestsList").addEventListener("click", async event => {
   const cancellationReason = nextStatus === "cancelled" ? requestProviderCancellationReason() : "";
   if (nextStatus === "rejected" && !providerNote) return;
   if (nextStatus === "cancelled" && !cancellationReason) return;
+  if (nextStatus === "accepted") {
+    const requiredFee = providerOperationFee(request);
+    if (walletAvailable() < requiredFee) {
+      toast(`رصيدك غير كافٍ لقبول الطلب. يلزم ${requiredFee.toLocaleString("ar-IQ")} د.ع. اشحن المحفظة ثم اضغط الموافقة مرة أخرى.`);
+      return;
+    }
+  }
   setBusy(button, true);
   try {
     if (nextStatus === "accepted") {
       const result=await karwaSensitiveAction("provider_accept_request",{requestId:request.firestoreId});
       if(Number.isFinite(Number(result?.balance))){currentUserData={...(currentUserData||{}),balance:Number(result.balance),bonusBalance:Number(result?.bonusBalance||0)};renderServiceWallet();}
-      toast(request.deliveryRequested ? "تمت الموافقة وإرسال التوصيل لكباتن التوصيل المطابقين" : (request.itemDeliveryAvailable===true ? "تمت الموافقة. ينتظر النظام الآن اختيار العميل للتوصيل أو الاستلام." : "تم قبول الطلب للاستلام من النشاط"));
+      toast(request.deliveryRequested ? "تمت الموافقة وإرسال التوصيل فورًا إلى كباتن التوصيل المطابقين ضمن 10 كم" : (request.itemDeliveryAvailable===true ? "تمت الموافقة. ينتظر النظام الآن اختيار العميل للتوصيل أو الاستلام." : "تم قبول الطلب للاستلام من النشاط"));
     } else if (nextStatus === "cancelled") {
       await karwaProviderCancelRequest(request.firestoreId,cancellationReason);
       toast("تم إلغاء الطلب وتسجيل السبب للإدارة");
@@ -1108,7 +1127,23 @@ byId("providerRequestsList").addEventListener("click", async event => {
     }
   } catch (error) {
     console.error(error);
-    toast(error?.message === "DELIVERY_COMPLETED" ? "لا يمكن إلغاء الطلب بعد اكتمال التوصيل." : "تعذر تحديث حالة الطلب.");
+    const code=String(error?.message||"").toUpperCase();
+    if(code.includes("INSUFFICIENT_WALLET")){
+      const requiredFee=providerOperationFee(request);
+      toast(`رصيدك غير كافٍ لقبول الطلب. يلزم ${requiredFee.toLocaleString("ar-IQ")} د.ع. اشحن المحفظة ثم حاول مجددًا.`);
+    } else if(code.includes("LOCATION_REQUIRED")){
+      toast("تعذر إنشاء طلب التوصيل لأن موقع المطعم أو العميل غير محدد. حدّث الموقع ثم حاول مجددًا.");
+    } else if(code.includes("REQUEST_NOT_AVAILABLE")||code.includes("TOPUP_ALREADY_REVIEWED")){
+      toast("تم تحديث هذا الطلب بالفعل من جهاز آخر. ستتحدث القائمة تلقائيًا.");
+    } else if(code.includes("REQUEST_NOT_FOUND")){
+      toast("الطلب غير موجود أو تم حذفه.");
+    } else if(code.includes("NOT_PROVIDER")){
+      toast("هذا الطلب غير تابع لحساب الخدمة الحالي.");
+    } else if(error?.message === "DELIVERY_COMPLETED"){
+      toast("لا يمكن إلغاء الطلب بعد اكتمال التوصيل.");
+    } else {
+      toast("تعذر تحديث حالة الطلب. تحقق من الاتصال وحاول مرة أخرى.");
+    }
   } finally {
     setBusy(button, false);
   }
@@ -1238,13 +1273,25 @@ byId("providerForm").addEventListener("submit", async event => {
 
 byId("serviceTopupForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!currentUser)return;
+  if(!serviceTransferTopupEnabled())return toast("طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.");
   const amount=Math.round(Number(byId("serviceTopupAmount")?.value||0));
   const transferReference=byId("serviceTopupReference")?.value.trim()||"";
-  if(!Number.isFinite(amount)||amount<1000||amount>1000000)return toast("أدخل مبلغًا بين 1,000 و1,000,000 د.ع");
+  if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return toast("الشحن بالتحويل يبدأ من 5,000 د.ع وبمضاعفات 5,000 فقط.");
   if(transferReference.length<3)return toast("اكتب مرجع التحويل");
   if(serviceHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
   const button=event.submitter||byId("serviceTopupSubmit");setBusy(button,true,"جاري الإرسال…");
-  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:currentUserData?.name||currentUser.displayName||"مزود خدمة",email:currentUser.email||"",accountType:"service"});serviceTopupRequests=[{firestoreId:result?.requestId||"",userId:currentUser.uid,amount,transferReference,status:"pending",createdAt:null},...serviceTopupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderServiceTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);toast((["permission-denied","failed-precondition","already-exists"].includes(error?.code)||String(error?.message||"").toUpperCase().includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setBusy(button,false);updateServiceTopupFormState();}
+  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:currentUserData?.name||currentUser.displayName||"مزود خدمة",email:currentUser.email||"",accountType:"service"});serviceTopupRequests=[{firestoreId:result?.requestId||"",userId:currentUser.uid,amount,transferReference,status:"pending",createdAt:null},...serviceTopupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderServiceTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);const msg=String(error?.message||"").toUpperCase();toast(msg.includes("TOPUP_TRANSFER_DISABLED")?"طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.":(["permission-denied","failed-precondition","already-exists"].includes(error?.code)||msg.includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setBusy(button,false);updateServiceTopupFormState();}
+});
+
+byId("serviceTopupCardRedeemForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!currentUser)return;
+  if(!serviceCardTopupEnabled())return toast("طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.");
+  const code=String(byId("serviceTopupCardCode")?.value||"").replace(/\D/g,"");
+  if(code.length!==16)return toast("أدخل رقم الكرت المكوّن من 16 رقمًا.");
+  const button=event.submitter||byId("serviceRedeemTopupCard");setBusy(button,true,"جاري الشحن…");
+  try{const result=await karwaRedeemTopupCard(code);currentUserData={...(currentUserData||{}),balance:Number(result?.balance ?? currentUserData?.balance ?? 0)};renderServiceWallet();event.currentTarget.reset();toast(`تم شحن ${Number(result?.amount||0).toLocaleString("ar-IQ")} د.ع بنجاح. الكرت أصبح مستخدمًا.`);}
+  catch(error){console.error(error);const msg=String(error?.message||"");toast(msg.includes("TOPUP_CARD_METHOD_DISABLED")?"طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.":msg.includes("TOPUP_CARD_USED")?"هذا الكرت مستخدم مسبقًا.":msg.includes("INVALID_TOPUP_CARD")?"رقم الكرت غير صحيح أو غير موجود.":msg.includes("TOPUP_CARD_DISABLED")?"هذا الكرت غير فعال.":"تعذر شحن الرصيد بالكرت.");}
+  finally{setBusy(button,false);}
 });
 
 function clearRoleContent() {

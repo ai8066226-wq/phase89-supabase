@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=102";
+import { initializeApp } from "./supabase-compat.js?v=106";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=102";
+} from "./supabase-compat.js?v=106";
 import {
   addDoc,
   collection,
@@ -28,9 +28,10 @@ import {
   karwaSensitiveAction,
   karwaSensitiveAux,
   karwaCustomerCancelOrder,
-  karwaCustomerCancelServiceRequest
-} from "./supabase-compat.js?v=102";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=102";
+  karwaCustomerCancelServiceRequest,
+  karwaRedeemTopupCard
+} from "./supabase-compat.js?v=106";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=106";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -796,12 +797,23 @@ function renderReferralCard(){
   if(byId("referralCodeValue"))byId("referralCodeValue").textContent=state.referralCode||"—";
   if(byId("referralDiscountValue"))byId("referralDiscountValue").textContent=`خصم ${Number(state.appSettings.referralDiscountPercent||10)}% حتى ${formatMoney(state.appSettings.referralMaxDiscount||3000)}`;
 }
+function customerTransferTopupEnabled(){return state.appSettings?.topupTransferEnabled!==false;}
+function customerCardTopupEnabled(){return state.appSettings?.topupCardEnabled!==false;}
+function renderCustomerTopupMethods(){
+  const transfer=customerTransferTopupEnabled(),card=customerCardTopupEnabled();
+  if(byId("customerTransferTopupMethod"))byId("customerTransferTopupMethod").hidden=!transfer;
+  if(byId("customerCardTopupMethod"))byId("customerCardTopupMethod").hidden=!card;
+  if(byId("customerTopupMethodsDisabled"))byId("customerTopupMethodsDisabled").hidden=transfer||card;
+  [byId("topupCardCode"),byId("redeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
+  updateCustomerTopupFormState();
+}
 function renderTopupDestination(){
   const cfg=state.appSettings||{};
   if(byId("customerOrderFeeLabel"))byId("customerOrderFeeLabel").textContent=customerFeeSummary();
   if(byId("topupTransferLabel"))byId("topupTransferLabel").textContent=cfg.topupTransferLabel||"Mastercard محلي";
   if(byId("topupTransferId"))byId("topupTransferId").textContent=cfg.topupTransferId||"أضف معرف التحويل من لوحة الإدارة";
   if(byId("topupCardHolder"))byId("topupCardHolder").textContent=cfg.topupCardHolder||"إدارة كروة";
+  renderCustomerTopupMethods();
 }
 function subscribeToAppSettings(){
   return subscribeGlobalPricing(settings=>{
@@ -813,9 +825,9 @@ function subscribeToAppSettings(){
 }
 function customerHasPendingTopup(){return state.topupRequests.some(x=>(x.status||"pending")==="pending");}
 function updateCustomerTopupFormState(){
-  const pending=customerHasPendingTopup();
-  [byId("topupAmount"),byId("topupReference"),byId("submitTopup")].forEach(el=>{if(el)el.disabled=pending;});
-  const submit=byId("submitTopup");if(submit)submit.textContent=pending?"يوجد طلب شحن قيد المراجعة":"إرسال طلب الشحن";
+  const pending=customerHasPendingTopup(),enabled=customerTransferTopupEnabled();
+  [byId("topupAmount"),byId("topupReference"),byId("submitTopup")].forEach(el=>{if(el)el.disabled=pending||!enabled;});
+  const submit=byId("submitTopup");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"يوجد طلب شحن قيد المراجعة":"إرسال طلب الشحن";
 }
 function renderTopupRequests(){
   const box=byId("topupRequestsList"); if(!box)return;
@@ -2742,9 +2754,10 @@ function renderBalance() {
 
 byId("topupForm")?.addEventListener("submit",async event=>{
   event.preventDefault(); if(!requireUser())return;
+  if(!customerTransferTopupEnabled())return showToast("طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.");
   const amount=Math.round(Number(byId("topupAmount")?.value||0));
   const transferReference=byId("topupReference")?.value.trim()||"";
-  if(!Number.isFinite(amount)||amount<1000||amount>1000000)return showToast("أدخل مبلغًا بين 1,000 و1,000,000 د.ع");
+  if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return showToast("الشحن بالتحويل يبدأ من 5,000 د.ع ويكون 10,000 ثم 15,000 وهكذا بمضاعفات 5,000 فقط.");
   if(transferReference.length<3)return showToast("اكتب رقم/مرجع التحويل أو آخر أرقام العملية");
   if(customerHasPendingTopup())return showToast("لديك طلب شحن قيد المراجعة. انتظر اعتماد الإدارة أو رفضها قبل إرسال طلب جديد.");
   const button=event.submitter||byId("submitTopup"); setButtonBusy(button,true,"جارٍ إرسال الطلب…");
@@ -2752,8 +2765,24 @@ byId("topupForm")?.addEventListener("submit",async event=>{
     const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.name,email:state.user.email||"",accountType:"customer"});
     state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];
     renderTopupRequests();event.currentTarget.reset();showToast("تم إرسال طلب الشحن مرة واحدة. لا يمكن إرسال طلب جديد حتى تراجعه الإدارة.");
-  }catch(error){console.error(error);showToast((["permission-denied","failed-precondition","already-exists"].includes(error?.code)||String(error?.message||"").toUpperCase().includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setButtonBusy(button,false);updateCustomerTopupFormState();}
+  }catch(error){console.error(error);const msg=String(error?.message||"").toUpperCase();showToast(msg.includes("TOPUP_TRANSFER_DISABLED")?"طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.":(["permission-denied","failed-precondition","already-exists"].includes(error?.code)||msg.includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setButtonBusy(button,false);updateCustomerTopupFormState();}
 });
+byId("topupCardRedeemForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!requireUser())return;
+  if(!customerCardTopupEnabled())return showToast("طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.");
+  const code=String(byId("topupCardCode")?.value||"").replace(/\D/g,"");
+  if(code.length!==16)return showToast("أدخل رقم الكرت المكوّن من 16 رقمًا.");
+  const button=event.submitter||byId("redeemTopupCard");setButtonBusy(button,true,"جارٍ تعبئة الرصيد…");
+  try{
+    const result=await karwaRedeemTopupCard(code);
+    state.balance=Number(result?.balance??state.balance);renderBalance();event.currentTarget.reset();
+    showToast(`تم شحن ${formatMoney(result?.amount||0)} بنجاح. الكرت أصبح مستخدمًا ولا يمكن استعماله مرة أخرى.`);
+  }catch(error){
+    console.error(error);const msg=String(error?.message||"");
+    showToast(msg.includes("TOPUP_CARD_METHOD_DISABLED")?"طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.":msg.includes("TOPUP_CARD_USED")?"هذا الكرت مستخدم مسبقًا ولا يمكن استخدامه مرة أخرى.":msg.includes("INVALID_TOPUP_CARD")?"رقم الكرت غير صحيح أو غير موجود.":msg.includes("TOPUP_CARD_DISABLED")?"هذا الكرت غير فعال.":"تعذر تعبئة الرصيد بالكرت.");
+  }finally{setButtonBusy(button,false);}
+});
+
 byId("shareReferral")?.addEventListener("click",async()=>{
   if(!requireUser())return; const code=state.referralCode||await ensureReferralCode(state.user);
   const text=`حمّل كروة واستخدم كود الدعوة ${code} للحصول على خصم على أول مشوار.`;

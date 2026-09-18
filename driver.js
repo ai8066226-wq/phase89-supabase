@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=102";
+import { initializeApp } from "./supabase-compat.js?v=106";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=102";
+} from "./supabase-compat.js?v=106";
 import {
   addDoc,
   collection,
@@ -28,9 +28,10 @@ import {
   where,
   writeBatch,
   karwaSensitiveAction,
-  karwaDriverAutoComplete
-} from "./supabase-compat.js?v=102";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=102";
+  karwaDriverAutoComplete,
+  karwaRedeemTopupCard
+} from "./supabase-compat.js?v=106";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=106";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -143,8 +144,10 @@ function orderWithinRequestRadius(order, point = currentDriverPoint()) {
 
 function driverOrderMode(driver = state.driverData) {
   if (!driver) return "none";
-  if (driver.serviceType === "taxi" && driver.vehicleType !== "دراجة") return "taxi";
-  if (driver.serviceType === "delivery" && ["اقتصادي", "تكسي", "عائلي", "دراجة"].includes(driver.vehicleType)) return "delivery";
+  if (driver.serviceType === "taxi") return driver.vehicleType === "دراجة" ? "none" : "taxi";
+  // Any captain explicitly approved for delivery receives parcel/food/service-delivery jobs.
+  // The vehicle can be a bike or a car; serviceType is the authoritative dispatch mode.
+  if (driver.serviceType === "delivery") return "delivery";
   return "none";
 }
 
@@ -252,6 +255,16 @@ function driverActiveBonus(data={}){const amount=Math.max(0,Number(data.bonusBal
 function driverWalletAvailable(data=state.userData||{}){return Math.max(0,Number(data?.balance||0))+driverActiveBonus(data||{});}
 function driverWalletDebitPatch(data,amount){const fee=Math.max(0,Math.round(Number(amount||0)));const paid=Math.max(0,Number(data?.balance||0));const bonus=driverActiveBonus(data||{});if(paid+bonus<fee)return null;const useBonus=Math.min(bonus,fee);return {balance:paid-(fee-useBonus),bonusBalance:Math.max(0,Number(data?.bonusBalance||0)-useBonus),updatedAt:serverTimestamp()};}
 function driverSignupBonusFields(settings=driverPricingSettings||{}){const enabled=settings.signupBonusEnabled!==false;const amount=enabled?Math.max(0,Math.round(Number(settings.signupBonusAmount??1000))):0;const hours=Math.max(1,Math.min(168,Math.round(Number(settings.signupBonusHours??24))));return {bonusBalance:amount,bonusExpiresAt:amount?new Date(Date.now()+hours*3600000):null,welcomeBonusGranted:amount>0,welcomeBonusEvaluated:true};}
+function driverTransferTopupEnabled(){return driverPricingSettings?.topupTransferEnabled!==false;}
+function driverCardTopupEnabled(){return driverPricingSettings?.topupCardEnabled!==false;}
+function renderDriverTopupMethods(){
+  const transfer=driverTransferTopupEnabled(),card=driverCardTopupEnabled();
+  if(byId("driverTransferTopupMethod"))byId("driverTransferTopupMethod").hidden=!transfer;
+  if(byId("driverCardTopupMethod"))byId("driverCardTopupMethod").hidden=!card;
+  if(byId("driverTopupMethodsDisabled"))byId("driverTopupMethodsDisabled").hidden=transfer||card;
+  [byId("driverTopupCardCode"),byId("driverRedeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
+  updateDriverTopupFormState();
+}
 function renderDriverWallet(){
   if(byId("driverWalletBalance"))byId("driverWalletBalance").textContent=`${driverWalletAvailable().toLocaleString("ar-IQ")} د.ع`;
   const bonus=driverActiveBonus(state.userData||{});if(byId("driverBonusStatus"))byId("driverBonusStatus").textContent=bonus>0?`مجاني ${bonus.toLocaleString("ar-IQ")} د.ع حتى ${new Date(driverTimestampMillis(state.userData?.bonusExpiresAt)).toLocaleString("ar-IQ")}`:"الرصيد المشحون";
@@ -259,13 +272,14 @@ function renderDriverWallet(){
   if(byId("driverTopupTransferLabel"))byId("driverTopupTransferLabel").textContent=driverPricingSettings.topupTransferLabel||"Mastercard محلي";
   if(byId("driverTopupTransferId"))byId("driverTopupTransferId").textContent=driverPricingSettings.topupTransferId||"أضف معرف التحويل من الإدارة";
   if(byId("driverTopupCardHolder"))byId("driverTopupCardHolder").textContent=driverPricingSettings.topupCardHolder||"إدارة كروة";
+  renderDriverTopupMethods();
   renderDriverTopupRequests();
 }
 function driverHasPendingTopup(){return state.topupRequests.some(x=>(x.status||"pending")==="pending");}
 function updateDriverTopupFormState(){
-  const pending=driverHasPendingTopup();
-  [byId("driverTopupAmount"),byId("driverTopupReference"),byId("driverTopupSubmit")].forEach(el=>{if(el)el.disabled=pending;});
-  const submit=byId("driverTopupSubmit");if(submit)submit.textContent=pending?"طلب الشحن قيد المراجعة":"إرسال طلب الشحن";
+  const pending=driverHasPendingTopup(),enabled=driverTransferTopupEnabled();
+  [byId("driverTopupAmount"),byId("driverTopupReference"),byId("driverTopupSubmit")].forEach(el=>{if(el)el.disabled=pending||!enabled;});
+  const submit=byId("driverTopupSubmit");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"طلب الشحن قيد المراجعة":"إرسال طلب الشحن";
 }
 function renderDriverTopupRequests(){
   const box=byId("driverTopupRequestsList");if(!box)return;
@@ -1694,13 +1708,25 @@ document.addEventListener("click", async event => {
 
 byId("driverTopupForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user)return;
+  if(!driverTransferTopupEnabled())return toast("طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.");
   const amount=Math.round(Number(byId("driverTopupAmount")?.value||0));
   const transferReference=byId("driverTopupReference")?.value.trim()||"";
-  if(!Number.isFinite(amount)||amount<1000||amount>1000000)return toast("أدخل مبلغًا بين 1,000 و1,000,000 د.ع");
+  if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return toast("الشحن بالتحويل يبدأ من 5,000 د.ع وبمضاعفات 5,000 فقط.");
   if(transferReference.length<3)return toast("اكتب مرجع التحويل");
   if(driverHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
   const button=event.submitter||byId("driverTopupSubmit");busy(button,true,"جاري الإرسال…");
-  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.userData?.name||state.user.displayName||"كابتن",email:state.user.email||"",accountType:"captain"});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);toast((["permission-denied","failed-precondition","already-exists"].includes(error?.code)||String(error?.message||"").toUpperCase().includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{busy(button,false);updateDriverTopupFormState();}
+  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.userData?.name||state.user.displayName||"كابتن",email:state.user.email||"",accountType:"captain"});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);const msg=String(error?.message||"").toUpperCase();toast(msg.includes("TOPUP_TRANSFER_DISABLED")?"طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.":(["permission-denied","failed-precondition","already-exists"].includes(error?.code)||msg.includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{busy(button,false);updateDriverTopupFormState();}
+});
+
+byId("driverTopupCardRedeemForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!state.user)return;
+  if(!driverCardTopupEnabled())return toast("طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.");
+  const code=String(byId("driverTopupCardCode")?.value||"").replace(/\D/g,"");
+  if(code.length!==16)return toast("أدخل رقم الكرت المكوّن من 16 رقمًا.");
+  const button=event.submitter||byId("driverRedeemTopupCard");busy(button,true,"جاري الشحن…");
+  try{const result=await karwaRedeemTopupCard(code);state.userData={...(state.userData||{}),balance:Number(result?.balance ?? state.userData?.balance ?? 0)};renderDriverWallet();event.currentTarget.reset();toast(`تم شحن ${money(result?.amount||0)} بنجاح. الكرت أصبح مستخدمًا.`);}
+  catch(error){console.error(error);const msg=String(error?.message||"");toast(msg.includes("TOPUP_CARD_METHOD_DISABLED")?"طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.":msg.includes("TOPUP_CARD_USED")?"هذا الكرت مستخدم مسبقًا.":msg.includes("INVALID_TOPUP_CARD")?"رقم الكرت غير صحيح أو غير موجود.":msg.includes("TOPUP_CARD_DISABLED")?"هذا الكرت غير فعال.":"تعذر شحن الرصيد بالكرت.");}
+  finally{busy(button,false);}
 });
 
 onAuthStateChanged(auth, user => {

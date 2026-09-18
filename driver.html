@@ -336,6 +336,7 @@ body.driver-map-mode{background:#edf3f6}
 <style id="phase90-driver-map-controls">
 .driver-map-controls{position:absolute;z-index:1320;left:14px;top:50%;display:grid;gap:7px;transform:translateY(-50%);pointer-events:auto}.driver-map-control{width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.95);border-radius:15px;color:#0a3551;background:rgba(255,255,255,.96);box-shadow:0 10px 28px rgba(10,37,64,.22);font:900 22px/1 Tahoma,Arial,sans-serif;cursor:pointer;backdrop-filter:blur(12px)}.driver-map-control:hover{background:#f4fbfa}.driver-map-control.drive{font-size:18px}.driver-map-control.drive.active{color:#fff;background:#087b75;border-color:#087b75;box-shadow:0 10px 28px rgba(8,123,117,.32)}.driver-map-control.recenter{font-size:24px}.driver-map-control small{display:none}.driver-map-control:active{transform:scale(.94)}#driverView.map-theme-night .driver-map-control{color:#dff8f5;border-color:#33536a;background:rgba(8,29,47,.95)}#driverView.map-theme-night .driver-map-control.drive.active{background:#087b75}.driver-map-mode-hint{position:absolute;z-index:1310;left:70px;top:50%;max-width:190px;padding:7px 9px;border-radius:10px;color:#fff;background:rgba(8,35,52,.8);font-size:9px;font-weight:800;opacity:0;pointer-events:none;transform:translateY(-50%) translateX(-4px);transition:.18s}.driver-map-controls:hover+.driver-map-mode-hint{opacity:1;transform:translateY(-50%)}@media(max-width:760px){.driver-map-controls{left:10px;top:48%;gap:6px}.driver-map-control{width:45px;height:45px;border-radius:14px}.driver-map-mode-hint{display:none}}@media(max-width:430px){.driver-map-controls{top:46%}.driver-map-control{width:42px;height:42px;font-size:20px}}
 </style>
+<style>.topup-method-off{padding:12px;border:1px dashed #d4dee5;border-radius:13px;background:#f8fafb;color:#6c7e90;text-align:center;font-size:11px;font-weight:850}.topup-method-off[hidden]{display:none!important}[hidden]{display:none!important}</style>
 </head>
 <body>
   <header class="topbar">
@@ -603,13 +604,17 @@ body.driver-map-mode{background:#edf3f6}
         <section class="driver-settings-group unified-wallet" id="driverSettingsWallet" aria-labelledby="driverWalletTitle">
           <div class="unified-wallet-head"><div><small>المحفظة</small><h3 id="driverWalletTitle">الرصيد والشحن</h3></div><span class="status-chip approved" id="driverBonusStatus">الرصيد المشحون</span></div>
           <div class="unified-wallet-balance"><small>الرصيد المتاح</small><strong id="driverWalletBalance">0 د.ع</strong><span>رسم كروة عند قبول الطلب: <b id="driverOrderFeeLabel">250 د.ع</b></span></div>
+          <div id="driverTransferTopupMethod">
           <div class="unified-topup-destination"><span class="unified-wallet-icon">💳</span><div><small id="driverTopupTransferLabel">Mastercard محلي</small><strong id="driverTopupTransferId">معرف التحويل يظهر هنا</strong><span>اسم المستلم: <b id="driverTopupCardHolder">إدارة كروة</b></span></div></div>
           <p class="muted unified-wallet-help">حوّل المبلغ إلى حساب Mastercard المحدد من الإدارة ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
           <form id="driverTopupForm" class="unified-topup-form">
-            <div class="field"><label for="driverTopupAmount">المبلغ المحوّل (د.ع)</label><input id="driverTopupAmount" type="number" inputmode="numeric" min="1000" max="1000000" step="250" placeholder="مثال: 10000" required></div>
+            <div class="field"><label for="driverTopupAmount">المبلغ المحوّل (د.ع)</label><input id="driverTopupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
             <div class="field"><label for="driverTopupReference">رقم/مرجع التحويل</label><input id="driverTopupReference" maxlength="80" placeholder="مثال: رقم العملية" required></div>
             <button class="driver-settings-action primary" id="driverTopupSubmit" type="submit">إرسال طلب الشحن</button>
           </form>
+          </div>
+          <div class="unified-topup-history-wrap" id="driverCardTopupMethod"><h4>شحن بكرت رقمي</h4><p class="muted unified-wallet-help">أدخل كرت كروة المكوّن من 16 رقمًا. كل كرت يُستخدم مرة واحدة فقط.</p><form id="driverTopupCardRedeemForm" class="unified-topup-form"><div class="field"><label for="driverTopupCardCode">رقم الكرت</label><input id="driverTopupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div><button class="driver-settings-action primary" id="driverRedeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button></form></div>
+          <div class="topup-method-off" id="driverTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة.</div>
           <div class="unified-topup-history-wrap"><h4>طلبات الشحن</h4><div id="driverTopupRequestsList" class="unified-topup-history"><p class="muted">لا توجد طلبات شحن بعد.</p></div></div>
         </section>
         <section class="driver-settings-group map-place-tool" aria-labelledby="driverPlaceToolTitle">
@@ -685,7 +690,7 @@ body.driver-map-mode{background:#edf3f6}
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
-  <script type="module" src="./driver.js?v=102"></script>
+  <script type="module" src="./driver.js?v=106"></script>
   <script src="./pwa.js?v=98"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{

@@ -2486,6 +2486,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 .other-item-picture img,.selected-item-image img{width:100%;height:100%;display:block;object-fit:cover}
 .selected-item-image{position:relative}
 </style>
+<style>.topup-method-off{padding:12px;border:1px dashed #d4dee5;border-radius:13px;background:#f8fafb;color:#6c7e90;text-align:center;font-size:11px;font-weight:850}.topup-method-off[hidden]{display:none!important}[hidden]{display:none!important}</style>
 </head>
 
 <body>
@@ -2889,7 +2890,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           </div>
 
           <div class="wallet-grid wallet-topup-grid">
-            <div class="card topup-card">
+            <div class="card topup-card" id="customerTransferTopupMethod">
               <h2>شحن محلي عبر Mastercard</h2>
               <div class="topup-destination">
                 <span>💳</span>
@@ -2897,11 +2898,22 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               </div>
               <p class="muted">حوّل المبلغ من تطبيق البنك/المحفظة التي تدعم التحويل إلى Mastercard، ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
               <form id="topupForm" class="topup-form">
-                <div class="field"><label for="topupAmount">المبلغ المحوّل (د.ع)</label><input id="topupAmount" type="number" inputmode="numeric" min="1000" max="1000000" step="250" placeholder="مثال: 10000" required></div>
+                <div class="field"><label for="topupAmount">المبلغ المحوّل (د.ع)</label><input id="topupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
                 <div class="field"><label for="topupReference">رقم/مرجع التحويل</label><input id="topupReference" maxlength="80" placeholder="مثال: رقم العملية أو آخر أرقام المرجع" required></div>
                 <button class="primary-button" id="submitTopup" type="submit">إرسال طلب الشحن</button>
               </form>
             </div>
+
+            <div class="card topup-card" id="customerCardTopupMethod">
+              <h2>شحن بكرت رقمي</h2>
+              <div class="topup-destination"><span>🔢</span><div><small>كرت شحن كروة</small><strong>16 رقمًا • استخدام واحد</strong><small>أدخل الرقم الذي حصلت عليه من الإدارة.</small></div></div>
+              <form id="topupCardRedeemForm" class="topup-form">
+                <div class="field"><label for="topupCardCode">رقم الكرت</label><input id="topupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div>
+                <button class="primary-button" id="redeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button>
+              </form>
+            </div>
+
+            <div class="topup-method-off" id="customerTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة. لا توجد طريقة شحن مفعلة حاليًا.</div>
 
             <div class="card referral-card">
               <h2>دعوة الأصدقاء وكود الخصم</h2>
@@ -3151,9 +3163,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=102"></script>
+  <script src="./native-notifications.js?v=106"></script>
   <script src="./service-themes.js?v=81"></script>
-  <script type="module" src="./app.js?v=102"></script>
+  <script type="module" src="./app.js?v=106"></script>
   <script src="./pwa.js?v=98"></script>
 
 <script id="phase20-map-first-js">

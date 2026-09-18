@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=102";
+import { initializeApp } from "./supabase-compat.js?v=106";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=102";
+} from "./supabase-compat.js?v=106";
 import {
   collection,
   doc,
@@ -20,8 +20,10 @@ import {
   setDoc,
   updateDoc,
   writeBatch,
-  karwaSensitiveAction
-} from "./supabase-compat.js?v=102";
+  karwaSensitiveAction,
+  karwaCreateTopupCard,
+  karwaListTopupCards
+} from "./supabase-compat.js?v=106";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -57,6 +59,8 @@ const state = {
   orders: [],
   serviceRequests: [],
   topupRequests: [],
+  topupCards: [],
+  lastGeneratedTopupCardCode: "",
   deviceBindings: [],
   deviceLinks: [],
   deviceChangeRequests: [],
@@ -76,6 +80,33 @@ function adminNotify(input={}){
   try{return window.KarwaNotify?.push?.({...input,native:input.native!==false});}catch(error){console.warn("تعذر إنشاء إشعار الإدارة",error);return null;}
 }
 function changedToPending(previous,item){return (!previous||previous.status!=="pending")&&(item?.status||"pending")==="pending";}
+
+function recordCreatedMillis(item={}){
+  const value=item.createdAt||item.submittedAt||item.requestedAt||item.updatedAt;
+  if(value?.seconds)return Number(value.seconds)*1000;
+  if(typeof value?.toMillis==="function")return Number(value.toMillis());
+  const raw=item.createdAtISO||item.created_at||item.updated_at||value||0;
+  const ms=new Date(raw).getTime();
+  return Number.isFinite(ms)?ms:0;
+}
+function isNewRealtimeRecord(previous,item){return !previous&&!!item?.firestoreId;}
+function notifyNewOrderForAdmin(order={}){
+  const type=String(order.type||"");
+  const label=type==="ride"?"طلب تكسي جديد":type==="parcel"?"طلب توصيل أغراض جديد":type==="serviceDelivery"?"طلب توصيل طعام/خدمة جديد":type==="food"?"طلب توصيل طعام جديد":"طلب جديد";
+  const customer=order.customerName||order.userName||"عميل كروة";
+  const route=order.route?` • ${String(order.route).slice(0,90)}`:"";
+  adminNotify({title:label,body:`${customer}${route}`,type:"order",route:"#waitingOrdersPanel",tag:`admin-order-${order.firestoreId}`,forceNative:true});
+  toast(label);
+}
+function notifyNewServiceRequestForAdmin(request={}){
+  const restaurant=String(request.providerCategory||"").toLowerCase()==="restaurant";
+  const label=restaurant?"طلب طعام جديد":"طلب خدمة جديد";
+  const customer=request.customerName||"عميل كروة";
+  const provider=request.providerName||request.businessName||"مزود الخدمة";
+  const delivery=request.deliveryRequested===true?" • مع توصيل":"";
+  adminNotify({title:label,body:`${customer} ← ${provider}${delivery}`,type:"service",route:"#waitingOrdersPanel",tag:`admin-service-request-${request.firestoreId}`,forceNative:true});
+  toast(label);
+}
 
 const money = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
 
@@ -226,6 +257,9 @@ function adminNotificationCounts() {
   const waitingOrders = state.orders.filter(order =>
     !order.cancelled && !order.driverId && Number(order.statusIndex || 0) === 0
   ).length;
+  const pendingServiceRequests = state.serviceRequests.filter(request =>
+    !request.cancelled && (request.status || "pending") === "pending"
+  ).length;
   const driversAttention = state.drivers.filter(driver =>
     driver.blocked === true || Number(driver.warningCount || 0) > 0
   ).length;
@@ -239,6 +273,7 @@ function adminNotificationCounts() {
     serviceApplications,
     topups,
     waitingOrders,
+    pendingServiceRequests,
     driversAttention,
     completedTrips,
     deviceChanges,
@@ -268,7 +303,7 @@ function renderAdminNotifications() {
   setModuleNotification("navServicesCount", counts.serviceApplications);
   setModuleNotification("navCaptainsCount", counts.captainApplications);
   setModuleNotification("navDriversCount", counts.driversAttention);
-  setModuleNotification("navOrdersCount", counts.waitingOrders);
+  setModuleNotification("navOrdersCount", counts.waitingOrders + counts.pendingServiceRequests);
   setModuleNotification("navFinanceCount", counts.completedTrips, false);
   setModuleNotification("navRatingsCount", counts.ratings, false);
 
@@ -276,11 +311,11 @@ function renderAdminNotifications() {
   setPanelNotification("serviceApplicationsBadge", counts.serviceApplications, "بانتظار المراجعة");
   setPanelNotification("captainApplicationsBadge", counts.captainApplications, "بانتظار المراجعة");
   setPanelNotification("driversAttentionBadge", counts.driversAttention, "يحتاج متابعة");
-  setPanelNotification("waitingOrdersBadge", counts.waitingOrders, "بانتظار كابتن");
+  setPanelNotification("waitingOrdersBadge", counts.waitingOrders + counts.pendingServiceRequests, "طلب وارد الآن");
   setPanelNotification("financialReportBadge", counts.completedTrips, "رحلة مكتملة");
   setPanelNotification("ratingsBadge", counts.ratings, "تقييم");
 
-  const actionable = counts.topups + counts.serviceApplications + counts.captainApplications + counts.driversAttention + counts.waitingOrders + counts.deviceChanges;
+  const actionable = counts.topups + counts.serviceApplications + counts.captainApplications + counts.driversAttention + counts.waitingOrders + counts.pendingServiceRequests + counts.deviceChanges;
   const globalBadge = byId("globalNotificationsBadge");
   const notificationsLink = byId("adminNotificationsLink");
   const heroCount = byId("heroActionCount");
@@ -434,8 +469,8 @@ function renderMetrics() {
   byId("driversCount").textContent = state.drivers.length;
   byId("serviceProvidersCount").textContent = state.users.filter(user => user.role === "serviceProvider").length;
   byId("blockedCount").textContent = state.drivers.filter(driver => driver.blocked === true).length;
-  byId("pendingCount").textContent = notifications.captainApplications + notifications.serviceApplications + notifications.topups + notifications.deviceChanges;
-  byId("ordersCount").textContent = state.orders.length;
+  byId("pendingCount").textContent = notifications.captainApplications + notifications.serviceApplications + notifications.topups + notifications.pendingServiceRequests + notifications.deviceChanges;
+  byId("ordersCount").textContent = state.orders.length + state.serviceRequests.length;
   byId("liveTripsCount").textContent = state.orders.filter(o => !o.cancelled && Number(o.statusIndex||0) > 0 && Number(o.statusIndex||0) < 4).length;
   byId("cancelledTripsCount").textContent = state.orders.filter(o => o.cancelled).length;
   byId("onlineDriversCount").textContent = state.drivers.filter(d => d.online === true && d.blocked !== true).length;
@@ -721,16 +756,31 @@ function orderCard(order) {
     </article>`;
 }
 
+function serviceRequestAdminCard(request) {
+  const restaurant=String(request.providerCategory||"").toLowerCase()==="restaurant";
+  const status=String(request.status||"pending");
+  const statusLabel=status==="pending"?(restaurant?"بانتظار المطعم":"بانتظار مزود الخدمة"):status==="accepted"?"مقبول":status==="rejected"?"مرفوض":status;
+  const title=request.requestText||request.itemName||(restaurant?"طلب طعام":"طلب خدمة");
+  const delivery=request.deliveryRequested===true?"نعم":"لا";
+  const total=Number(request.totalPrice||request.subtotal||0);
+  return `<article class="order-card service-request-admin-card">
+    <div class="order-top"><h3>${restaurant?"🍽️":"🧰"} ${escapeHtml(title)}</h3><span class="status-chip ${status==="pending"?"pending":status==="accepted"?"approved":"cancelled"}">${escapeHtml(statusLabel)}</span></div>
+    <p class="order-route">${escapeHtml(request.customerName||"عميل كروة")} ← ${escapeHtml(request.providerName||"مزود الخدمة")}</p>
+    <div class="order-bottom"><div class="order-meta"><span>النوع: ${restaurant?"مطعم/طعام":"خدمة"}</span><span>التوصيل: ${delivery}</span></div>${total>0?`<span class="order-price">${money(total)}</span>`:""}${request.customerAddress?`<div class="order-meta"><span>عنوان العميل: ${escapeHtml(request.customerAddress)}</span></div>`:""}</div>
+  </article>`;
+}
+
 function renderOrders() {
   const waiting = state.orders.filter(order =>
     !order.cancelled && !order.driverId && Number(order.statusIndex || 0) === 0
-  );
-  const sorted = [...waiting].sort((a, b) =>
-    String(b.createdAtISO || "").localeCompare(String(a.createdAtISO || ""))
-  );
+  ).map(item=>({kind:"order",item,at:recordCreatedMillis(item)}));
+  const serviceWaiting = state.serviceRequests.filter(request =>
+    !request.cancelled && (request.status || "pending") === "pending"
+  ).map(item=>({kind:"service",item,at:recordCreatedMillis(item)}));
+  const sorted = [...waiting,...serviceWaiting].sort((a,b)=>b.at-a.at);
   byId("ordersList").innerHTML = sorted.length
-    ? sorted.map(orderCard).join("")
-    : `<div class="empty"><span>✅</span>لا توجد طلبات بانتظار كابتن حالياً.</div>`;
+    ? sorted.map(row=>row.kind==="order"?orderCard(row.item):serviceRequestAdminCard(row.item)).join("")
+    : `<div class="empty"><span>✅</span>لا توجد طلبات جديدة حالياً.</div>`;
 }
 function cancellationRoleLabel(role) {
   return ({ customer:"عميل", driver:"كابتن", serviceProvider:"خدمات أخرى", admin:"الإدارة" })[role] || "مستخدم";
@@ -827,7 +877,72 @@ function renderPricingSettings(){
   Object.entries(values).forEach(([id,value])=>{const el=byId(id);if(el&&document.activeElement!==el)el.value=String(Number(value));});
   const bonusToggle=byId("signupBonusEnabled");if(bonusToggle&&document.activeElement!==bonusToggle)bonusToggle.checked=c.signupBonusEnabled!==false;
   ["topupTransferLabel","topupTransferId","topupCardHolder"].forEach(id=>{const el=byId(id);if(el&&document.activeElement!==el)el.value=String(c[id]||"");});
+  const transferToggle=byId("topupTransferEnabled"),cardToggle=byId("topupCardEnabled");
+  if(transferToggle&&document.activeElement!==transferToggle)transferToggle.checked=c.topupTransferEnabled!==false;
+  if(cardToggle&&document.activeElement!==cardToggle)cardToggle.checked=c.topupCardEnabled!==false;
+  renderTopupMethodAdminControls();
 }
+function renderTopupMethodAdminControls(){
+  const transfer=byId("topupTransferEnabled")?.checked ?? (state.pricingSettings?.topupTransferEnabled!==false);
+  const card=byId("topupCardEnabled")?.checked ?? (state.pricingSettings?.topupCardEnabled!==false);
+  const summary=byId("topupMethodsSummary");
+  if(summary){summary.classList.toggle("off",!transfer&&!card);summary.textContent=transfer&&card?"الطريقتان تعملان":transfer?"التحويل اليدوي فقط مفعّل":card?"كروت الشحن فقط مفعّلة":"جميع طرق الشحن متوقفة";}
+  const status=byId("topupCardMethodStatus");if(status){status.textContent=card?"مفعّل":"متوقف";status.className=`status-chip ${card?"approved":"cancelled"}`;}
+  const generate=byId("generateTopupCard"),amount=byId("topupCardAmount");if(generate)generate.disabled=!card;if(amount)amount.disabled=!card;
+  document.querySelectorAll("[data-topup-card-amount]").forEach(button=>button.disabled=!card);
+}
+function renderTopupCardsAdmin(){
+  const box=byId("topupCardsAdminList");if(!box)return;
+  const rows=Array.isArray(state.topupCards)?state.topupCards:[];
+  if(!rows.length){box.innerHTML='<p class="muted">لا توجد بطاقات مولدة بعد.</p>';return;}
+  box.innerHTML=rows.map(card=>{
+    const used=card.status==="redeemed";
+    const date=card.createdAt?new Date(card.createdAt).toLocaleString("ar-IQ"):"—";
+    const redeemed=card.redeemedAt?new Date(card.redeemedAt).toLocaleString("ar-IQ"):"";
+    const who=card.redeemedByName||card.redeemedByEmail||"مستخدم كروة";
+    return `<div class="topup-card-history-row"><div><strong>${money(card.amount)} • <span class="topup-card-code-mask">•••• •••• •••• ${escapeHtml(card.last4||"----")}</span></strong><small>توليد: ${escapeHtml(date)}${used?` • استُخدم بواسطة ${escapeHtml(who)}${redeemed?` • ${escapeHtml(redeemed)}`:""}`:" • لم يُستخدم بعد"}</small></div><span class="topup-card-state ${used?"redeemed":""}">${used?"مستخدم":"فعال"}</span></div>`;
+  }).join("");
+}
+async function refreshTopupCardsAdmin(){
+  if(!state.user)return;
+  try{const rows=await karwaListTopupCards(100);state.topupCards=Array.isArray(rows)?rows:[];renderTopupCardsAdmin();}
+  catch(error){console.warn("تعذر تحميل بطاقات الشحن",error);}
+}
+byId("topupTransferEnabled")?.addEventListener("change",renderTopupMethodAdminControls);
+byId("topupCardEnabled")?.addEventListener("change",renderTopupMethodAdminControls);
+byId("topupMethodsAdminForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!state.user)return;
+  const transfer=byId("topupTransferEnabled")?.checked===true,card=byId("topupCardEnabled")?.checked===true;
+  const button=event.submitter||byId("saveTopupMethods");busy(button,true,"جارٍ الحفظ…");
+  try{
+    await setDoc(doc(db,"appSettings","pricing"),{topupTransferEnabled:transfer,topupCardEnabled:card,updatedAt:serverTimestamp(),updatedBy:state.user.uid},{merge:true});
+    state.pricingSettings={...(state.pricingSettings||{}),topupTransferEnabled:transfer,topupCardEnabled:card};renderTopupMethodAdminControls();
+    toast(transfer&&card?"تم تشغيل طريقتي الشحن":transfer?"تم تشغيل التحويل اليدوي فقط":card?"تم تشغيل كروت الشحن فقط":"تم إيقاف جميع طرق الشحن");
+  }catch(error){console.error(error);toast("تعذر حفظ طرق الشحن");}finally{busy(button,false);}
+});
+document.querySelectorAll("[data-topup-card-amount]").forEach(button=>button.addEventListener("click",()=>{const input=byId("topupCardAmount");if(input)input.value=button.dataset.topupCardAmount||"5000";}));
+byId("topupCardGeneratorForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!state.user)return;
+  if(byId("topupCardEnabled")?.checked===false)return toast("فعّل طريقة كروت الشحن أولًا ثم ولّد الكرت.");
+  const amount=Math.round(Number(byId("topupCardAmount")?.value||0));
+  if(!Number.isFinite(amount)||amount<1000||amount>1000000||amount%1000!==0)return toast("قيمة الكرت يجب أن تكون من 1,000 إلى 1,000,000 د.ع وبمضاعفات 1,000.");
+  const button=event.submitter||byId("generateTopupCard");busy(button,true,"جاري التوليد…");
+  try{
+    const result=await karwaCreateTopupCard(amount);
+    state.lastGeneratedTopupCardCode=String(result?.code||"");
+    const cardBox=byId("generatedTopupCard");if(cardBox)cardBox.hidden=false;
+    if(byId("generatedTopupCardCode"))byId("generatedTopupCardCode").textContent=result?.formattedCode||state.lastGeneratedTopupCardCode;
+    if(byId("generatedTopupCardAmount"))byId("generatedTopupCardAmount").textContent=money(result?.amount||amount);
+    await refreshTopupCardsAdmin();toast("تم توليد كرت جديد. انسخ الرقم الآن قبل مغادرة الصفحة.");
+  }catch(error){console.error(error);toast(String(error?.message||"").includes("INVALID_CARD_AMOUNT")?"قيمة الكرت غير صالحة.":"تعذر توليد كرت الشحن");}
+  finally{busy(button,false);}
+});
+byId("copyGeneratedTopupCard")?.addEventListener("click",async()=>{
+  const code=state.lastGeneratedTopupCardCode;if(!code)return toast("ولّد كرتًا أولًا");
+  try{await navigator.clipboard.writeText(code);toast("تم نسخ رقم الكرت");}
+  catch(_){toast(code);}
+});
+
 function renderTopupRequests(){
   const box=byId("topupRequestsAdmin"); if(!box)return;
   const rows=[...state.topupRequests].sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
@@ -1031,12 +1146,14 @@ setupAdminAreaMapControls();
 function openDashboard() {
   clearDashboardListeners();
   showView("dashboard");
-  let captainAppsReady=false, serviceAppsReady=false, topupsReady=false;
-  let previousCaptainApps=new Map(), previousServiceApps=new Map(), previousTopups=new Map();
+  let captainAppsReady=false, serviceAppsReady=false, topupsReady=false, ordersReady=false, serviceRequestsReady=false, deviceChangesReady=false;
+  let previousCaptainApps=new Map(), previousServiceApps=new Map(), previousTopups=new Map(), previousOrders=new Map(), previousServiceRequests=new Map(), previousDeviceChanges=new Map();
   // Authentication and the rest of the dashboard must not depend on any map CDN.
   loadAdminLeaflet()
     .then(() => { initializeAdminAreaMap(); window.setTimeout(()=>{state.areaMap?.invalidateSize();renderAdminAreaMap();},80); })
     .catch(error => { console.warn("تعذر تحميل خريطة الإدارة", error); showAdminMapLoadError(); });
+  refreshTopupCardsAdmin();
+  const topupCardsPoll=setInterval(refreshTopupCardsAdmin,8000);
   const usersUnsubscribe = onSnapshot(collection(db, "users"), snapshot => {
     state.users = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderMetrics();
@@ -1048,7 +1165,7 @@ function openDashboard() {
     const incoming=snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     if(captainAppsReady)incoming.forEach(item=>{
       const old=previousCaptainApps.get(item.firestoreId);
-      if(changedToPending(old,item))adminNotify({title:"طلب تسجيل كابتن جديد",body:`${item.fullName||item.name||"كابتن جديد"} أرسل طلب انضمام يحتاج المراجعة.`,type:"admin",route:"#captainApplicationsPanel",tag:`admin-captain-${item.firestoreId}`});
+      if(changedToPending(old,item))adminNotify({title:"طلب تسجيل كابتن جديد",body:`${item.fullName||item.name||"كابتن جديد"} أرسل طلب انضمام يحتاج المراجعة.`,type:"admin",route:"#captainApplicationsPanel",tag:`admin-captain-${item.firestoreId}`,forceNative:true});
     });
     state.applications=incoming;
     previousCaptainApps=new Map(incoming.map(item=>[item.firestoreId,item]));captainAppsReady=true;
@@ -1061,7 +1178,7 @@ function openDashboard() {
     const incoming=snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     if(serviceAppsReady)incoming.forEach(item=>{
       const old=previousServiceApps.get(item.firestoreId);
-      if(changedToPending(old,item))adminNotify({title:"طلب خدمة جديد",body:`${item.businessName||item.ownerName||"مزود خدمة"} أرسل طلب تفعيل يحتاج المراجعة.`,type:"admin",route:"#servicesPanel",tag:`admin-service-${item.firestoreId}`});
+      if(changedToPending(old,item))adminNotify({title:"طلب خدمة جديد",body:`${item.businessName||item.ownerName||"مزود خدمة"} أرسل طلب تفعيل يحتاج المراجعة.`,type:"admin",route:"#servicesPanel",tag:`admin-service-${item.firestoreId}`,forceNative:true});
     });
     state.serviceApplications=incoming;
     previousServiceApps=new Map(incoming.map(item=>[item.firestoreId,item]));serviceAppsReady=true;
@@ -1080,14 +1197,27 @@ function openDashboard() {
     renderAdminAreaMap();
   });
   const ordersUnsubscribe = onSnapshot(collection(db, "orders"), snapshot => {
-    state.orders = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    const incoming=snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    if(ordersReady)incoming.forEach(item=>{
+      const old=previousOrders.get(item.firestoreId);
+      if(isNewRealtimeRecord(old,item))notifyNewOrderForAdmin(item);
+    });
+    state.orders = incoming;
+    previousOrders=new Map(incoming.map(item=>[item.firestoreId,item]));ordersReady=true;
     renderOrders();
     renderDrivers();
     renderMetrics();
     renderCancellations();
   });
   const serviceRequestsUnsubscribe = onSnapshot(collection(db, "serviceRequests"), snapshot => {
-    state.serviceRequests = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    const incoming=snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
+    if(serviceRequestsReady)incoming.forEach(item=>{
+      const old=previousServiceRequests.get(item.firestoreId);
+      if(isNewRealtimeRecord(old,item))notifyNewServiceRequestForAdmin(item);
+    });
+    state.serviceRequests = incoming;
+    previousServiceRequests=new Map(incoming.map(item=>[item.firestoreId,item]));serviceRequestsReady=true;
+    renderOrders();
     renderMetrics();
     renderCancellations();
   });
@@ -1108,7 +1238,7 @@ function openDashboard() {
     const incoming=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
     if(topupsReady)incoming.forEach(item=>{
       const old=previousTopups.get(item.firestoreId);
-      if(changedToPending(old,item))adminNotify({title:"طلب شحن رصيد جديد",body:`${item.customerName||"مستخدم كروة"} طلب شحن ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`});
+      if(changedToPending(old,item))adminNotify({title:"طلب شحن رصيد جديد",body:`${item.customerName||"مستخدم كروة"} طلب شحن ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`,forceNative:true});
     });
     state.topupRequests=incoming;
     previousTopups=new Map(incoming.map(item=>[item.firestoreId,item]));topupsReady=true;
@@ -1123,7 +1253,13 @@ function openDashboard() {
     renderDeviceManagement();
   });
   const deviceChangesUnsubscribe = onSnapshot(collection(db,"deviceChangeRequests"), snapshot => {
-    state.deviceChangeRequests = snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+    const incoming=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+    if(deviceChangesReady)incoming.forEach(item=>{
+      const old=previousDeviceChanges.get(item.firestoreId);
+      if(changedToPending(old,item))adminNotify({title:"طلب تغيير جهاز جديد",body:`${item.accountName||"مستخدم كروة"} طلب نقل حسابه إلى جهاز جديد.`,type:"admin",route:"#deviceManagementPanel",tag:`admin-device-${item.firestoreId}`,forceNative:true});
+    });
+    state.deviceChangeRequests = incoming;
+    previousDeviceChanges=new Map(incoming.map(item=>[item.firestoreId,item]));deviceChangesReady=true;
     renderDeviceManagement();
     renderMetrics();
   });
@@ -1145,7 +1281,8 @@ function openDashboard() {
     deviceBindingsUnsubscribe,
     deviceLinksUnsubscribe,
     deviceChangesUnsubscribe,
-    pricingUnsubscribe
+    pricingUnsubscribe,
+    ()=>clearInterval(topupCardsPoll)
   );
 }
 
