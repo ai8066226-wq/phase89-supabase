@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=100";
+import { initializeApp } from "./supabase-compat.js?v=101";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=100";
+} from "./supabase-compat.js?v=101";
 import {
   addDoc,
   collection,
@@ -28,8 +28,8 @@ import {
   writeBatch,
   karwaSensitiveAction,
   karwaDriverAutoComplete
-} from "./supabase-compat.js?v=100";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=100";
+} from "./supabase-compat.js?v=101";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=101";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -1330,7 +1330,8 @@ byId("applicationForm").addEventListener("submit", async event => {
   const phone = byId("driverPhone").value.replace(/\s/g, "");
   const name = byId("driverName").value.trim();
   if (name.length < 2) { toast("أدخل الاسم الكامل"); return; }
-  if (phone.replace(/\D/g, "").length < 8) { toast("أدخل رقم هاتف صحيحًا"); return; }
+  const phoneDigits = phone.replace(/\D/g, "");
+  if (phoneDigits.length < 8 || phoneDigits.length > 15) { toast("أدخل رقم هاتف صحيحًا من 8 إلى 15 رقمًا"); return; }
 
   let registerEmail = "", registerPassword = "";
   if (directSignup) {

@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=100";
+import { initializeApp } from "./supabase-compat.js?v=101";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=100";
+} from "./supabase-compat.js?v=101";
 import {
   collection,
   doc,
@@ -25,9 +25,9 @@ import {
   karwaSensitiveAction,
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp
-} from "./supabase-compat.js?v=100";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=100";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=100";
+} from "./supabase-compat.js?v=101";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=101";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=101";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -518,11 +518,11 @@ function setAuthMode(mode) {
   byId("authLead").textContent = registering
     ? "عند إكمال التسجيل سيصل طلب اعتمادك إلى الإدارة تلقائيًا."
     : "سجّل الدخول لمتابعة طلبك أو إدارة خدمتك.";
-  byId("authSubmit").textContent = registering ? "إنشاء الحساب وإرسال الطلب" : "تسجيل الدخول";
+  byId("authSubmit").textContent = registering ? "إنشاء الحساب وإرسال طلب الموافقة" : "تسجيل الدخول";
   byId("authPassword").autocomplete = registering ? "new-password" : "current-password";
   byId("authMessage").textContent = "";
   document.querySelectorAll(".registration-field").forEach(field => field.classList.toggle("hidden", !registering));
-  ["registerName", "registerBusinessName", "registerCategory", "registerPhone", "registerCity", "registerAddress"].forEach(id => {
+  ["registerPasswordConfirm", "registerName", "registerBusinessName", "registerCategory", "registerPhone", "registerCity", "registerAddress"].forEach(id => {
     byId(id).required = registering;
   });
 }
@@ -562,6 +562,7 @@ byId("authForm").addEventListener("submit", async event => {
   event.preventDefault();
   const email = byId("authEmail").value.trim();
   const password = byId("authPassword").value;
+  const passwordConfirm = byId("registerPasswordConfirm")?.value || "";
   const submit = byId("authSubmit");
   byId("authMessage").textContent = "";
 
@@ -570,6 +571,11 @@ byId("authForm").addEventListener("submit", async event => {
     const validationMessage = validateApplication(data);
     if (validationMessage) {
       byId("authMessage").textContent = validationMessage;
+      return;
+    }
+    if (password !== passwordConfirm) {
+      byId("authMessage").textContent = "كلمتا المرور غير متطابقتين.";
+      byId("registerPasswordConfirm")?.focus();
       return;
     }
 

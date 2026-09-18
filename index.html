@@ -3123,18 +3123,20 @@ body.customer-map-mode #home>.welcome::after { display: none; }
         <div class="role-entry-heading"><small>ابدأ الآن</small><h3 id="accountTypeTitle">اختر نوع حسابك</h3><p>اختر البوابة المناسبة، ثم سجّل الدخول أو أنشئ حسابًا جديدًا.</p></div>
         <article class="role-entry-card customer"><div class="role-entry-icon">👤</div><h3>عميل</h3><p>اطلب تكسي أو توصيل وتابع طلباتك بسهولة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="customer" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="customer" data-mode="register">إنشاء حساب</button></div></article>
         <article class="role-entry-card captain"><div class="role-entry-icon">🚕</div><h3>كابتن</h3><p>استقبل الرحلات والطلبات المناسبة لنوع خدمتك.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="driverApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="driverApplicant" data-mode="register">إنشاء حساب</button></div></article>
-        <article class="role-entry-card services"><div class="role-entry-icon">🧰</div><h3>خدمات أخرى</h3><p>سجّل نشاطك وأرسل طلب الاعتماد، ثم أدر خدماتك من لوحة مستقلة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="serviceApplicant" data-mode="login">دخول بوابة الخدمات</button><button type="button" class="secondary-button role-auth-action" data-role="serviceApplicant" data-mode="register">تسجيل خدمة جديدة</button></div></article>
+        <article class="role-entry-card services"><div class="role-entry-icon">🧰</div><h3>خدمات أخرى</h3><p>سجّل نشاطك وأرسل طلب الاعتماد، ثم أدر خدماتك من لوحة مستقلة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="serviceApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="serviceApplicant" data-mode="register">إنشاء حساب</button></div></article>
       </div>
       <div id="authFormPanel" hidden>
         <button type="button" class="auth-back-button" id="authBackToRoles">→ العودة لاختيار نوع الحساب</button>
         <div class="auth-form-heading"><small>بيانات الحساب</small><h3>دخول واضح وآمن</h3><p>أدخل بياناتك لإكمال الخطوة والمتابعة إلى حسابك.</p></div>
         <div class="selected-role-banner"><span id="selectedRoleIcon">👤</span><div><small>نوع الحساب</small><strong id="selectedRoleLabel">عميل</strong></div></div>
         <form id="authForm">
-          <div class="field" id="nameField" hidden><label for="authName">الاسم الكامل</label><input id="authName" autocomplete="name" placeholder="مثال: محمد علي"></div>
+          <div class="field"><label for="authEmail">البريد الإلكتروني</label><input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" required></div>
+          <div class="field"><label for="authPassword">كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="6 أحرف على الأقل" required></div>
+          <div class="field" id="passwordConfirmField" hidden><label for="authPasswordConfirm">تأكيد كلمة المرور</label><input id="authPasswordConfirm" type="password" autocomplete="new-password" minlength="6" placeholder="أعد كتابة كلمة المرور"></div>
+          <div class="field" id="nameField" hidden><label for="authName">الاسم الكامل</label><input id="authName" autocomplete="name" maxlength="80" placeholder="مثال: محمد علي"></div>
+          <div class="field" id="phoneField" hidden><label for="authPhone">رقم الهاتف</label><input id="authPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="07xx xxx xxxx"></div>
           <div class="field" id="inviteField" hidden><label for="authInviteCode">كود دعوة (اختياري)</label><input id="authInviteCode" maxlength="24" autocapitalize="characters" placeholder="مثال: KWABC123"></div>
           <div class="field" id="roleField" hidden><select id="authRole"><option value="customer">عميل</option><option value="driverApplicant">كابتن</option></select></div>
-          <div class="field"><label for="authEmail">البريد الإلكتروني</label><input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" required></div>
-          <div class="field"><label for="authPassword">كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="ستة أحرف على الأقل" required></div>
           <div class="auth-message" id="authMessage" role="alert"></div>
           <button class="primary-button auth-submit" id="authSubmit" type="submit">تسجيل الدخول</button>
           <p class="auth-note">نوع الحساب ثابت بعد الإنشاء، ولكل نوع بوابته وصلاحياته المستقلة.</p>
@@ -3151,7 +3153,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script src="./precise-location.js?v=81"></script>
   <script src="./native-notifications.js?v=81"></script>
   <script src="./service-themes.js?v=81"></script>
-  <script type="module" src="./app.js?v=100"></script>
+  <script type="module" src="./app.js?v=101"></script>
   <script src="./pwa.js?v=98"></script>
 
 <script id="phase20-map-first-js">

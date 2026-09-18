@@ -1,8 +1,8 @@
 {
   "phase": 90,
-  "version": "2.8.10",
+  "version": "2.8.11",
   "webBasePhase": 87,
-  "updateMode": "single-transient-update-notice-no-repeat-v100",
+  "updateMode": "single-transient-update-notice-no-repeat-v101",
   "hosting": "github-pages",
   "notifications": "android-native-sound-vibration",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -44,9 +44,10 @@
   "rls": "karwa-documents-explicit-data-api-grants-protected-user-financial-fields",
   "adminAreaMap": "admin-selected-center-10km-live-captains-services-name-email-distance-filters",
   "driverMapControls": "zoom-in-out-recenter-manual-driving-mode-auto-driving-on-active-order",
-  "phoneRegistration": "required-8-to-15-digits-server-enforced",
+  "phoneRegistration": "required-8-to-15-digits-single-visible-field-all-registration-forms-v101",
   "adminLoginFix": "map-divicon-syntax-fix-form-guard-remembered-admin-session-v98",
   "adminMapLoading": "lazy-leaflet-after-admin-auth-jsdelivr-unpkg-fallback",
   "pwaUpdateNotice": "hidden-when-current-shown-once-5.5s-per-new-version",
-  "adminSession": "persistent-local-supabase-session-exit-portal-without-signout"
+  "adminSession": "persistent-local-supabase-session-exit-portal-without-signout",
+  "registrationForms": "unified-customer-driver-service-email-password-confirm-name-phone-single-field-v101"
 }

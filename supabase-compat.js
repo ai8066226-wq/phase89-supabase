@@ -174,7 +174,7 @@ function ensureCustomerSignupPhoneField() {
   const install = () => {
     const form = document.getElementById("authForm");
     const email = document.getElementById("authEmail")?.closest?.(".field");
-    if (!form || !email || document.getElementById("authPhone")) return;
+    if (!form || !email || document.getElementById("authPhone") || document.getElementById("driverPhone") || document.getElementById("registerPhone")) return;
 
     const field = document.createElement("div");
     field.className = "field";

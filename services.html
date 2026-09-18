@@ -127,18 +127,19 @@
       <section class="auth-intro"><span class="eyebrow">بوابة شركاء كروة</span><h1>حوّل خدمتك إلى تجربة رقمية موثوقة</h1><p>أنشئ حساب مزود خدمة، وأرسل طلب الاعتماد تلقائيًا إلى الإدارة، ثم أدر ملفك وخدماتك من لوحة واحدة بعد الموافقة.</p><div class="feature-list"><div class="feature"><span>1</span><div><b>تسجيل احترافي</b><small>بيانات واضحة تساعد الإدارة على مراجعة الطلب.</small></div></div><div class="feature"><span>2</span><div><b>اعتماد آمن</b><small>لا تُفتح لوحة الخدمة إلا بعد موافقة الإدارة.</small></div></div><div class="feature"><span>3</span><div><b>إدارة مرنة</b><small>حدّث ملف النشاط وقائمة الخدمات أو المنتجات بسهولة.</small></div></div></div></section>
       <section class="card auth-card">
         <h2 id="authHeading">مرحبًا بعودتك</h2><p class="muted" id="authLead">سجّل الدخول لمتابعة طلبك أو إدارة خدمتك.</p>
-        <div class="tabs" role="tablist" aria-label="الدخول أو إنشاء حساب"><button class="tab active" id="loginMode" type="button" role="tab">تسجيل الدخول</button><button class="tab" id="registerMode" type="button" role="tab">إنشاء حساب خدمة</button></div>
+        <div class="tabs" role="tablist" aria-label="الدخول أو إنشاء حساب"><button class="tab active" id="loginMode" type="button" role="tab">تسجيل الدخول</button><button class="tab" id="registerMode" type="button" role="tab">إنشاء حساب</button></div>
         <form id="authForm"><div class="form-grid">
+          <div class="field full"><label for="authEmail">البريد الإلكتروني</label><input id="authEmail" type="email" inputmode="email" autocomplete="email" required placeholder="name@example.com"></div>
+          <div class="field full"><label for="authPassword">كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="6 أحرف على الأقل"></div>
+          <div class="field registration-field full hidden"><label for="registerPasswordConfirm">تأكيد كلمة المرور</label><input id="registerPasswordConfirm" type="password" autocomplete="new-password" minlength="6" placeholder="أعد كتابة كلمة المرور"></div>
           <div class="field registration-field full hidden"><label for="registerName">اسم صاحب الخدمة</label><input id="registerName" autocomplete="name" maxlength="80" placeholder="الاسم الكامل"></div>
+          <div class="field registration-field hidden"><label for="registerPhone">رقم الهاتف</label><input id="registerPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="07xx xxx xxxx"></div>
           <div class="field registration-field hidden"><label for="registerBusinessName">اسم النشاط</label><input id="registerBusinessName" maxlength="80" placeholder="مثال: مطعم مذاق الموصل"></div>
-          <div class="field registration-field hidden"><label for="registerCategory">تصنيف المهنة</label><input id="registerCategory" list="professionCategories" maxlength="60" placeholder="مثال: كهربائي، سباك، نجار، مطعم" required><datalist id="professionCategories"><option value="كهربائي"><option value="سباك"><option value="نجار"><option value="ميكانيكي"><option value="خدمات منزلية"><option value="صحة وعناية"><option value="بقالة ومتجر غذائي"><option value="مطعم ومأكولات"></datalist><small>اكتب اسم المهنة كما تريد أن تظهر بطاقتها للعميل.</small></div>
-          <div class="field registration-field hidden"><label for="registerPhone">رقم الهاتف</label><input id="registerPhone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="07xx xxx xxxx"></div>
+          <div class="field registration-field hidden"><label for="registerCategory">تصنيف المهنة</label><input id="registerCategory" list="professionCategories" maxlength="60" placeholder="مثال: كهربائي، سباك، نجار، مطعم"><datalist id="professionCategories"><option value="كهربائي"><option value="سباك"><option value="نجار"><option value="ميكانيكي"><option value="خدمات منزلية"><option value="صحة وعناية"><option value="بقالة ومتجر غذائي"><option value="مطعم ومأكولات"></datalist><small>اكتب اسم المهنة كما تريد أن تظهر بطاقتها للعميل.</small></div>
           <div class="field registration-field hidden"><label for="registerCity">المدينة</label><select id="registerCity"><option>الموصل</option><option>بغداد</option><option>البصرة</option><option>أربيل</option><option>النجف</option><option>كركوك</option><option>دهوك</option><option>السليمانية</option><option>أخرى</option></select></div>
           <div class="field registration-field full hidden"><label for="registerAddress">عنوان النشاط</label><input id="registerAddress" maxlength="160" placeholder="المنطقة، الشارع، أقرب نقطة دالة"></div>
           <div class="field registration-field full hidden"><label>الموقع الجغرافي للنشاط</label><div class="location-capture"><button class="button secondary" id="registerGpsButton" type="button">📍 تحديد موقع النشاط</button><small id="registerGpsStatus">لم يتم تحديد الموقع بعد</small></div></div>
           <div class="field registration-field full hidden"><label for="registerDescription">نبذة مختصرة</label><textarea id="registerDescription" maxlength="500" placeholder="ما الخدمات أو المنتجات التي تقدمها؟"></textarea></div>
-          <div class="field full"><label for="authEmail">البريد الإلكتروني</label><input id="authEmail" type="email" inputmode="email" autocomplete="email" required placeholder="name@example.com"></div>
-          <div class="field full"><label for="authPassword">كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="ستة أحرف على الأقل"></div>
         </div><div class="auth-message" id="authMessage" role="alert"></div><button class="button primary wide form-submit" id="authSubmit" type="submit">تسجيل الدخول</button></form>
         <p class="auth-foot"><a href="./index.html">العودة إلى تطبيق كروة</a></p>
       </section>
@@ -218,7 +219,7 @@
   <script src="./native-notifications.js?v=81"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./service-image-library.js?v=89"></script>
-  <script type="module" src="./services.js?v=99"></script>
+  <script type="module" src="./services.js?v=101"></script>
   <script src="./pwa.js?v=98"></script>
 </body>
 </html>

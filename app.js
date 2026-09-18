@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=100";
+import { initializeApp } from "./supabase-compat.js?v=101";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=100";
+} from "./supabase-compat.js?v=101";
 import {
   addDoc,
   collection,
@@ -28,8 +28,8 @@ import {
   karwaSensitiveAux,
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest
-} from "./supabase-compat.js?v=100";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=100";
+} from "./supabase-compat.js?v=101";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=101";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -748,11 +748,15 @@ function setAuthMode(mode) {
   byId("loginTab").classList.toggle("active", !registering);
   byId("registerTab").classList.toggle("active", registering);
   byId("nameField").hidden = !registering;
+  byId("phoneField").hidden = !registering;
+  byId("passwordConfirmField").hidden = !registering;
   byId("roleField").hidden = !registering;
   if(byId("inviteField"))byId("inviteField").hidden=!registering;
   byId("authName").required = registering;
+  byId("authPhone").required = registering;
+  byId("authPasswordConfirm").required = registering;
   byId("authPassword").autocomplete = registering ? "new-password" : "current-password";
-  byId("authSubmit").textContent = registering ? "إنشاء الحساب" : "تسجيل الدخول";
+  byId("authSubmit").textContent = registering ? "إنشاء الحساب وإرسال البيانات" : "تسجيل الدخول";
   byId("authMessage").textContent = "";
 }
 
@@ -983,6 +987,7 @@ byId("authForm").addEventListener("submit", async event => {
   event.preventDefault();
   const email = byId("authEmail").value.trim();
   const password = byId("authPassword").value;
+  const passwordConfirm = byId("authPasswordConfirm")?.value || "";
   const name = byId("authName").value.trim();
   const selectedRole = byId("authRole")?.value || "customer";
   const inviteCode = byId("authInviteCode")?.value.trim().toUpperCase() || "";
@@ -996,6 +1001,19 @@ byId("authForm").addEventListener("submit", async event => {
   if (state.authMode === "register" && name.length < 2) {
     byId("authMessage").textContent = "اكتب اسمًا صحيحًا.";
     return;
+  }
+  if (state.authMode === "register" && password !== passwordConfirm) {
+    byId("authMessage").textContent = "كلمتا المرور غير متطابقتين.";
+    byId("authPasswordConfirm")?.focus();
+    return;
+  }
+  if (state.authMode === "register") {
+    const phoneDigits = String(byId("authPhone")?.value || "").replace(/\D/g, "");
+    if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+      byId("authMessage").textContent = "أدخل رقم هاتف صحيحًا من 8 إلى 15 رقمًا.";
+      byId("authPhone")?.focus();
+      return;
+    }
   }
 
   setButtonBusy(submit, true);
