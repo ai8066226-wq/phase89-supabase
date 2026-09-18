@@ -959,7 +959,7 @@ function setAdminAreaCenter(point,persist=true){
   if(persist)try{localStorage.setItem("karwa.admin.areaCenter",JSON.stringify(safe))}catch{}
   if(state.areaMap){
     const ll=[safe.latitude,safe.longitude];
-    if(state.areaCenterMarker)state.areaCenterMarker.setLatLng(ll);else state.areaCenterMarker=window.L.marker(ll,{icon:window.L.divIcon({className:"",html:'<div class="admin-map-center-pin"></div>',iconSize:[30,30],iconAnchor:[15,15]),zIndexOffset:1200}).addTo(state.areaMap).bindTooltip("مركز نطاق 10 كم",{direction:"top"});
+    if(state.areaCenterMarker)state.areaCenterMarker.setLatLng(ll);else state.areaCenterMarker=window.L.marker(ll,{icon:window.L.divIcon({className:"",html:'<div class="admin-map-center-pin"></div>',iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:1200}).addTo(state.areaMap).bindTooltip("مركز نطاق 10 كم",{direction:"top"});
     if(state.areaCircle)state.areaCircle.setLatLng(ll);else state.areaCircle=window.L.circle(ll,{radius:ADMIN_AREA_RADIUS_KM*1000,color:"#087b75",weight:2,fillColor:"#19a69a",fillOpacity:.07,dashArray:"8 7"}).addTo(state.areaMap);
   }
   renderAdminAreaMap();
