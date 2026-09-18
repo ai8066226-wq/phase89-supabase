@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=99";
+import { initializeApp } from "./supabase-compat.js?v=100";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=99";
+} from "./supabase-compat.js?v=100";
 import {
   collection,
   doc,
@@ -25,9 +25,9 @@ import {
   karwaSensitiveAction,
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp
-} from "./supabase-compat.js?v=99";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=99";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=99";
+} from "./supabase-compat.js?v=100";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=100";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=100";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);

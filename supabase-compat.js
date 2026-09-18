@@ -2,8 +2,92 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://ndrcopijnkbpfrxzafzk.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7dMKIHQUj-C1GwQVXkU5oA_2zhc_IoS";
+const browserFetch = globalThis.fetch.bind(globalThis);
+const nativeSupabasePending = new Map();
+let nativeSupabaseRequestCounter = 0;
+
+function nativeSupabaseBridgeAvailable() {
+  try { return typeof window !== "undefined" && typeof window.KarwaNative?.supabaseRequest === "function"; }
+  catch (_) { return false; }
+}
+
+function nativeSupabaseHeaders(inputHeaders, initHeaders) {
+  const headers = new Headers(inputHeaders || undefined);
+  new Headers(initHeaders || undefined).forEach((value, key) => headers.set(key, value));
+  const out = {};
+  headers.forEach((value, key) => { out[key] = value; });
+  return out;
+}
+
+function nativeSupabaseBody(body) {
+  if (body == null) return "";
+  if (typeof body === "string") return body;
+  if (body instanceof URLSearchParams) return body.toString();
+  return null;
+}
+
+function shouldUseNativeSupabase(url) {
+  if (!nativeSupabaseBridgeAvailable()) return false;
+  try {
+    const parsed = new URL(String(url));
+    if (parsed.origin !== SUPABASE_URL) return false;
+    return parsed.pathname.startsWith("/auth/v1/") || parsed.pathname === "/functions/v1/public-signup";
+  } catch (_) { return false; }
+}
+
+globalThis.__karwaNativeSupabaseResolve = (requestId, responseJson) => {
+  const pending = nativeSupabasePending.get(String(requestId || ""));
+  if (!pending) return;
+  nativeSupabasePending.delete(String(requestId || ""));
+  clearTimeout(pending.timer);
+  try {
+    pending.resolve(JSON.parse(String(responseJson || "{}")));
+  } catch (error) {
+    pending.reject(error);
+  }
+};
+
+async function karwaSupabaseFetch(input, init = {}) {
+  const url = typeof input === "string" || input instanceof URL ? String(input) : String(input?.url || "");
+  if (!shouldUseNativeSupabase(url)) return browserFetch(input, init);
+
+  const method = String(init?.method || input?.method || "GET").toUpperCase();
+  const body = nativeSupabaseBody(init?.body);
+  if (body === null) return browserFetch(input, init);
+  const headers = nativeSupabaseHeaders(input?.headers, init?.headers);
+  const requestId = `ks${Date.now().toString(36)}${(++nativeSupabaseRequestCounter).toString(36)}`;
+
+  const nativeResult = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      nativeSupabasePending.delete(requestId);
+      const error = new Error("NATIVE_SUPABASE_TIMEOUT");
+      error.code = "auth/network-request-failed";
+      reject(error);
+    }, 18000);
+    nativeSupabasePending.set(requestId, { resolve, reject, timer });
+    try {
+      window.KarwaNative.supabaseRequest(requestId, url, method, JSON.stringify(headers), body);
+    } catch (error) {
+      clearTimeout(timer);
+      nativeSupabasePending.delete(requestId);
+      reject(error);
+    }
+  });
+
+  if (Number(nativeResult?.status || 0) <= 0) {
+    const error = new TypeError(String(nativeResult?.error || "Native Supabase network request failed"));
+    error.code = "auth/network-request-failed";
+    throw error;
+  }
+  return new Response(String(nativeResult?.body || ""), {
+    status: Number(nativeResult.status),
+    headers: nativeResult?.headers || { "content-type": "application/json" }
+  });
+}
+
 const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  global: { fetch: karwaSupabaseFetch }
 });
 
 const nowTs = () => {
@@ -33,7 +117,8 @@ function authError(error) {
   const msg = String(error?.message || error || "Auth error");
   const low = msg.toLowerCase();
   let code = "auth/unknown";
-  if (low.includes("invalid login") || low.includes("invalid credentials")) code = "auth/invalid-credential";
+  if (low.includes("network") || low.includes("fetch") || low.includes("timeout") || low.includes("native_supabase")) code = "auth/network-request-failed";
+  else if (low.includes("invalid login") || low.includes("invalid credentials")) code = "auth/invalid-credential";
   else if (low.includes("already") || low.includes("registered")) code = "auth/email-already-in-use";
   else if (low.includes("password") && low.includes("least")) code = "auth/weak-password";
   else if (low.includes("phone") || low.includes("invalid_phone")) code = "auth/invalid-phone";
@@ -185,7 +270,7 @@ export async function createUserWithEmailAndPassword(_auth, email, password) {
     throw e;
   }
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/public-signup`, {
+    const response = await karwaSupabaseFetch(`${SUPABASE_URL}/functions/v1/public-signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
       body: JSON.stringify({ email: String(email || "").trim(), password: String(password || ""), phone })

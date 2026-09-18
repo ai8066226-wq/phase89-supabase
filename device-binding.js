@@ -4,7 +4,7 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc
-} from "./supabase-compat.js?v=99";
+} from "./supabase-compat.js?v=100";
 
 const DEVICE_KEY_RE = /^KDW1-[A-F0-9]{64}$/;
 

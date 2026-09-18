@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=99";
+import { initializeApp } from "./supabase-compat.js?v=100";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=99";
+} from "./supabase-compat.js?v=100";
 import {
   addDoc,
   collection,
@@ -28,8 +28,8 @@ import {
   karwaSensitiveAux,
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest
-} from "./supabase-compat.js?v=99";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=99";
+} from "./supabase-compat.js?v=100";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=100";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -760,6 +760,7 @@ function authErrorMessage(error) {
   const messages = {
     "auth/email-already-in-use": "هذا البريد مستخدم في حساب آخر.",
     "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+    "auth/invalid-phone": "أدخل رقم هاتف صحيحًا من 8 إلى 15 رقمًا.",
     "auth/invalid-credential": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
     "auth/missing-password": "أدخل كلمة المرور.",
     "auth/weak-password": "كلمة المرور يجب أن تكون ستة أحرف على الأقل.",
