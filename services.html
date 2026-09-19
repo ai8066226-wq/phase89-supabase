@@ -117,6 +117,15 @@
 @media(max-width:850px){.image-library-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:620px){.image-library-tools{grid-template-columns:1fr}.image-library-filters{overflow:auto}.image-library-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding:12px;gap:8px}.image-library-head{padding:16px}.library-image-card span{font-size:9px}.catalog-item-actions{justify-content:flex-start}}
 </style>
 <style>.topup-method-off{padding:12px;border:1px dashed #d4dee5;border-radius:13px;background:#f8fafb;color:#6c7e90;text-align:center;font-size:11px;font-weight:850}.topup-method-off[hidden]{display:none!important}[hidden]{display:none!important}</style>
+
+<style id="karwaWhatsAppLinksStyle">
+.karwa-whatsapp-panel{display:grid;gap:9px;margin-top:12px;padding:13px;border:1px solid #cce8df;border-radius:15px;background:linear-gradient(145deg,#f1fbf7,#fff)}
+.karwa-whatsapp-panel strong{font-size:13px;color:#12384a}.karwa-whatsapp-panel small{color:#657b88;font-size:10px;line-height:1.65}
+.karwa-whatsapp-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.karwa-whatsapp-actions.single{grid-template-columns:1fr}
+.karwa-whatsapp-link{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:10px 12px;border:1px solid #b9dfd0;border-radius:12px;background:#e9f8f1;color:#116b47;font-size:11px;font-weight:900;text-decoration:none;text-align:center}
+.karwa-whatsapp-link.private{border-color:#d6e4ea;background:#f8fbfc;color:#244a5e}.karwa-whatsapp-link:active{transform:translateY(1px)}
+@media(max-width:520px){.karwa-whatsapp-actions{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="./index.html" aria-label="كروة - الصفحة الرئيسية"><span class="brand-mark">ك</span><span>كروة<small>بوابة الخدمات الأخرى</small></span></a><div class="account"><span id="accountName"></span><button class="button danger hidden" id="logoutBtn" type="button">تسجيل الخروج</button></div></div></header>
@@ -173,13 +182,15 @@
           <div id="serviceTransferTopupMethod">
           <div class="unified-topup-destination"><span class="unified-wallet-icon">💳</span><div><small id="serviceTopupTransferLabel">Mastercard محلي</small><strong id="serviceTopupTransferId">معرف التحويل يظهر هنا</strong><span>اسم المستلم: <b id="serviceTopupCardHolder">إدارة كروة</b></span></div></div>
           <p class="muted">حوّل المبلغ إلى حساب Mastercard المحدد من الإدارة، ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
+          <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>تواصل مباشرة مع إدارة كروة بخصوص شحن رصيد الخدمة.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
           <form id="serviceTopupForm" class="form-grid">
             <div class="field"><label for="serviceTopupAmount">المبلغ المحوّل (د.ع)</label><input id="serviceTopupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
             <div class="field"><label for="serviceTopupReference">رقم/مرجع التحويل</label><input id="serviceTopupReference" maxlength="80" placeholder="مثال: رقم العملية" required></div>
             <div class="field full"><button class="button primary wide" id="serviceTopupSubmit" type="submit">إرسال طلب الشحن إلى الإدارة</button></div>
           </form>
           </div>
-          <div id="serviceCardTopupMethod" style="margin-top:14px;padding-top:14px;border-top:1px solid #e1e8ed"><h3 style="margin:0 0 6px">شحن بكرت رقمي</h3><p class="muted">أدخل كرت كروة المكوّن من 16 رقمًا. كل كرت صالح للاستخدام مرة واحدة فقط.</p><form id="serviceTopupCardRedeemForm" class="form-grid"><div class="field full"><label for="serviceTopupCardCode">رقم الكرت</label><input id="serviceTopupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div><div class="field full"><button class="button primary wide" id="serviceRedeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button></div></form></div>          <div class="topup-method-off" id="serviceTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة.</div>
+          <div id="serviceCardTopupMethod" style="margin-top:14px;padding-top:14px;border-top:1px solid #e1e8ed"><h3 style="margin:0 0 6px">شحن بكرت رقمي</h3><p class="muted">أدخل كرت كروة المكوّن من 16 رقمًا. كل كرت صالح للاستخدام مرة واحدة فقط.</p><form id="serviceTopupCardRedeemForm" class="form-grid"><div class="field full"><label for="serviceTopupCardCode">رقم الكرت</label><input id="serviceTopupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div><div class="field full"><button class="button primary wide" id="serviceRedeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button></div></form></div>
+          <div class="karwa-whatsapp-panel"><strong>مجموعة واتساب كروة</strong><small>انضم إلى مجموعة كروة الرسمية للعملاء والكباتن ومزودي الخدمات.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب كروة</a></div></div>          <div class="topup-method-off" id="serviceTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة.</div>
         </div>
         <div><h3 style="margin-top:0">طلبات الشحن</h3><div id="serviceTopupRequestsList" class="unified-topup-history"><p class="muted">لا توجد طلبات شحن بعد.</p></div></div>
       </div>
@@ -220,10 +231,10 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=106"></script>
+  <script src="./native-notifications.js?v=107"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./service-image-library.js?v=89"></script>
-  <script type="module" src="./services.js?v=106"></script>
+  <script type="module" src="./services.js?v=107"></script>
   <script src="./pwa.js?v=98"></script>
 </body>
 </html>

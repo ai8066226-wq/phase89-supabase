@@ -1,8 +1,8 @@
 {
   "phase": 90,
-  "version": "2.8.16",
+  "version": "2.8.17",
   "webBasePhase": 87,
-  "updateMode": "single-transient-update-notice-no-repeat-v106",
+  "updateMode": "single-transient-update-notice-no-repeat-v107",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -11,7 +11,7 @@
   "serviceThemes": "24-preloaded-textless-auto-by-service-type",
   "ratings": "unified-customer-taxi-delivery-service-admin-analytics",
   "quantitySystem": "unit-aware-restaurant-services-piece-person-weight-liter-pack-meter-hour-day",
-  "updateFix": "admin-independent-topup-method-switches-server-enforced-v106",
+  "updateFix": "whatsapp-group-and-private-topup-links-all-portals-v107",
   "arrivalFallback": "taxi-no-otp-both-gps-near-destination-120m-8s-single-settlement",
   "cancellationAudit": "required-reason-actor-name-email-role-for-customer-driver-service-admin",
   "customerOrderEditing": "owner-edits-service-quantity-notes-and-parcel-delivery-details-until-courier-pickup-status3-atomic-guarded",
@@ -38,7 +38,7 @@
   "firebaseRemaining": "firebase-cloud-messaging-worker-only-for-push",
   "security": "wallet-order-service-fees-topups-provider-accept-driver-lifecycle-server-side-rpc",
   "sensitiveOperations": "karwa-sensitive-action-karwa-sensitive-aux-plus-dedicated-rpcs",
-  "walletSecurity": "server-side-rpc-atomic-debit-topup-review-single-use-cards-method-switches-v106",
+  "walletSecurity": "server-side-rpc-atomic-debit-topup-review-single-use-cards-method-switches-v107",
   "orderSecurity": "server-side-create-accept-advance-cancel-gps-complete",
   "serviceSecurity": "server-side-request-create-provider-accept-publish-delivery-cancel",
   "rls": "karwa-documents-explicit-data-api-grants-protected-user-financial-fields",
@@ -54,7 +54,8 @@
   "driverDispatch": "server-rls-matched-10km-live-parcel-food-serviceDelivery-all-approved-delivery-captains-v103",
   "providerAcceptance": "explicit-wallet-fee-precheck-and-errors-service-delivery-rpc-verified-v103",
   "adminRealtime": "orders-serviceRequests-topups-captain-service-applications-device-changes-instant-plus-4s-safety-v104",
-  "walletTopupCards": "admin-generated-16-digit-sha256-unique-single-use-atomic-method-toggle-v106",
-  "manualTopupDenominations": "5000-multiples-only-admin-toggle-v106",
-  "topupMethodControls": "admin-transfer-card-independent-on-off-server-enforced-realtime-v106"
+  "walletTopupCards": "admin-generated-16-digit-sha256-unique-single-use-atomic-method-toggle-v107",
+  "manualTopupDenominations": "5000-multiples-only-admin-toggle-v107",
+  "topupMethodControls": "admin-transfer-card-independent-on-off-server-enforced-realtime-v107",
+  "whatsappLinks": "group-all-portals-private-topup-transfer-v107"
 }

@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=106";
+import { initializeApp } from "./supabase-compat.js?v=107";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=106";
+} from "./supabase-compat.js?v=107";
 import {
   addDoc,
   collection,
@@ -30,8 +30,8 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=106";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=106";
+} from "./supabase-compat.js?v=107";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=107";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
