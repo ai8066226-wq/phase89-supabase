@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=112";
+import { initializeApp } from "./supabase-compat.js?v=113";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=112";
+} from "./supabase-compat.js?v=113";
 import {
   addDoc,
   collection,
@@ -31,8 +31,8 @@ import {
   karwaSensitiveAction,
   karwaDriverAutoComplete,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=112";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=112";
+} from "./supabase-compat.js?v=113";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=113";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -192,6 +192,7 @@ function canDriverHandleOrder(order, driver = state.driverData) {
 
 function orderMeetsDriverDispatchConditions(order, now = Date.now()) {
   if (!order || order.cancelled || Number(order.statusIndex || 0) >= 4 || order.driverId) return false;
+  if (!driverGovernorateEnabled(state.driverData?.city)) return false;
   if (!canDriverHandleOrder(order)) return false;
   if (!orderWithinRequestRadius(order)) return false;
   if (order.type === "serviceDelivery" && order.serviceCity && String(order.serviceCity).trim() !== String(state.driverData?.city || "").trim()) return false;
@@ -266,10 +267,31 @@ const state = {
   manualDrivingMode: false,
   restaurantGps: null,
   restaurantMeals: [],
+  governorateAutoOffline: false,
   directRegistration: new URLSearchParams(window.location.search).get("mode") === "register"
 };
 
 let driverPricingSettings = {};
+const driverGovernorates=window.KarwaGovernorates;
+function normalizedDriverGovernorate(value){return driverGovernorates?.normalize(value)||"";}
+function driverGovernorateEnabled(value){return Boolean(driverGovernorates?.isEnabled(driverPricingSettings||{},value));}
+function syncDriverGovernorateSelect(selected=byId("driverCity")?.value||""){
+  driverGovernorates?.populateSelect(byId("driverCity"),driverPricingSettings||{},{selected,includeDisabled:true});
+  const city=normalizedDriverGovernorate(byId("driverCity")?.value),enabled=driverGovernorateEnabled(city),hint=byId("driverGovernorateAvailability");
+  if(hint)hint.textContent=!city?"اختر محافظة عراقية من القائمة.":enabled?"الخدمة مفعّلة حاليًا في هذه المحافظة.":"الخدمة متوقفة حاليًا في هذه المحافظة بقرار الإدارة.";
+}
+function applyDriverGovernorateAvailability(){
+  syncDriverGovernorateSelect();
+  const city=normalizedDriverGovernorate(state.driverData?.city),enabled=driverGovernorateEnabled(city),notice=byId("driverGovernorateNotice"),online=byId("onlineSwitch");
+  if(!state.driverData||!city){if(notice)notice.className="notice danger hidden";return;}
+  if(notice){notice.className=enabled?"notice danger hidden":"notice danger driver-alert";notice.textContent=enabled?"":`الخدمة متوقفة حاليًا في ${driverGovernorates.label(city)}. لا يمكنك الاتصال أو قبول طلبات حتى تعيد الإدارة تفعيل المحافظة.`;}
+  if(online)online.disabled=!enabled||state.driverData.blocked===true;
+  if(!enabled){
+    byId("onlineSwitch")?.classList.remove("on");if(byId("onlineLabel"))byId("onlineLabel").textContent="المحافظة متوقفة";
+    stopLocationSharing();renderOrders();
+    if(state.user&&state.driverData.online&&!state.governorateAutoOffline){state.governorateAutoOffline=true;updateDoc(doc(db,"drivers",state.user.uid),{online:false,availabilityReason:"governorate_disabled",updatedAt:serverTimestamp()}).catch(error=>console.warn("تعذر إيقاف اتصال الكابتن في المحافظة المتوقفة",error)).finally(()=>{state.governorateAutoOffline=false;});}
+  }
+}
 function driverFixedFee(key,fallback){const n=Number(driverPricingSettings?.[key]);return Math.max(0,Math.min(100000,Math.round(Number.isFinite(n)?n:fallback)));}
 function driverOperationFee(orderOrType){
   const type=typeof orderOrType==="string"?orderOrType:String(orderOrType?.type||"");
@@ -338,7 +360,8 @@ function subscribeDriverTopups(user){
     renderDriverTopupRequests();
   },error=>console.warn("تعذر تحميل طلبات شحن الكابتن",error));
 }
-const unsubscribeDriverPricing=subscribeGlobalPricing(settings=>{driverPricingSettings=settings||{};renderDriverWallet();},error=>console.warn("تعذر تحميل إعدادات الرسوم العامة",error));
+const unsubscribeDriverPricing=subscribeGlobalPricing(settings=>{driverPricingSettings=settings||{};renderDriverWallet();syncDriverGovernorateSelect();applyDriverGovernorateAvailability();},error=>console.warn("تعذر تحميل إعدادات الرسوم العامة",error));
+byId("driverCity")?.addEventListener("change",()=>syncDriverGovernorateSelect(byId("driverCity")?.value));
 
 const money = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({
@@ -1321,7 +1344,7 @@ function fillApplication(data = {}) {
   byId("vehicleCondition").value = data.vehicleCondition || "شغالة";
   updateVehicleApplicationFields();
   byId("plate").value = data.plate || "";
-  byId("driverCity").value = data.city || "بغداد";
+  syncDriverGovernorateSelect(data.governorate || data.city || "بغداد");
 }
 
 function showApplicationStatus(data) {
@@ -1379,6 +1402,8 @@ byId("applicationForm").addEventListener("submit", async event => {
   if (name.length < 2) { toast("أدخل الاسم الكامل"); return; }
   const phoneDigits = phone.replace(/\D/g, "");
   if (phoneDigits.length < 8 || phoneDigits.length > 15) { toast("أدخل رقم هاتف صحيحًا من 8 إلى 15 رقمًا"); return; }
+  const selectedGovernorate=normalizedDriverGovernorate(byId("driverCity").value);
+  if(!selectedGovernorate){toast("اختر محافظة عراقية صحيحة");return;}
 
   let registerEmail = "", registerPassword = "";
   if (directSignup) {
@@ -1414,9 +1439,11 @@ byId("applicationForm").addEventListener("submit", async event => {
     let accountUser = state.user;
     let deviceInfo = null;
     let welcomeBonus = null;
+    const settingsSnapshot = await getDoc(doc(db, "appSettings", "pricing"));
+    driverPricingSettings = settingsSnapshot.exists() ? settingsSnapshot.data() : {};
+    syncDriverGovernorateSelect(selectedGovernorate);
+    if(!driverGovernorateEnabled(selectedGovernorate))throw new Error("GOVERNORATE_DISABLED");
     if (directSignup) {
-      const settingsSnapshot = await getDoc(doc(db, "appSettings", "pricing"));
-      driverPricingSettings = settingsSnapshot.exists() ? settingsSnapshot.data() : {};
       deviceInfo = requireNativeRegistrationDevice();
       createdCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       accountUser = createdCredential.user;
@@ -1435,7 +1462,8 @@ byId("applicationForm").addEventListener("submit", async event => {
       vehicleModel: (isRestaurant || byId("vehicleType").value === "دراجة") ? "" : byId("vehicleModel").value.trim(),
       vehicleCondition: (isRestaurant || byId("vehicleType").value === "دراجة") ? "" : byId("vehicleCondition").value,
       plate: isRestaurant ? "" : byId("plate").value.trim(),
-      city: byId("driverCity").value,
+      city: selectedGovernorate,
+      governorate: selectedGovernorate,
       status: "pending",
       profileComplete: true,
       submittedAt: serverTimestamp(),
@@ -1445,6 +1473,7 @@ byId("applicationForm").addEventListener("submit", async event => {
     const restaurantPayload = isRestaurant ? {
       ownerId: accountUser.uid, name: byId("captainRestaurantName").value.trim(),
       address: byId("captainRestaurantAddress").value.trim(), phone: byId("captainRestaurantPhone").value.trim(),
+      city: selectedGovernorate, governorate: selectedGovernorate,
       location: {...state.restaurantGps}, meals: state.restaurantMeals.map(meal=>({...meal})),
       active: false, approvalStatus: "pending", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
     } : null;
@@ -1479,7 +1508,7 @@ byId("applicationForm").addEventListener("submit", async event => {
     const deviceMessage = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
       ? "إنشاء حساب كابتن جديد متاح من تطبيق كروة على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
       : (directSignup && String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بالفعل بحساب كروة آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة." : "");
-    toast(deviceMessage || authMessage(error));
+    toast(error?.message==="GOVERNORATE_DISABLED"?"التسجيل أو إعادة الإرسال متوقف حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة.":deviceMessage || authMessage(error));
   } finally {
     busy(button, false);
   }
@@ -1613,6 +1642,7 @@ function openDriverDashboard() {
     updateDriverSettingsInfo();
     if (state.driverData.online) startLocationSharing();
     else stopLocationSharing();
+    applyDriverGovernorateAvailability();
     subscribeToAllowedOrders();
     renderOrders();
   });
@@ -1682,6 +1712,7 @@ byId("onlineSwitch").addEventListener("click", async () => {
     toast("الحساب محظور ولا يمكن تفعيل الاتصال");
     return;
   }
+  if(!driverGovernorateEnabled(state.driverData.city)){toast("الخدمة متوقفة حاليًا في محافظتك بقرار الإدارة");applyDriverGovernorateAvailability();return;}
   const next = !state.driverData.online;
   try {
     await updateDoc(doc(db, "drivers", state.user.uid), { online: next, updatedAt: serverTimestamp() });
@@ -1711,6 +1742,7 @@ document.addEventListener("click", async event => {
   try {
     if (button.dataset.action === "accept") {
       if (!state.driverData?.online) throw new Error("OFFLINE");
+      if(!driverGovernorateEnabled(state.driverData?.city))throw new Error("GOVERNORATE_DISABLED");
       const result=await karwaSensitiveAction("driver_accept_order",{orderId:button.dataset.id});
       if(Number.isFinite(Number(result?.balance))){state.userData={...(state.userData||{}),balance:Number(result.balance),bonusBalance:Number(result?.bonusBalance||0)};renderDriverWallet();}
       if (state.lastPosition) await sharePosition(state.lastPosition, true);
@@ -1732,7 +1764,7 @@ document.addEventListener("click", async event => {
 
   } catch (error) {
     console.error(error);
-    toast(error.message === "OFFLINE" ? "فعّل حالة الاتصال أولًا" : error.message === "PICKUP_OTP_REQUIRED" ? "يجب إدخال رمز الاستلام من المطعم أو صاحب الخدمة" : error.message === "PICKUP_OTP_INVALID" ? "رمز الاستلام غير صحيح" : error.message === "OTP_REQUIRED" ? "يجب إدخال الرمز" : error.message === "OTP_INVALID" ? "الرمز غير صحيح" : error.message === "ORDER_TAKEN" ? "سبق أن قبل كابتن آخر هذا الطلب" : error.message === "ORDER_NOT_FOUND" ? "الطلب غير موجود" : error.message === "ORDER_NOT_AVAILABLE" ? "الطلب لم يعد متاحًا" : error.message === "DRIVER_BUSY" ? "لديك رحلة نشطة بالفعل، أكملها أولًا" : error.message === "DRIVER_PROFILE_MISSING" ? "ملف الكابتن غير موجود. أعد تفعيل الحساب من الإدارة" : error.message === "DRIVER_BLOCKED" ? "الحساب موقوف من الإدارة" : error.message === "DELIVERY_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن مسجل في خدمة التوصيل" : error.message === "TAXI_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن تكسي مسجل لخدمة الركوب" : error.message === "OUTSIDE_DRIVER_AREA" ? "هذا الطلب خارج نطاق المدينة المسجلة لحسابك" : error.message === "LOCATION_REQUIRED" ? "يجب تفعيل GPS وتحديد موقعك الحالي قبل قبول أي طلب" : error.message === "OUTSIDE_REQUEST_RADIUS" ? `هذا الطلب أصبح خارج نطاق ${DRIVER_REQUEST_RADIUS_KM} كم من موقعك الحالي` : error.message === "INSUFFICIENT_WALLET" ? `رصيدك غير كافٍ. يلزم ${driverOperationFee(state.orders.find(item=>item.firestoreId===button.dataset.id)||"parcel").toLocaleString("ar-IQ")} د.ع لقبول هذا الطلب. اشحن المحفظة أولًا.` : error.message === "USER_PROFILE_MISSING" ? "ملف المحفظة غير موجود. أعد تسجيل الدخول." : driverSupabaseMessage(error, button.dataset.action === "accept" ? "قبول الطلب" : "تحديث حالة الرحلة"));
+    toast(error.message === "GOVERNORATE_DISABLED" ? "الخدمة متوقفة حاليًا في محافظتك" : error.message === "OFFLINE" ? "فعّل حالة الاتصال أولًا" : error.message === "PICKUP_OTP_REQUIRED" ? "يجب إدخال رمز الاستلام من المطعم أو صاحب الخدمة" : error.message === "PICKUP_OTP_INVALID" ? "رمز الاستلام غير صحيح" : error.message === "OTP_REQUIRED" ? "يجب إدخال الرمز" : error.message === "OTP_INVALID" ? "الرمز غير صحيح" : error.message === "ORDER_TAKEN" ? "سبق أن قبل كابتن آخر هذا الطلب" : error.message === "ORDER_NOT_FOUND" ? "الطلب غير موجود" : error.message === "ORDER_NOT_AVAILABLE" ? "الطلب لم يعد متاحًا" : error.message === "DRIVER_BUSY" ? "لديك رحلة نشطة بالفعل، أكملها أولًا" : error.message === "DRIVER_PROFILE_MISSING" ? "ملف الكابتن غير موجود. أعد تفعيل الحساب من الإدارة" : error.message === "DRIVER_BLOCKED" ? "الحساب موقوف من الإدارة" : error.message === "DELIVERY_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن مسجل في خدمة التوصيل" : error.message === "TAXI_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن تكسي مسجل لخدمة الركوب" : error.message === "OUTSIDE_DRIVER_AREA" ? "هذا الطلب خارج نطاق المدينة المسجلة لحسابك" : error.message === "LOCATION_REQUIRED" ? "يجب تفعيل GPS وتحديد موقعك الحالي قبل قبول أي طلب" : error.message === "OUTSIDE_REQUEST_RADIUS" ? `هذا الطلب أصبح خارج نطاق ${DRIVER_REQUEST_RADIUS_KM} كم من موقعك الحالي` : error.message === "INSUFFICIENT_WALLET" ? `رصيدك غير كافٍ. يلزم ${driverOperationFee(state.orders.find(item=>item.firestoreId===button.dataset.id)||"parcel").toLocaleString("ar-IQ")} د.ع لقبول هذا الطلب. اشحن المحفظة أولًا.` : error.message === "USER_PROFILE_MISSING" ? "ملف المحفظة غير موجود. أعد تسجيل الدخول." : driverSupabaseMessage(error, button.dataset.action === "accept" ? "قبول الطلب" : "تحديث حالة الرحلة"));
   } finally {
     busy(button, false);
   }

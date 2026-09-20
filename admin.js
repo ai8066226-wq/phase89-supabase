@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=112";
+import { initializeApp } from "./supabase-compat.js?v=113";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=112";
+} from "./supabase-compat.js?v=113";
 import {
   collection,
   doc,
@@ -24,7 +24,7 @@ import {
   karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=112";
+} from "./supabase-compat.js?v=113";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -46,6 +46,7 @@ try {
 const byId = id => document.getElementById(id);
 const statuses = ["بانتظار كابتن", "الكابتن في الطريق", "وصل الكابتن", "بدأت الرحلة", "تم الوصول"];
 const icons = { ride: "🚕", parcel: "📦", food: "🍽️", serviceDelivery: "🛵" };
+const governoratesApi = window.KarwaGovernorates;
 
 const state = {
   user: null,
@@ -448,6 +449,56 @@ function showView(name) {
   byId("adminNotificationsLink").classList.toggle("hidden", name !== "dashboard");
 }
 
+function openAdminPanel(panelId, { scroll = false, remember = true } = {}) {
+  const target = byId(String(panelId || "").replace(/^#/, ""));
+  if (!target?.classList.contains("admin-panel")) return false;
+  document.querySelectorAll(".admin-panel").forEach(panel => {
+    const open = panel === target;
+    panel.classList.toggle("is-open", open);
+    panel.querySelector(":scope > .card-heading")?.setAttribute("aria-expanded", String(open));
+  });
+  document.querySelectorAll(".admin-module-card").forEach(card => card.classList.toggle("is-active", card.getAttribute("href") === `#${target.id}`));
+  if (remember) {
+    try { sessionStorage.setItem("karwaAdminOpenPanel", target.id); } catch (_) {}
+    if (location.hash !== `#${target.id}`) history.replaceState(null, "", `#${target.id}`);
+  }
+  if (target.id === "areaMapPanel") window.setTimeout(() => { state.areaMap?.invalidateSize(); renderAdminAreaMap(); }, 80);
+  if (scroll) window.setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+  return true;
+}
+
+function setupAdminSections() {
+  document.querySelectorAll(".admin-panel").forEach(panel => {
+    const heading = panel.querySelector(":scope > .card-heading");
+    if (!heading) return;
+    heading.setAttribute("role", "button");
+    heading.setAttribute("tabindex", "0");
+    heading.setAttribute("aria-controls", panel.id);
+    heading.setAttribute("aria-expanded", "false");
+    const toggle = () => {
+      if (panel.classList.contains("is-open")) {
+        panel.classList.remove("is-open");
+        heading.setAttribute("aria-expanded", "false");
+        document.querySelector(`.admin-module-card[href="#${panel.id}"]`)?.classList.remove("is-active");
+        return;
+      }
+      openAdminPanel(panel.id, { scroll: false });
+    };
+    heading.addEventListener("click", toggle);
+    heading.addEventListener("keydown", event => {
+      if (!["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      toggle();
+    });
+  });
+  document.querySelectorAll(".admin-module-card[href^='#']").forEach(card => card.addEventListener("click", event => {
+    event.preventDefault();
+    openAdminPanel(card.getAttribute("href"), { scroll: true });
+  }));
+  window.addEventListener("hashchange", () => openAdminPanel(location.hash, { scroll: true, remember: false }));
+}
+setupAdminSections();
+
 function clearDashboardListeners() {
   state.dashboardUnsubscribes.forEach(unsubscribe => unsubscribe?.());
   state.dashboardUnsubscribes = [];
@@ -518,6 +569,7 @@ function renderAdminNotifications() {
   setModuleNotification("navOrdersCount", counts.waitingOrders + counts.pendingServiceRequests);
   setModuleNotification("navFinanceCount", counts.completedFinancial, false);
   setModuleNotification("navRatingsCount", counts.ratings, false);
+  setModuleNotification("navDevicesCount", counts.deviceChanges);
 
   setPanelNotification("pendingTopupsBadge", counts.topups, "بانتظار المراجعة");
   setPanelNotification("serviceApplicationsBadge", counts.serviceApplications, "بانتظار المراجعة");
@@ -872,6 +924,7 @@ byId("financeAccountSearch")?.addEventListener("input", () => renderFinanceAccou
 byId("financeRoleFilter")?.addEventListener("change", () => renderFinanceAccounts());
 byId("exportFinanceCsv")?.addEventListener("click", exportFinancialReportCsv);
 byId("printFinanceReport")?.addEventListener("click", () => {
+  openAdminPanel("financePanel", { scroll: false });
   renderFinancialReport();
   window.print();
 });
@@ -1148,6 +1201,46 @@ function renderPricingSettings(){
   if(cardToggle&&document.activeElement!==cardToggle)cardToggle.checked=c.topupCardEnabled!==false;
   renderTopupMethodAdminControls();
 }
+function selectedGovernorateNames(){
+  return [...document.querySelectorAll('#governoratesGrid input[data-governorate]:checked')].map(input=>input.dataset.governorate).filter(Boolean);
+}
+function renderGovernorateDraftSummary(){
+  const total=governoratesApi?.all?.length||19,enabled=selectedGovernorateNames().length;
+  const summary=byId("governoratesSummary"),badge=byId("governoratesStatusBadge"),nav=byId("navGovernoratesCount");
+  if(summary){summary.textContent=enabled===total?"الخدمة متاحة في جميع المحافظات":enabled===0?"الخدمة متوقفة في جميع المحافظات":`الخدمة متاحة في ${enabled} من ${total} محافظة`;summary.classList.toggle("off",enabled===0);}
+  if(badge){badge.textContent=`${enabled} محافظة فعالة`;badge.className=`status-chip ${enabled?"approved":"cancelled"}`;}
+  if(nav)nav.textContent=`${enabled}/${total}`;
+}
+function renderGovernorateSettings(){
+  const host=byId("governoratesGrid");if(!host||!governoratesApi)return;
+  const enabled=new Set(governoratesApi.enabledNames(state.pricingSettings||{}));
+  host.innerHTML=governoratesApi.all.map(governorate=>`<label class="governorate-control"><input type="checkbox" data-governorate="${escapeHtml(governorate.name)}" ${enabled.has(governorate.name)?"checked":""}><span class="governorate-control-icon">${escapeHtml(governorate.icon||"📍")}</span><span><strong>${escapeHtml(governorate.label||governorate.name)}</strong><small>${enabled.has(governorate.name)?"الخدمة فعالة":"الخدمة متوقفة"}</small></span><b>${enabled.has(governorate.name)?"مفعّلة":"متوقفة"}</b></label>`).join("");
+  host.querySelectorAll("input[data-governorate]").forEach(input=>input.addEventListener("change",()=>{
+    const card=input.closest(".governorate-control");card?.classList.toggle("is-disabled",!input.checked);
+    const small=card?.querySelector("small"),status=card?.querySelector(":scope > b");if(small)small.textContent=input.checked?"الخدمة فعالة":"الخدمة متوقفة";if(status)status.textContent=input.checked?"مفعّلة":"متوقفة";
+    renderGovernorateDraftSummary();
+  }));
+  host.querySelectorAll(".governorate-control").forEach(card=>card.classList.toggle("is-disabled",!card.querySelector("input")?.checked));
+  renderGovernorateDraftSummary();
+}
+function setAllGovernorates(enabled){
+  document.querySelectorAll('#governoratesGrid input[data-governorate]').forEach(input=>{input.checked=enabled;input.dispatchEvent(new Event("change"));});
+}
+byId("enableAllGovernorates")?.addEventListener("click",()=>setAllGovernorates(true));
+byId("disableAllGovernorates")?.addEventListener("click",()=>{
+  if(confirm("سيؤدي إيقاف الكل إلى تعطيل التسجيل والنشر وقبول الطلبات في جميع المحافظات. هل تريد المتابعة؟"))setAllGovernorates(false);
+});
+byId("governoratesSettingsForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!state.user||!governoratesApi)return;
+  const enabledGovernorates=selectedGovernorateNames();
+  if(!enabledGovernorates.length&&!confirm("لم تُفعّل أي محافظة. ستتوقف الخدمة ميدانيًا في العراق بالكامل. حفظ هذا القرار؟"))return;
+  const button=byId("saveGovernorates");busy(button,true,"جارٍ التطبيق…");
+  try{
+    await setDoc(doc(db,"appSettings","pricing"),{enabledGovernorates,governoratesUpdatedAt:serverTimestamp(),governoratesUpdatedBy:state.user.uid},{merge:true});
+    state.pricingSettings={...(state.pricingSettings||{}),enabledGovernorates};renderGovernorateSettings();
+    toast(enabledGovernorates.length?`تم تشغيل الخدمة في ${enabledGovernorates.length} محافظة`:`تم إيقاف الخدمة في جميع المحافظات`);
+  }catch(error){console.error(error);toast("تعذر حفظ تشغيل المحافظات");}finally{busy(button,false);}
+});
 function renderTopupMethodAdminControls(){
   const transfer=byId("topupTransferEnabled")?.checked ?? (state.pricingSettings?.topupTransferEnabled!==false);
   const card=byId("topupCardEnabled")?.checked ?? (state.pricingSettings?.topupCardEnabled!==false);
@@ -1412,6 +1505,9 @@ setupAdminAreaMapControls();
 function openDashboard() {
   clearDashboardListeners();
   showView("dashboard");
+  let preferredPanel=location.hash;
+  if(!preferredPanel){try{preferredPanel=sessionStorage.getItem("karwaAdminOpenPanel")||"";}catch(_){}}
+  if(preferredPanel)openAdminPanel(preferredPanel,{scroll:false,remember:false});
   let captainAppsReady=false, serviceAppsReady=false, topupsReady=false, ordersReady=false, serviceRequestsReady=false, deviceChangesReady=false;
   let previousCaptainApps=new Map(), previousServiceApps=new Map(), previousTopups=new Map(), previousOrders=new Map(), previousServiceRequests=new Map(), previousDeviceChanges=new Map();
   // Authentication and the rest of the dashboard must not depend on any map CDN.
@@ -1548,6 +1644,7 @@ function openDashboard() {
   const pricingUnsubscribe = subscribeGlobalPricing(settings => {
     state.pricingSettings = settings || {};
     renderPricingSettings();
+    renderGovernorateSettings();
   }, error => console.warn("تعذر مزامنة التسعيرة العامة", error));
   state.dashboardUnsubscribes.push(
     usersUnsubscribe,
@@ -1865,6 +1962,8 @@ document.addEventListener("click", async event => {
         return;
       }
       const items = Array.isArray(existingProfile?.items) ? existingProfile.items : Array.isArray(restaurant?.meals) ? restaurant.meals : [];
+      const governorate = governoratesApi?.normalize(application.governorate || application.city || existingProfile?.governorate || existingProfile?.city || restaurant?.governorate || restaurant?.city) || "";
+      if(!governorate)throw new Error("INVALID_GOVERNORATE");
       const batch = writeBatch(db);
       batch.update(doc(db, legacy ? "driverApplications" : "serviceApplications", id), {
         status: "approved",
@@ -1882,7 +1981,8 @@ document.addEventListener("click", async event => {
         businessName,
         category,
         phone,
-        city: String(application.city || existingProfile?.city || "").trim(),
+        city: governorate,
+        governorate,
         address,
         description: String(application.description || existingProfile?.description || "").trim(),
         location: { latitude: Number(location.latitude), longitude: Number(location.longitude) },
@@ -1900,6 +2000,8 @@ document.addEventListener("click", async event => {
           ownerId: accountUid,
           name: businessName,
           phone,
+          city: governorate,
+          governorate,
           address,
           meals: items,
           active: false,
@@ -2014,7 +2116,8 @@ document.addEventListener("click", async event => {
       const captainPhone = String(application.phone || "").trim();
       const vehicleType = String(application.vehicleType || "").trim();
       const plate = String(application.plate || "").trim();
-      const city = String(application.city || "").trim();
+      const city = governoratesApi?.normalize(application.governorate || application.city) || "";
+      if(!city)throw new Error("INVALID_GOVERNORATE");
       // الدراجة تُعامل دائمًا كتوصيل، كما يتم توحيد أي قيمة قديمة مثل «توصيل أغراض وطعام» إلى delivery.
       const batch = writeBatch(db);
       batch.update(doc(db, "driverApplications", id), {
@@ -2031,7 +2134,7 @@ document.addEventListener("click", async event => {
         userId: accountUid, name: captainName, email: captainEmail, phone: captainPhone,
         serviceType: normalizedServiceType, vehicleType,
         vehicleMake: String(application.vehicleMake || "").trim(), vehicleModel: String(application.vehicleModel || "").trim(),
-        vehicleCondition: String(application.vehicleCondition || "").trim(), plate, city,
+        vehicleCondition: String(application.vehicleCondition || "").trim(), plate, city, governorate: city,
         online: false, blocked: false, warningCount: 0, warningMessage: "",
         approvedAt: serverTimestamp(), updatedAt: serverTimestamp()
       }, { merge: true });

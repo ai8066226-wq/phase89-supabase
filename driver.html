@@ -486,14 +486,29 @@ body.driver-map-mode{background:#edf3f6}
               </div>
             </section>
             <div class="field full">
-              <label for="driverCity">المدينة</label>
+              <label for="driverCity">المحافظة</label>
               <select id="driverCity" required>
                 <option value="بغداد">بغداد</option>
                 <option value="البصرة">البصرة</option>
+                <option value="نينوى">نينوى (الموصل)</option>
                 <option value="أربيل">أربيل</option>
                 <option value="النجف">النجف</option>
-                <option value="الموصل">الموصل</option>
+                <option value="كربلاء">كربلاء</option>
+                <option value="كركوك">كركوك</option>
+                <option value="دهوك">دهوك</option>
+                <option value="السليمانية">السليمانية</option>
+                <option value="الأنبار">الأنبار</option>
+                <option value="بابل">بابل</option>
+                <option value="ديالى">ديالى</option>
+                <option value="ذي قار">ذي قار</option>
+                <option value="صلاح الدين">صلاح الدين</option>
+                <option value="واسط">واسط</option>
+                <option value="ميسان">ميسان</option>
+                <option value="المثنى">المثنى</option>
+                <option value="القادسية">القادسية (الديوانية)</option>
+                <option value="حلبجة">حلبجة</option>
               </select>
+              <small class="muted" id="driverGovernorateAvailability">تعمل كروة في المحافظات التي تفعلها الإدارة.</small>
             </div>
           </div>
           <button class="primary wide" id="submitApplication" type="submit">إرسال طلب الانضمام</button>
@@ -517,6 +532,7 @@ body.driver-map-mode{background:#edf3f6}
     </section>
 
     <div class="notice hidden" id="driverWarningNotice"></div>
+    <div class="notice danger hidden" id="driverGovernorateNotice"></div>
 
     <section class="stats">
       <div class="stat"><small>طلبات متاحة</small><strong id="availableCount">0</strong></div>
@@ -724,8 +740,9 @@ body.driver-map-mode{background:#edf3f6}
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
-  <script type="module" src="./driver.js?v=112"></script>
-  <script src="./pwa.js?v=112"></script>
+  <script src="./iraq-governorates.js?v=113"></script>
+  <script type="module" src="./driver.js?v=113"></script>
+  <script src="./pwa.js?v=113"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
   const view=document.getElementById("driverView");

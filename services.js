@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=112";
+import { initializeApp } from "./supabase-compat.js?v=113";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=112";
+} from "./supabase-compat.js?v=113";
 import {
   collection,
   doc,
@@ -28,9 +28,9 @@ import {
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=112";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=112";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=112";
+} from "./supabase-compat.js?v=113";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=113";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=113";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -94,6 +94,20 @@ let providerRatings = [];
 let lastProviderModerationNotice = "";
 const pickupOtpBackfillIds = new Set();
 let pricingSettings = {};
+const serviceGovernorates=window.KarwaGovernorates;
+function normalizedServiceGovernorate(value){return serviceGovernorates?.normalize(value)||"";}
+function serviceGovernorateEnabled(value){return Boolean(serviceGovernorates?.isEnabled(pricingSettings||{},value));}
+function syncServiceGovernorateSelect(id,selected=""){
+  serviceGovernorates?.populateSelect(byId(id),pricingSettings||{},{selected:selected||byId(id)?.value||"",includeDisabled:true});
+}
+function syncServiceGovernorateControls(){
+  syncServiceGovernorateSelect("registerCity");syncServiceGovernorateSelect("editCity");syncServiceGovernorateSelect("pCity",byId("pCity")?.value||currentProfile?.governorate||currentProfile?.city||currentApplication?.governorate||currentApplication?.city||"");
+  const city=normalizedServiceGovernorate(byId("pCity")?.value||currentProfile?.governorate||currentProfile?.city||currentApplication?.governorate||currentApplication?.city),enabled=serviceGovernorateEnabled(city),blocked=currentProfile?.blocked===true;
+  const notice=byId("providerGovernorateNotice");
+  if(notice){notice.className=city&&!enabled?"notice danger":"notice danger hidden";notice.textContent=city&&!enabled?`الخدمة متوقفة حاليًا في ${serviceGovernorates.label(city)}. يمكنك تعديل الملف، لكن لا يمكن نشر النشاط أو قبول الطلبات حتى تعيد الإدارة تفعيل المحافظة.`:"";}
+  const active=byId("pActive");if(active){active.disabled=blocked||Boolean(city&&!enabled);if(city&&!enabled)active.checked=false;}
+  if(city&&!enabled&&byId("activeMetric"))byId("activeMetric").textContent="المحافظة متوقفة";
+}
 
 function fixedFee(key,fallback){const n=Number(pricingSettings?.[key]);return Math.max(0,Math.min(100000,Math.round(Number.isFinite(n)?n:fallback)));}
 function providerOperationFee(requestOrCategory){
@@ -211,8 +225,9 @@ function renderProviderModeration(profile = currentProfile || {}) {
   }
   lastProviderModerationNotice = noticeKey;
   if (byId("pActive")) {
-    byId("pActive").disabled = blocked;
-    byId("pActive").checked = blocked ? false : profile.active !== false;
+    const governorateEnabled=serviceGovernorateEnabled(profile.governorate||profile.city||currentApplication?.governorate||currentApplication?.city);
+    byId("pActive").disabled = blocked || !governorateEnabled;
+    byId("pActive").checked = blocked || !governorateEnabled ? false : profile.active !== false;
   }
   if (byId("saveProviderButton")) byId("saveProviderButton").disabled = blocked;
   if (blocked) {
@@ -223,9 +238,10 @@ function renderProviderModeration(profile = currentProfile || {}) {
     byId("activeMetric").textContent = profile.active === false ? "متوقف مؤقتًا" : "نشط";
     showView("providerView");
   }
+  syncServiceGovernorateControls();
 }
 
-const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();if(providerRequests.length)renderProviderRequests(providerRequests);},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
+const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();syncServiceGovernorateControls();if(providerRequests.length)renderProviderRequests(providerRequests);},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
 
 function showView(id) {
   views.forEach(view => byId(view)?.classList.toggle("hidden", view !== id));
@@ -661,12 +677,14 @@ byId("registerGpsButton").addEventListener("click", () => captureLocation("regis
 byId("editGpsButton").addEventListener("click", () => captureLocation("editGpsButton", "editGpsStatus", "edit"));
 
 function registrationData() {
+  const governorate=normalizedServiceGovernorate(byId("registerCity").value);
   return {
     ownerName: byId("registerName").value.trim(),
     businessName: byId("registerBusinessName").value.trim(),
     category: normalizeCategory(byId("registerCategory").value),
     phone: byId("registerPhone").value.trim(),
-    city: byId("registerCity").value,
+    city: governorate,
+    governorate,
     address: byId("registerAddress").value.trim(),
     description: byId("registerDescription").value.trim(),
     location: registrationLocation
@@ -678,7 +696,8 @@ function validateApplication(data) {
   if (data.businessName.length < 2) return "اكتب اسم النشاط بشكل صحيح.";
   if (String(data.category || "").trim().length < 2) return "اكتب تصنيف المهنة بشكل واضح.";
   if (!validPhone(data.phone)) return "اكتب رقم هاتف صحيحًا.";
-  if (!data.city) return "اختر المدينة.";
+  if (!normalizedServiceGovernorate(data.governorate||data.city)) return "اختر محافظة عراقية صحيحة.";
+  if (!serviceGovernorateEnabled(data.governorate||data.city)) return "التسجيل متوقف حاليًا في هذه المحافظة بقرار الإدارة.";
   if (data.address.length < 3) return "اكتب عنوان النشاط بشكل أوضح.";
   if (data.location?.latitude == null || data.location?.longitude == null) return "حدد موقع النشاط الجغرافي قبل إرسال الطلب.";
   return "";
@@ -711,6 +730,8 @@ byId("authForm").addEventListener("submit", async event => {
     try {
       const settingsSnapshot = await getDoc(doc(db, "appSettings", "pricing"));
       pricingSettings = settingsSnapshot.exists() ? settingsSnapshot.data() : {};
+      syncServiceGovernorateControls();
+      if(!serviceGovernorateEnabled(data.governorate||data.city))throw new Error("GOVERNORATE_DISABLED");
       const deviceInfo = requireNativeRegistrationDevice();
       credential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(credential.user, { displayName: data.ownerName });
@@ -737,6 +758,7 @@ byId("authForm").addEventListener("submit", async event => {
         phone: data.phone,
         email,
         city: data.city,
+        governorate: data.governorate,
         address: data.address,
         description: data.description,
         location: data.location,
@@ -757,7 +779,9 @@ byId("authForm").addEventListener("submit", async event => {
           console.warn("تعذر التراجع عن الحساب غير المكتمل", rollbackError);
         }
       }
-      const deviceMessage = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
+      const deviceMessage = error?.message === "GOVERNORATE_DISABLED"
+        ? "التسجيل متوقف حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة."
+        : error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
         ? "إنشاء حساب خدمة جديد متاح من تطبيق كروة على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
         : (String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بالفعل بحساب كروة آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة." : "");
       byId("authMessage").textContent = deviceMessage || authErrorMessage(error);
@@ -786,7 +810,7 @@ function applicationSummary(data) {
     ["صاحب الخدمة", data.ownerName || currentUserData?.name || "—"],
     ["التصنيف", categoryLabel(data.category)],
     ["الهاتف", data.phone || "—"],
-    ["المدينة", data.city || "—"],
+    ["المحافظة", serviceGovernorates?.label(data.governorate||data.city) || "—"],
     ["العنوان", data.address || "—"],
     ["موقع GPS", locationLabel(data.location)]
   ];
@@ -800,7 +824,7 @@ function fillResubmitForm(data = {}) {
   byId("editBusinessName").value = data.businessName || "";
   byId("editCategory").value = categoryLabel(data.category);
   byId("editPhone").value = data.phone || "";
-  byId("editCity").value = data.city || "الموصل";
+  syncServiceGovernorateSelect("editCity",data.governorate||data.city||"نينوى");
   byId("editAddress").value = data.address || "";
   byId("editDescription").value = data.description || "";
   editApplicationLocation = data.location || null;
@@ -876,12 +900,14 @@ async function openApplicant() {
 
 byId("resubmitForm").addEventListener("submit", async event => {
   event.preventDefault();
+  const governorate=normalizedServiceGovernorate(byId("editCity").value);
   const data = {
     ownerName: byId("editOwnerName").value.trim(),
     businessName: byId("editBusinessName").value.trim(),
     category: normalizeCategory(byId("editCategory").value),
     phone: byId("editPhone").value.trim(),
-    city: byId("editCity").value,
+    city: governorate,
+    governorate,
     address: byId("editAddress").value.trim(),
     description: byId("editDescription").value.trim(),
     location: editApplicationLocation
@@ -891,6 +917,10 @@ byId("resubmitForm").addEventListener("submit", async event => {
   const button = byId("resubmitButton");
   setBusy(button, true, "جاري إرسال الطلب…");
   try {
+    const settingsSnapshot=await getDoc(doc(db,"appSettings","pricing"));
+    pricingSettings=settingsSnapshot.exists()?settingsSnapshot.data():{};
+    syncServiceGovernorateControls();
+    if(!serviceGovernorateEnabled(governorate))throw new Error("GOVERNORATE_DISABLED");
     const payload = {
       userId: currentUser.uid,
       ...data,
@@ -906,7 +936,7 @@ byId("resubmitForm").addEventListener("submit", async event => {
     toast("تم إرسال الطلب إلى الإدارة");
   } catch (error) {
     console.error(error);
-    toast("تعذر إرسال الطلب. تحقق من الاتصال وسياسات Supabase.");
+    toast(error?.message==="GOVERNORATE_DISABLED"?"إعادة إرسال الطلب متوقفة حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة.":"تعذر إرسال الطلب. تحقق من الاتصال وسياسات Supabase.");
   } finally {
     setBusy(button, false);
   }
@@ -1109,7 +1139,7 @@ function fillProviderForm(data) {
   byId("pBusinessName").value = data.businessName || currentApplication?.businessName || "";
   byId("pCategory").value = categoryLabel(category);
   byId("pPhone").value = data.phone || currentApplication?.phone || "";
-  byId("pCity").value = data.city || currentApplication?.city || "";
+  syncServiceGovernorateSelect("pCity",data.governorate||data.city||currentApplication?.governorate||currentApplication?.city||"");
   byId("pAddress").value = data.address || currentApplication?.address || "";
   byId("pDescription").value = data.description || currentApplication?.description || "";
   byId("pActive").checked = data.blocked === true ? false : data.active !== false;
@@ -1129,6 +1159,7 @@ function fillProviderForm(data) {
   byId("pCancelItemEdit").hidden = true;
   byId("pAddItem").textContent = "＋ إضافة وحفظ العنصر";
   renderProviderItems();
+  syncServiceGovernorateControls();
 }
 
 const requestStatusLabels = {
@@ -1198,6 +1229,7 @@ byId("providerRequestsList").addEventListener("click", async event => {
   if (nextStatus === "rejected" && !providerNote) return;
   if (nextStatus === "cancelled" && !cancellationReason) return;
   if (nextStatus === "accepted") {
+    if(!serviceGovernorateEnabled(currentProfile?.governorate||currentProfile?.city||currentApplication?.governorate||currentApplication?.city))return toast("الخدمة متوقفة حاليًا في محافظتك بقرار الإدارة.");
     const requiredFee = providerOperationFee(request);
     if (walletAvailable() < requiredFee) {
       toast(`رصيدك غير كافٍ لقبول الطلب. يلزم ${requiredFee.toLocaleString("ar-IQ")} د.ع. اشحن المحفظة ثم اضغط الموافقة مرة أخرى.`);
@@ -1225,7 +1257,9 @@ byId("providerRequestsList").addEventListener("click", async event => {
   } catch (error) {
     console.error(error);
     const code=String(error?.message||"").toUpperCase();
-    if(code.includes("INSUFFICIENT_WALLET")){
+    if(code.includes("GOVERNORATE_DISABLED")){
+      toast("الخدمة متوقفة حاليًا في محافظتك بقرار الإدارة.");
+    } else if(code.includes("INSUFFICIENT_WALLET")){
       const requiredFee=providerOperationFee(request);
       toast(`رصيدك غير كافٍ لقبول الطلب. يلزم ${requiredFee.toLocaleString("ar-IQ")} د.ع. اشحن المحفظة ثم حاول مجددًا.`);
     } else if(code.includes("LOCATION_REQUIRED")){
@@ -1260,7 +1294,8 @@ async function openProvider() {
     businessName: restaurant?.name || currentApplication?.businessName || "",
     category: currentApplication?.category || (restaurant ? "restaurant" : "other"),
     phone: restaurant?.phone || currentApplication?.phone || "",
-    city: currentApplication?.city || "",
+    city: currentApplication?.governorate || currentApplication?.city || "",
+    governorate: currentApplication?.governorate || currentApplication?.city || "",
     address: restaurant?.address || currentApplication?.address || "",
     description: currentApplication?.description || "",
     location: restaurant?.location || currentApplication?.location || null,
@@ -1329,6 +1364,7 @@ byId("pGpsBtn").addEventListener("click", async () => {
 ["pBusinessName", "pPhone", "pCity", "pAddress", "pDescription", "pActive"].forEach(id => {
   byId(id).addEventListener("input", renderPreview);
 });
+byId("pCity")?.addEventListener("change",()=>{syncServiceGovernorateControls();renderPreview();});
 
 byId("providerForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -1336,11 +1372,12 @@ byId("providerForm").addEventListener("submit", async event => {
   const category = currentProfile?.category || currentApplication?.category || "other";
   const businessName = byId("pBusinessName").value.trim();
   const phone = byId("pPhone").value.trim();
-  const city = byId("pCity").value.trim();
+  const city = normalizedServiceGovernorate(byId("pCity").value);
   const address = byId("pAddress").value.trim();
   const description = byId("pDescription").value.trim();
   const active = byId("pActive").checked;
   if (businessName.length < 2 || !validPhone(phone) || city.length < 2 || address.length < 3) return toast("أكمل بيانات النشاط بشكل صحيح.");
+  if(active&&!serviceGovernorateEnabled(city))return toast("لا يمكن نشر النشاط لأن الخدمة متوقفة حاليًا في هذه المحافظة.");
   if (!providerLocation) return toast("حدد موقع النشاط قبل نشره للعملاء.");
   if (category === "restaurant" && !providerItems.length) return toast("أضف وجبة واحدة على الأقل للمطعم.");
 
@@ -1364,12 +1401,12 @@ byId("providerForm").addEventListener("submit", async event => {
       finalItems.push({ ...item, image: finalImage });
     }
     const removedPaths=collectRemovedAssetPaths(currentProfile||{},finalCoverImage,finalItems);
-    const profilePayload={ownerId:currentUser.uid,businessName,category,phone,city,address,description,location:providerLocation,items:finalItems.map(item=>({...item})),coverImage:finalCoverImage,active,updatedAt:serverTimestamp()};
-    const restaurantPayload=category==="restaurant"?{ownerId:currentUser.uid,name:businessName,phone,address,location:providerLocation,meals:finalItems.map(item=>({...item})),coverImage:finalCoverImage,active,updatedAt:serverTimestamp()}:null;
+    const profilePayload={ownerId:currentUser.uid,businessName,category,phone,city,governorate:city,address,description,location:providerLocation,items:finalItems.map(item=>({...item})),coverImage:finalCoverImage,active,updatedAt:serverTimestamp()};
+    const restaurantPayload=category==="restaurant"?{ownerId:currentUser.uid,name:businessName,phone,city,governorate:city,address,location:providerLocation,meals:finalItems.map(item=>({...item})),coverImage:finalCoverImage,active,updatedAt:serverTimestamp()}:null;
     const publishResult=await karwaSensitiveAction("publish_service_profile",{profile:profilePayload,restaurant:restaurantPayload});
     if(Number.isFinite(Number(publishResult?.balance))){currentUserData={...(currentUserData||{}),balance:Number(publishResult.balance),bonusBalance:Number(publishResult?.bonusBalance||0)};renderServiceWallet();}
     await Promise.allSettled(removedPaths.map(deleteServiceAssetPath));
-    currentProfile={...currentProfile,businessName,category,phone,city,address,description,location:providerLocation,items:finalItems,coverImage:finalCoverImage,active,publishFeePaid:currentProfile?.publishFeePaid===true||Boolean(publishResult?.charged),publishFeeAmount:currentProfile?.publishFeePaid===true?Number(currentProfile.publishFeeAmount||publishFee):(publishResult?.charged?Number(publishResult?.fee||publishFee):Number(currentProfile?.publishFeeAmount||0))};
+    currentProfile={...currentProfile,businessName,category,phone,city,governorate:city,address,description,location:providerLocation,items:finalItems,coverImage:finalCoverImage,active,publishFeePaid:currentProfile?.publishFeePaid===true||Boolean(publishResult?.charged),publishFeeAmount:currentProfile?.publishFeePaid===true?Number(currentProfile.publishFeeAmount||publishFee):(publishResult?.charged?Number(publishResult?.fee||publishFee):Number(currentProfile?.publishFeeAmount||0))};
     providerItems = finalItems.map(normalizedProviderItem);
     providerCoverImage = normalizedImageAsset(finalCoverImage);
     byId("providerHeroName").textContent = businessName;
@@ -1381,7 +1418,7 @@ byId("providerForm").addEventListener("submit", async event => {
   } catch (error) {
     console.error(error);
     await Promise.allSettled(newlyUploadedPaths.map(deleteServiceAssetPath));
-    toast("تعذر حفظ التغييرات أو رفع الصور. تم تنظيف أي صور جديدة لم يكتمل حفظها.");
+    toast(String(error?.message||"").toUpperCase().includes("GOVERNORATE_DISABLED")?"لا يمكن نشر النشاط لأن الخدمة متوقفة حاليًا في هذه المحافظة.":"تعذر حفظ التغييرات أو رفع الصور. تم تنظيف أي صور جديدة لم يكتمل حفظها.");
   } finally { setBusy(button, false); }
 });
 

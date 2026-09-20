@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=112";
+import { initializeApp } from "./supabase-compat.js?v=113";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=112";
+} from "./supabase-compat.js?v=113";
 import {
   addDoc,
   collection,
@@ -31,8 +31,8 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=112";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=112";
+} from "./supabase-compat.js?v=113";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=113";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -202,6 +202,8 @@ const state = {
   mapTapLockedUntil: 0,
   locationRequestToken: 0
 };
+const marketplaceGovernorates=window.KarwaGovernorates;
+function marketplaceGovernorateEnabled(item={}){return Boolean(marketplaceGovernorates?.isEnabled(state.appSettings||{},item.governorate||item.city));}
 
 const formatMoney = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
 const DEFAULT_PLATFORM_FEES = {
@@ -822,6 +824,10 @@ function subscribeToAppSettings(){
     calculateRidePrice();
     renderReferralCard();
     renderTopupDestination();
+    renderRestaurants();
+    renderProfessionTabs();
+    renderOtherServices();
+    if(state.selectedServiceProfile&&!marketplaceGovernorateEnabled(state.selectedServiceProfile)){state.selectedServiceProfile=null;state.serviceCart=[];renderOtherServiceCart();if(byId("selectedServiceBox"))byId("selectedServiceBox").hidden=true;showToast("توقفت الخدمة مؤقتًا في محافظة هذا النشاط.");}
   },error=>console.warn("تعذر تحميل إعدادات التسعير العامة",error));
 }
 function customerHasPendingTopup(){return state.topupRequests.some(x=>(x.status||"pending")==="pending");}
@@ -1428,7 +1434,7 @@ function renderRestaurantDraftMeals() {
 
 function renderRestaurants() {
   const host = byId("restaurantMarketplace"); if (!host) return;
-  const approved = state.restaurants.filter(r => r.active === true && r.approvalStatus === "approved");
+  const approved = state.restaurants.filter(r => r.active === true && r.approvalStatus === "approved" && marketplaceGovernorateEnabled(r));
   // بطاقة واحدة فقط لكل صاحب مطعم. إن وُجد أكثر من إعلان لنفس الشخص نعرض الأحدث/الأكمل فقط.
   const unique = new Map();
   approved.forEach(r => {
@@ -1890,8 +1896,9 @@ function professionLabel(profile = {}) { return (otherServiceCategories[profile.
 function professionIcon(profile = {}) { return (otherServiceCategories[profile.category] || ["🧰", ""])[0]; }
 function renderProfessionTabs() {
   const host = byId("professionServiceTabs"); if (!host) return;
-  const professions = [...new Set(state.serviceProfiles.filter(p => p.category !== "restaurant").map(p => professionLabel(p)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ar"));
-  host.innerHTML = professions.map(name => { const sample=state.serviceProfiles.find(p=>professionLabel(p)===name); const theme=karwaServiceTheme(sample||{category:"other"}); return `<button class="service-button" data-service="profession" data-profession="${restaurantSafeText(name)}"><span>${theme.icon}</span>${restaurantSafeText(name)}</button>`; }).join("");
+  const enabledProfiles=state.serviceProfiles.filter(p=>marketplaceGovernorateEnabled(p));
+  const professions = [...new Set(enabledProfiles.filter(p => p.category !== "restaurant").map(p => professionLabel(p)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ar"));
+  host.innerHTML = professions.map(name => { const sample=enabledProfiles.find(p=>professionLabel(p)===name); const theme=karwaServiceTheme(sample||{category:"other"}); return `<button class="service-button" data-service="profession" data-profession="${restaurantSafeText(name)}"><span>${theme.icon}</span>${restaurantSafeText(name)}</button>`; }).join("");
   if (state.selectedProfession && !professions.includes(state.selectedProfession)) state.selectedProfession = "";
 }
 
@@ -1902,7 +1909,7 @@ function renderOtherServices() {
     host.innerHTML = '<div class="restaurant-empty">سجّل الدخول لعرض مزودي الخدمات المعتمدين.</div>';
     return;
   }
-  const visibleProfiles = state.serviceProfiles.filter(profile => profile.category !== "restaurant" && (!state.selectedProfession || professionLabel(profile) === state.selectedProfession));
+  const visibleProfiles = state.serviceProfiles.filter(profile => marketplaceGovernorateEnabled(profile) && profile.category !== "restaurant" && (!state.selectedProfession || professionLabel(profile) === state.selectedProfession));
   if (!visibleProfiles.length) {
     host.innerHTML = '<div class="restaurant-empty">لا توجد أنشطة معتمدة ضمن هذا التصنيف حاليًا.</div>';
     return;
@@ -1988,6 +1995,7 @@ function updateSelectedServicePrice() {
 
 function selectServiceProfile(profile, itemIndex = 0) {
   if (!profile) return;
+  if(!marketplaceGovernorateEnabled(profile))return showToast("هذه الخدمة متوقفة حاليًا في محافظتها.");
   if (state.selectedServiceProfile?.firestoreId !== profile.firestoreId) state.serviceCart = [];
   state.selectedServiceProfile = profile;
   const [, category] = otherServiceCategories[profile.category] || otherServiceCategories.other;
@@ -2034,7 +2042,7 @@ function subscribeServiceProfiles() {
       renderProfessionTabs();
       renderOtherServices();
       if (state.selectedServiceProfile) {
-        const freshProfile = state.serviceProfiles.find(item => item.firestoreId === state.selectedServiceProfile.firestoreId);
+        const freshProfile = state.serviceProfiles.find(item => item.firestoreId === state.selectedServiceProfile.firestoreId && marketplaceGovernorateEnabled(item));
         if (freshProfile) {
           state.selectedServiceProfile = freshProfile;
           byId("selectedServiceName").textContent = freshProfile.businessName || "نشاط كروة";
