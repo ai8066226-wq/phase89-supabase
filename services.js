@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=111";
+import { initializeApp } from "./supabase-compat.js?v=112";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=111";
+} from "./supabase-compat.js?v=112";
 import {
   collection,
   doc,
@@ -28,9 +28,9 @@ import {
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=111";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=111";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=111";
+} from "./supabase-compat.js?v=112";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=112";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=112";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -77,6 +77,8 @@ let draftItemImage = null;
 let editingItemIndex = -1;
 let imageLibraryTarget = "item";
 let imageLibraryFilter = "all";
+const SERVICE_IMAGE_MAX_BYTES = 100 * 1024;
+const SERVICE_IMAGE_INPUT_TYPES = new Set(["image/jpeg", "image/jpg", "image/png"]);
 let registrationLocation = null;
 let editApplicationLocation = null;
 let authMode = new URLSearchParams(location.search).get("mode") === "register" ? "register" : "login";
@@ -300,8 +302,10 @@ function normalizedImageAsset(asset = null) {
   const height = Math.max(0, Math.round(Number(asset.height || 0)));
   const contentType = String(asset.contentType || asset.draftBlob?.type || "image/webp").trim() || "image/webp";
   const name = String(asset.name || "image.webp").slice(0, 120);
+  const sourceSize = Math.max(0, Math.round(Number(asset.sourceSize || 0)));
+  const sourceFormat = String(asset.sourceFormat || "").trim().toUpperCase().slice(0, 12);
   if (!url && !asset.draftBlob) return null;
-  return { ...(url ? { url } : {}), ...(path ? { path } : {}), ...(size ? { size } : {}), ...(width ? { width } : {}), ...(height ? { height } : {}), contentType, ...(name ? { name } : {}), ...(asset.previewUrl ? { previewUrl: asset.previewUrl } : {}), ...(asset.draftBlob ? { draftBlob: asset.draftBlob } : {}) };
+  return { ...(url ? { url } : {}), ...(path ? { path } : {}), ...(size ? { size } : {}), ...(width ? { width } : {}), ...(height ? { height } : {}), contentType, ...(name ? { name } : {}), ...(sourceSize ? { sourceSize } : {}), ...(sourceFormat ? { sourceFormat } : {}), ...(asset.previewUrl ? { previewUrl: asset.previewUrl } : {}), ...(asset.draftBlob ? { draftBlob: asset.draftBlob } : {}) };
 }
 
 function imageAssetPreviewUrl(asset = null) {
@@ -319,16 +323,26 @@ function sanitizeImageAsset(asset = null) {
     contentType: normalized.contentType || "image/webp",
     width: Math.max(0, Math.round(Number(normalized.width || 0))),
     height: Math.max(0, Math.round(Number(normalized.height || 0))),
-    name: String(normalized.name || "image.webp").slice(0, 120)
+    name: String(normalized.name || "image.webp").slice(0, 120),
+    ...(normalized.sourceSize ? { sourceSize: normalized.sourceSize } : {}),
+    ...(normalized.sourceFormat ? { sourceFormat: normalized.sourceFormat } : {})
   };
+}
+
+function formatImageBytes(bytes = 0) {
+  const value = Math.max(0, Number(bytes || 0));
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(value / 1024).toFixed(1)} KB`;
 }
 
 function assetSummary(asset = null) {
   const normalized = normalizedImageAsset(asset);
   if (!normalized) return "";
-  const kb = normalized.size ? `${(normalized.size / 1024).toFixed(1)} KB` : "";
+  const format = normalized.sourceFormat ? `${normalized.sourceFormat} أصلية ← WebP محفوظة` : "WebP";
+  const kb = normalized.size ? `بعد الضغط ${formatImageBytes(normalized.size)}` : "";
+  const source = normalized.sourceSize ? `الأصل ${formatImageBytes(normalized.sourceSize)}` : "";
   const size = normalized.width && normalized.height ? `${normalized.width}×${normalized.height}` : "";
-  return ["WebP", kb, size].filter(Boolean).join(" • ");
+  return [format, source, kb, size].filter(Boolean).join(" • ");
 }
 
 function previewMarkup(asset, fallback, alt) {
@@ -394,7 +408,18 @@ function canvasToBlob(canvas, quality) {
   return new Promise(resolve => canvas.toBlob(resolve, "image/webp", quality));
 }
 
-async function prepareWebpImage(file, { maxBytes = 50 * 1024, maxDimension = 1280, targetAspect = 1 } = {}) {
+async function validateServiceImageFile(file) {
+  if (!file) throw new Error("NO_FILE");
+  const declaredType = String(file.type || "").toLowerCase();
+  if (declaredType && !SERVICE_IMAGE_INPUT_TYPES.has(declaredType)) throw new Error("IMAGE_FORMAT_NOT_ALLOWED");
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  if (!isJpeg && !isPng) throw new Error("IMAGE_FORMAT_NOT_ALLOWED");
+  return { sourceFormat: isPng ? "PNG" : "JPG", sourceSize: Math.max(0, Number(file.size || 0)) };
+}
+
+async function prepareWebpImage(file, { maxBytes = SERVICE_IMAGE_MAX_BYTES, maxDimension = 1280, targetAspect = 1, sourceFormat = "", sourceSize = 0 } = {}) {
   if (!file) throw new Error("NO_FILE");
   const dataUrl = await fileToDataUrl(file);
   const image = await loadImage(dataUrl);
@@ -431,7 +456,7 @@ async function prepareWebpImage(file, { maxBytes = 50 * 1024, maxDimension = 128
       if (blob.size <= maxBytes) {
         return normalizedImageAsset({
           previewUrl: await fileToDataUrl(blob), draftBlob: blob, size: blob.size, width, height,
-          contentType: "image/webp", name: `${slugifyAssetName(file.name || "image")}.webp`
+          contentType: "image/webp", name: `${slugifyAssetName(file.name || "image")}.webp`, sourceFormat, sourceSize
         });
       }
     }
@@ -439,11 +464,22 @@ async function prepareWebpImage(file, { maxBytes = 50 * 1024, maxDimension = 128
   throw new Error("IMAGE_TOO_LARGE");
 }
 
+async function prepareUploadedServiceImage(file, options = {}) {
+  const source = await validateServiceImageFile(file);
+  return prepareWebpImage(file, { ...options, maxBytes: SERVICE_IMAGE_MAX_BYTES, ...source });
+}
+
+function serviceAssetFolder(category, section) {
+  const categoryKey = String(category || "other").normalize("NFKC").trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "other";
+  return `categories/${categoryKey}/${section === "cover" ? "cover" : "items"}`;
+}
+
 async function uploadServiceAssetIfNeeded(asset, folder, label = "image") {
   const normalized = normalizedImageAsset(asset);
   if (!normalized) return null;
   if (!normalized.draftBlob) return sanitizeImageAsset(normalized);
   if (!currentUser?.uid) throw new Error("NOT_AUTHENTICATED");
+  if (normalized.draftBlob.size > SERVICE_IMAGE_MAX_BYTES) throw new Error("IMAGE_TOO_LARGE");
   const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${slugifyAssetName(label)}.webp`;
   const path = `service-assets/${currentUser.uid}/${folder}/${filename}`;
   const ref = storageRef(storage, path);
@@ -518,12 +554,12 @@ async function chooseServiceLibraryImage(key) {
     const blob = await response.blob();
     const file = new File([blob], `${entry.key}.webp`, { type: "image/webp" });
     if (target === "cover") {
-      providerCoverImage = await prepareWebpImage(file, { maxBytes: 50 * 1024, maxDimension: 1440, targetAspect: 16 / 9 });
+      providerCoverImage = await prepareWebpImage(file, { maxBytes: SERVICE_IMAGE_MAX_BYTES, maxDimension: 1440, targetAspect: 16 / 9 });
       renderCoverImagePanel();
       renderPreview();
       toast(`تم اختيار ${entry.label} كصورة واجهة. احفظ التغييرات لرفعها.`);
     } else {
-      draftItemImage = await prepareWebpImage(file, { maxBytes: 50 * 1024, maxDimension: 1200, targetAspect: 1 });
+      draftItemImage = await prepareWebpImage(file, { maxBytes: SERVICE_IMAGE_MAX_BYTES, maxDimension: 1200, targetAspect: 1 });
       renderDraftItemImagePanel();
       toast(`تم اختيار صورة ${entry.label}.`);
     }
@@ -972,13 +1008,13 @@ byId("pCoverImageInput").addEventListener("change", async event => {
   if (!file) return;
   try {
     input.disabled = true;
-    providerCoverImage = await prepareWebpImage(file, { maxBytes: 50 * 1024, maxDimension: 1440, targetAspect: 16 / 9 });
+    providerCoverImage = await prepareUploadedServiceImage(file, { maxDimension: 1440, targetAspect: 16 / 9 });
     renderCoverImagePanel();
     renderPreview();
-    toast("تم تجهيز صورة الواجهة. احفظ التغييرات لرفعها.");
+    toast(`تم ضغط صورة الواجهة إلى ${formatImageBytes(providerCoverImage.size)}. احفظ التغييرات لرفعها.`);
   } catch (error) {
     console.error(error);
-    toast("تعذر تجهيز صورة الواجهة. جرّب صورة أصغر أو أوضح.");
+    toast(error?.message === "IMAGE_FORMAT_NOT_ALLOWED" ? "صيغة غير مدعومة. اختر صورة JPG أو PNG فقط." : "تعذر ضغط صورة الواجهة إلى 100KB. جرّب صورة أخرى.");
     input.value = "";
   } finally { input.disabled = false; }
 });
@@ -997,12 +1033,12 @@ byId("pItemImage").addEventListener("change", async event => {
   if (!file) return;
   try {
     input.disabled = true;
-    draftItemImage = await prepareWebpImage(file, { maxBytes: 50 * 1024, maxDimension: 1200, targetAspect: 1 });
+    draftItemImage = await prepareUploadedServiceImage(file, { maxDimension: 1200, targetAspect: 1 });
     renderDraftItemImagePanel();
-    toast("تم تجهيز صورة العنصر. أضف العنصر الآن.");
+    toast(`تم ضغط صورة العنصر إلى ${formatImageBytes(draftItemImage.size)}. أضف العنصر الآن.`);
   } catch (error) {
     console.error(error);
-    toast("تعذر تجهيز صورة العنصر. جرّب صورة أصغر أو أوضح.");
+    toast(error?.message === "IMAGE_FORMAT_NOT_ALLOWED" ? "صيغة غير مدعومة. اختر صورة JPG أو PNG فقط." : "تعذر ضغط صورة العنصر إلى 100KB. جرّب صورة أخرى.");
     input.value = "";
   } finally { input.disabled = false; }
 });
@@ -1317,13 +1353,13 @@ byId("providerForm").addEventListener("submit", async event => {
   setBusy(button, true, "جارٍ حفظ التغييرات ورفع الصور…");
   try {
     const coverNeededUpload = Boolean(normalizedImageAsset(providerCoverImage)?.draftBlob);
-    const finalCoverImage = await uploadServiceAssetIfNeeded(providerCoverImage, "cover", businessName || category);
+    const finalCoverImage = await uploadServiceAssetIfNeeded(providerCoverImage, serviceAssetFolder(category, "cover"), businessName || category);
     if (coverNeededUpload && finalCoverImage?.path) newlyUploadedPaths.push(finalCoverImage.path);
     const finalItems = [];
     for (let index = 0; index < providerItems.length; index += 1) {
       const item = normalizedProviderItem(providerItems[index]);
       const imageNeededUpload = Boolean(normalizedImageAsset(item.image)?.draftBlob);
-      const finalImage = await uploadServiceAssetIfNeeded(item.image, "items", item.name || `${category}-${index + 1}`);
+      const finalImage = await uploadServiceAssetIfNeeded(item.image, serviceAssetFolder(category, "items"), item.name || `${category}-${index + 1}`);
       if (imageNeededUpload && finalImage?.path) newlyUploadedPaths.push(finalImage.path);
       finalItems.push({ ...item, image: finalImage });
     }

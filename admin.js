@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=111";
+import { initializeApp } from "./supabase-compat.js?v=112";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=111";
+} from "./supabase-compat.js?v=112";
 import {
   collection,
   doc,
@@ -24,7 +24,7 @@ import {
   karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=111";
+} from "./supabase-compat.js?v=112";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
