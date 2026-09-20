@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=107";
+import { initializeApp } from "./supabase-compat.js?v=111";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=107";
+} from "./supabase-compat.js?v=111";
 import {
   collection,
   doc,
@@ -23,13 +23,14 @@ import {
   updateDoc,
   where,
   writeBatch,
+  karwaTouchActivity,
   karwaSensitiveAction,
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=107";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=107";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=107";
+} from "./supabase-compat.js?v=111";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=111";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=111";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -50,7 +51,7 @@ try {
 }
 
 const byId = id => document.getElementById(id);
-const views = ["loadingView", "authView", "applicationView", "providerView", "deniedView"];
+const views = ["loadingView", "authView", "applicationView", "providerView", "serviceBlockedView", "deniedView"];
 const categories = {
   restaurant: "مطعم ومأكولات",
   grocery: "بقالة ومتجر غذائي",
@@ -83,9 +84,12 @@ let activeRole = "";
 let roleUnsubscribe = null;
 let contentUnsubscribe = null;
 let requestsUnsubscribe = null;
+let ratingsUnsubscribe = null;
 let topupUnsubscribe = null;
 let serviceTopupRequests = [];
 let serviceTopupSnapshotReady = false;
+let providerRatings = [];
+let lastProviderModerationNotice = "";
 const pickupOtpBackfillIds = new Set();
 let pricingSettings = {};
 
@@ -164,6 +168,60 @@ function subscribeServiceTopups(user){
   },error=>console.warn("تعذر تحميل طلبات شحن مزود الخدمة",error));
 }
 function serviceCommissionRate(){return 0;}
+
+function renderProviderRatings() {
+  const count = providerRatings.length;
+  const average = count ? providerRatings.reduce((sum, rating) => sum + Number(rating.score || 0), 0) / count : 0;
+  const rounded = Math.max(0, Math.min(5, Math.round(average)));
+  byId("providerRatingMetric").textContent = count ? average.toFixed(1) : "جديد";
+  byId("providerRatingCount").textContent = count ? `${count} تقييم` : "لا توجد تقييمات بعد";
+  byId("providerRatingAverage").textContent = count ? average.toFixed(1) : "—";
+  byId("providerRatingStars").textContent = `${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}`;
+  const host = byId("providerRatingsList");
+  if (!host) return;
+  host.innerHTML = count ? providerRatings.slice(0, 8).map(rating => {
+    const score = Math.max(0, Math.min(5, Number(rating.score || 0)));
+    const createdAt = rating.createdAt?.seconds ? new Date(Number(rating.createdAt.seconds) * 1000).toLocaleString("ar-IQ") : "";
+    const tags = Array.isArray(rating.tags) ? rating.tags.slice(0, 4).join(" • ") : "";
+    return `<article class="provider-review"><div class="provider-review-head"><strong>${escapeHtml(rating.customerName || "عميل كروة")}</strong><span class="provider-rating-stars">${"★".repeat(score)}${"☆".repeat(5 - score)}</span></div><p>${escapeHtml(rating.comment || tags || "تقييم بدون تعليق مكتوب.")}</p><small>${escapeHtml(rating.referenceCode || rating.itemName || "طلب خدمة")}${createdAt ? ` • ${escapeHtml(createdAt)}` : ""}</small></article>`;
+  }).join("") : `<div class="empty">لا توجد تقييمات بعد. تظهر التقييمات هنا بعد إكمال العملاء لطلباتهم.</div>`;
+}
+
+function renderProviderModeration(profile = currentProfile || {}) {
+  const blocked = profile.blocked === true;
+  const warningCount = Number(profile.warningCount || 0);
+  const warningMessage = String(profile.warningMessage || "").trim();
+  const notice = byId("providerAdminNotice");
+  if (notice) {
+    notice.hidden = !(warningCount > 0 && warningMessage);
+    byId("providerAdminNoticeText").textContent = warningMessage;
+  }
+  const noticeKey = warningCount > 0 && warningMessage ? `${warningCount}:${warningMessage}` : "";
+  if (noticeKey && noticeKey !== lastProviderModerationNotice) {
+    window.KarwaNotify?.push?.({
+      title: "تنبيه من إدارة كروة",
+      body: warningMessage,
+      type: "warning",
+      route: "./services.html#providerView",
+      tag: `service-admin-warning-${warningCount}`,
+      native: true
+    });
+  }
+  lastProviderModerationNotice = noticeKey;
+  if (byId("pActive")) {
+    byId("pActive").disabled = blocked;
+    byId("pActive").checked = blocked ? false : profile.active !== false;
+  }
+  if (byId("saveProviderButton")) byId("saveProviderButton").disabled = blocked;
+  if (blocked) {
+    byId("activeMetric").textContent = "محظور";
+    byId("serviceBlockedReason").textContent = profile.blockReason || "راجع الإدارة لمعرفة سبب إيقاف الحساب.";
+    showView("serviceBlockedView");
+  } else if (activeRole === "serviceProvider") {
+    byId("activeMetric").textContent = profile.active === false ? "متوقف مؤقتًا" : "نشط";
+    showView("providerView");
+  }
+}
 
 const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();if(providerRequests.length)renderProviderRequests(providerRequests);},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
 
@@ -562,6 +620,7 @@ byId("loginMode").addEventListener("click", () => setAuthMode("login"));
 byId("registerMode").addEventListener("click", () => setAuthMode("register"));
 byId("logoutBtn").addEventListener("click", () => signOut(auth));
 byId("deniedLogout").addEventListener("click", () => signOut(auth));
+byId("serviceBlockedLogout")?.addEventListener("click", () => signOut(auth));
 byId("registerGpsButton").addEventListener("click", () => captureLocation("registerGpsButton", "registerGpsStatus", "register"));
 byId("editGpsButton").addEventListener("click", () => captureLocation("editGpsButton", "editGpsStatus", "edit"));
 
@@ -1017,7 +1076,8 @@ function fillProviderForm(data) {
   byId("pCity").value = data.city || currentApplication?.city || "";
   byId("pAddress").value = data.address || currentApplication?.address || "";
   byId("pDescription").value = data.description || currentApplication?.description || "";
-  byId("pActive").checked = data.active !== false;
+  byId("pActive").checked = data.blocked === true ? false : data.active !== false;
+  byId("pActive").disabled = data.blocked === true;
   byId("categoryMetric").textContent = categoryLabel(category);
   providerLocation = data.location || null;
   providerCoverImage = normalizedImageAsset(data.coverImage || null);
@@ -1091,6 +1151,7 @@ function renderProviderRequests(requests) {
 byId("providerRequestsList").addEventListener("click", async event => {
   const button = event.target.closest("[data-request-action]");
   if (!button || !currentUser) return;
+  if (currentProfile?.blocked === true) return toast("الحساب محظور من الإدارة ولا يمكن التعامل مع الطلبات حاليًا.");
   const nextStatus = button.dataset.requestAction;
   const request = providerRequests.find(item => item.firestoreId === button.dataset.requestId);
   if (!request) return toast("تعذر العثور على الطلب.");
@@ -1171,12 +1232,28 @@ async function openProvider() {
     active: restaurant?.active !== false
   };
   fillProviderForm(currentProfile);
+  renderProviderModeration(currentProfile);
+
+  ratingsUnsubscribe?.();
+  ratingsUnsubscribe = onSnapshot(
+    query(collection(db, "ratings"), where("providerId", "==", currentUser.uid)),
+    snapshot => {
+      providerRatings = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }))
+        .sort((a, b) => Number(b.createdAt?.seconds || 0) - Number(a.createdAt?.seconds || 0));
+      renderProviderRatings();
+    },
+    error => {
+      console.error(error);
+      providerRatings = [];
+      renderProviderRatings();
+    }
+  );
 
   contentUnsubscribe?.();
   contentUnsubscribe = onSnapshot(doc(db, "serviceProfiles", currentUser.uid), snapshot => {
     if (!snapshot.exists()) return;
     currentProfile = snapshot.data();
-    byId("activeMetric").textContent = currentProfile.active === false ? "متوقف مؤقتًا" : "نشط";
+    renderProviderModeration(currentProfile);
   }, error => console.error(error));
 
   requestsUnsubscribe?.();
@@ -1219,6 +1296,7 @@ byId("pGpsBtn").addEventListener("click", async () => {
 
 byId("providerForm").addEventListener("submit", async event => {
   event.preventDefault();
+  if (currentProfile?.blocked === true) return toast("الحساب محظور من الإدارة ولا يمكن نشر التغييرات حاليًا.");
   const category = currentProfile?.category || currentApplication?.category || "other";
   const businessName = byId("pBusinessName").value.trim();
   const phone = byId("pPhone").value.trim();
@@ -1299,11 +1377,16 @@ function clearRoleContent() {
   contentUnsubscribe = null;
   requestsUnsubscribe?.();
   requestsUnsubscribe = null;
+  ratingsUnsubscribe?.();
+  ratingsUnsubscribe = null;
   topupUnsubscribe?.();
   topupUnsubscribe = null;
   serviceTopupRequests = [];
   serviceTopupSnapshotReady = false;
   providerRequests = [];
+  providerRatings = [];
+  lastProviderModerationNotice = "";
+  renderProviderRatings();
 }
 
 onAuthStateChanged(auth, user => {
@@ -1339,6 +1422,7 @@ onAuthStateChanged(auth, user => {
       return;
     }
     byId("accountName").textContent = currentUserData.name || user.displayName || user.email || "";
+    karwaTouchActivity(currentUserData.role || "serviceProvider").catch(error => console.warn("تعذر تحديث آخر نشاط للخدمة", error));
     renderServiceWallet();
     const role = currentUserData.role;
     if (role === activeRole) return;

@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=107";
+import { initializeApp } from "./supabase-compat.js?v=111";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=107";
+} from "./supabase-compat.js?v=111";
 import {
   addDoc,
   collection,
@@ -27,11 +27,12 @@ import {
   arrayUnion,
   where,
   writeBatch,
+  karwaTouchActivity,
   karwaSensitiveAction,
   karwaDriverAutoComplete,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=107";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=107";
+} from "./supabase-compat.js?v=111";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=111";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -93,7 +94,38 @@ const DRIVER_REQUEST_RADIUS_KM = 10;
 
 const scannedOtpCache=new Map();
 let barcodeScannerStream=null, barcodeScannerFrame=0, barcodeScannerResolver=null, barcodeScannerBusy=false;
+let verificationCodeResolver=null;
 function normalizeScannedOtp(raw){const value=String(raw||"").trim();if(/^\d{4}$/.test(value))return value;const match=value.match(/(?:KARWA[:|\- ]*)?(\d{4})$/i);return match?match[1]:"";}
+function normalizeVerificationDigits(raw){return String(raw||"").replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-1776)).replace(/\D/g,"").slice(0,4);}
+function verificationDigitInputs(){return [...document.querySelectorAll("[data-verification-digit]")];}
+function refreshVerificationDigitStyles(){verificationDigitInputs().forEach(input=>input.classList.toggle("filled",Boolean(input.value)));}
+function verificationCodeValue(){return normalizeVerificationDigits(verificationDigitInputs().map(input=>input.value).join(""));}
+function fillVerificationDigits(raw,startIndex=0){const digits=normalizeVerificationDigits(raw);const inputs=verificationDigitInputs();digits.split("").forEach((digit,offset)=>{if(inputs[startIndex+offset])inputs[startIndex+offset].value=digit;});refreshVerificationDigitStyles();const next=inputs[Math.min(startIndex+digits.length,inputs.length-1)];if(next)next.focus();}
+function finishVerificationCode(value=null){const modal=byId("verificationCodeModal");if(modal){modal.classList.add("hidden");modal.setAttribute("aria-hidden","true");}const resolve=verificationCodeResolver;verificationCodeResolver=null;if(resolve)resolve(value);}
+function openVerificationCodeCard(options={}){
+  if(verificationCodeResolver)finishVerificationCode(null);
+  const modal=byId("verificationCodeModal"),inputs=verificationDigitInputs();if(!modal||inputs.length!==4)return Promise.resolve(null);
+  byId("verificationCodeTitle").textContent=options.title||"أدخل رمز التحقق";
+  byId("verificationCodeDescription").textContent=options.description||"اكتب الرمز المكوّن من أربعة أرقام للمتابعة.";
+  byId("verificationCodeContext").textContent=options.context||"تأكيد آمن";
+  byId("verificationCodeIcon").textContent=options.icon||"🔐";
+  byId("verificationCodeSubmit").textContent=options.submitLabel||"تأكيد الرمز والمتابعة";
+  byId("verificationCodeError").textContent="";
+  inputs.forEach(input=>{input.value="";input.classList.remove("filled");});
+  modal.classList.remove("hidden");modal.setAttribute("aria-hidden","false");
+  const result=new Promise(resolve=>{verificationCodeResolver=resolve});
+  window.setTimeout(()=>inputs[0]?.focus(),80);
+  return result;
+}
+verificationDigitInputs().forEach((input,index,inputs)=>{
+  input.addEventListener("input",()=>{const digits=normalizeVerificationDigits(input.value);input.value=digits.slice(-1);byId("verificationCodeError").textContent="";refreshVerificationDigitStyles();if(input.value&&inputs[index+1])inputs[index+1].focus();});
+  input.addEventListener("paste",event=>{const digits=normalizeVerificationDigits(event.clipboardData?.getData("text")||"");if(!digits)return;event.preventDefault();byId("verificationCodeError").textContent="";fillVerificationDigits(digits,index);});
+  input.addEventListener("keydown",event=>{if(event.key==="Backspace"&&!input.value&&inputs[index-1]){inputs[index-1].value="";inputs[index-1].focus();refreshVerificationDigitStyles();}else if(event.key==="Enter")byId("verificationCodeSubmit")?.click();else if(event.key==="Escape")finishVerificationCode(null);});
+});
+byId("verificationCodeSubmit")?.addEventListener("click",()=>{const code=verificationCodeValue();if(code.length!==4){byId("verificationCodeError").textContent="أكمل الأرقام الأربعة للمتابعة";const firstEmpty=verificationDigitInputs().find(input=>!input.value);firstEmpty?.focus();return;}finishVerificationCode(code);});
+byId("verificationCodeClose")?.addEventListener("click",()=>finishVerificationCode(null));
+byId("verificationCodeCancel")?.addEventListener("click",()=>finishVerificationCode(null));
+byId("verificationCodeModal")?.addEventListener("click",event=>{if(event.target===event.currentTarget)finishVerificationCode(null);});
 function stopBarcodeCamera(){if(barcodeScannerFrame){cancelAnimationFrame(barcodeScannerFrame);barcodeScannerFrame=0;}if(barcodeScannerStream){for(const track of barcodeScannerStream.getTracks())try{track.stop()}catch{}barcodeScannerStream=null;}const video=byId("barcodeScannerVideo");if(video)video.srcObject=null;barcodeScannerBusy=false;}
 function finishBarcodeScan(value=null){stopBarcodeCamera();const modal=byId("barcodeScannerModal");if(modal){modal.classList.add("hidden");modal.setAttribute("aria-hidden","true");}const resolve=barcodeScannerResolver;barcodeScannerResolver=null;if(resolve)resolve(value);}
 async function detectBarcodeLoop(detector,video,status){if(!barcodeScannerResolver||barcodeScannerBusy)return;barcodeScannerBusy=true;try{if(video.readyState>=2){const found=await detector.detect(video);for(const item of found){const otp=normalizeScannedOtp(item.rawValue);if(otp){finishBarcodeScan(otp);return;}}}}catch(error){console.warn("تعذر تحليل الباركود",error)}finally{barcodeScannerBusy=false}if(barcodeScannerResolver)barcodeScannerFrame=requestAnimationFrame(()=>detectBarcodeLoop(detector,video,status));}
@@ -113,7 +145,7 @@ async function openCustomerBarcodeScanner(){
 byId("barcodeScannerClose")?.addEventListener("click",()=>finishBarcodeScan(null));
 byId("barcodeManualSubmit")?.addEventListener("click",()=>{const value=normalizeScannedOtp(byId("barcodeManualInput")?.value);if(!value)return toast("أدخل رمزًا صحيحًا من 4 أرقام");finishBarcodeScan(value)});
 byId("barcodeManualInput")?.addEventListener("keydown",event=>{if(event.key==="Enter")byId("barcodeManualSubmit")?.click()});
-window.addEventListener("pagehide",()=>finishBarcodeScan(null));
+window.addEventListener("pagehide",()=>{finishBarcodeScan(null);finishVerificationCode(null);});
 function orderNeedsCustomerBarcode(order,statusIndex=Number(order?.statusIndex||0)){if(order?.cancelled)return false;return order?.type==="ride"?statusIndex===2:DELIVERY_ORDER_TYPES.has(order?.type)&&statusIndex===3;}
 
 function validDispatchPoint(point) {
@@ -1691,8 +1723,8 @@ document.addEventListener("click", async event => {
       const order=state.orders.find(item=>item.firestoreId===button.dataset.id); if(!order)throw new Error("ORDER_NOT_FOUND");
       const next=Number(order.statusIndex||0)+1; let otp="",pickupOtp="";
       const finalOtpStep=DELIVERY_ORDER_TYPES.has(order.type)?4:3; const pickupOtpStep=order.type==="serviceDelivery"?3:-1;
-      if(next===pickupOtpStep){pickupOtp=(prompt("أدخل رمز الاستلام المكوّن من 4 أرقام الذي يعطيك إياه المطعم أو صاحب الخدمة عند وصولك:","")||"").trim();if(!pickupOtp)throw new Error("PICKUP_OTP_REQUIRED");if(!/^\d{4}$/.test(pickupOtp))throw new Error("PICKUP_OTP_INVALID");}
-      if(next===finalOtpStep){otp=scannedOtpCache.get(order.firestoreId)||"";scannedOtpCache.delete(order.firestoreId);if(!otp)otp=prompt(DELIVERY_ORDER_TYPES.has(order.type)?"أدخل رمز التسليم المكوّن من 4 أرقام الذي يعطيك إياه العميل عند الوصول:":"أدخل رمز بدء الرحلة المكوّن من 4 أرقام:","")||"";if(!otp)throw new Error("OTP_REQUIRED");}
+      if(next===pickupOtpStep){pickupOtp=await openVerificationCodeCard({context:"الاستلام من النشاط",icon:"🏪",title:"رمز استلام الطلب",description:"اطلب الرمز من المطعم أو صاحب الخدمة بعد استلام الطلب فعليًا، ثم أدخل الأرقام الأربعة.",submitLabel:"تأكيد الاستلام والمتابعة"});if(!pickupOtp)return;if(!/^\d{4}$/.test(pickupOtp))throw new Error("PICKUP_OTP_INVALID");}
+      if(next===finalOtpStep){otp=scannedOtpCache.get(order.firestoreId)||"";scannedOtpCache.delete(order.firestoreId);if(!otp)otp=await openVerificationCodeCard(DELIVERY_ORDER_TYPES.has(order.type)?{context:"التسليم للعميل",icon:"📦",title:"رمز تسليم العميل",description:"اطلب الرمز من العميل عند وصولك وتسليم الطلب له، ثم أدخل الأرقام الأربعة.",submitLabel:"تأكيد التسليم وإكمال الطلب"}:{context:"بدء الرحلة",icon:"🚕",title:"رمز بدء الرحلة",description:"أدخل الرمز الذي يظهر للعميل بعد وصولك إليه لبدء الرحلة بأمان.",submitLabel:"تأكيد الرمز وبدء الرحلة"});if(!otp)return;}
       await karwaSensitiveAction("driver_advance_order",{orderId:button.dataset.id,otp:String(otp||"").trim(),pickupOtp:String(pickupOtp||"").trim()});
       if(next===4)state.navigationCompletedOrderId=String(order.firestoreId);
       setTimeout(()=>drawPickupRoute(true,next===4?"arrived":"status-change"),400); toast(driverStatusLabel(order,next));
@@ -1772,6 +1804,7 @@ onAuthStateChanged(auth, user => {
       return;
     }
     state.deviceNotificationsEnabled = state.userData.notifications !== false && driverNativePermissionGranted();
+    karwaTouchActivity(state.userData.role || "driver").catch(error => console.warn("تعذر تحديث آخر نشاط للكابتن", error));
     updateDriverNotificationSetting();
     renderDriverWallet();
     if (!state.topupUnsubscribe) subscribeDriverTopups(user);

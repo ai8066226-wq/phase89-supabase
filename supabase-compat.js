@@ -31,7 +31,11 @@ function shouldUseNativeSupabase(url) {
   try {
     const parsed = new URL(String(url));
     if (parsed.origin !== SUPABASE_URL) return false;
-    return parsed.pathname.startsWith("/auth/v1/") || parsed.pathname === "/functions/v1/public-signup";
+    return parsed.pathname.startsWith("/auth/v1/") || [
+      "/functions/v1/public-signup",
+      "/functions/v1/delete-self",
+      "/functions/v1/admin-account-management"
+    ].includes(parsed.pathname);
   } catch (_) { return false; }
 }
 
@@ -328,6 +332,43 @@ export async function deleteUser() {
 
 export function getFirestore() { return { backend: "supabase", client }; }
 export function getSupabase() { return getFirestore(); }
+
+let lastActivityTouchAt = 0;
+export async function karwaTouchActivity(roleHint = "") {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return false;
+  const now = Date.now();
+  if (now - lastActivityTouchAt < 5 * 60 * 1000) return true;
+  lastActivityTouchAt = now;
+  try {
+    await setDoc(doc(getFirestore(), "users", uid), {
+      lastActiveAt: serverTimestamp(),
+      lastActiveRole: String(roleHint || "").slice(0, 40)
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    lastActivityTouchAt = 0;
+    throw error;
+  }
+}
+
+export async function karwaAdminAccountAction(action, payload = {}) {
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (sessionError || !token) throw firebaseLikeError(sessionError || new Error("UNAUTHORIZED"), "permission-denied");
+  const response = await karwaSupabaseFetch(`${SUPABASE_URL}/functions/v1/admin-account-management`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ action: String(action || ""), payload: resolveValue(payload, undefined) || {} })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result?.error) throw firebaseLikeError(new Error(String(result?.error || `ADMIN_ACCOUNT_${response.status}`)), response.status === 401 || response.status === 403 ? "permission-denied" : "unknown");
+  return hydrateValue(result);
+}
 
 function refPath(parts) { return parts.map(v => String(v ?? "").replace(/^\/+|\/+$/g, "")).filter(Boolean).join("/"); }
 export function collection(base, ...segments) {

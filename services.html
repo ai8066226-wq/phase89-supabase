@@ -117,6 +117,9 @@
 @media(max-width:850px){.image-library-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:620px){.image-library-tools{grid-template-columns:1fr}.image-library-filters{overflow:auto}.image-library-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding:12px;gap:8px}.image-library-head{padding:16px}.library-image-card span{font-size:9px}.catalog-item-actions{justify-content:flex-start}}
 </style>
 <style>.topup-method-off{padding:12px;border:1px dashed #d4dee5;border-radius:13px;background:#f8fafb;color:#6c7e90;text-align:center;font-size:11px;font-weight:850}.topup-method-off[hidden]{display:none!important}[hidden]{display:none!important}</style>
+<style id="v109-service-moderation-ratings">
+.provider-admin-notice{margin:16px 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;padding:16px 18px;border:1px solid #edcf85;border-radius:18px;color:#6d4b00;background:linear-gradient(145deg,#fff8df,#fff);box-shadow:0 9px 26px rgba(119,82,0,.08)}.provider-admin-notice>span{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;color:#fff;background:#b77a00;font-size:19px;font-weight:900}.provider-admin-notice strong,.provider-admin-notice small{display:block}.provider-admin-notice small{margin-top:4px;line-height:1.75}.provider-ratings{margin-top:18px}.provider-rating-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.provider-rating-score{font-size:30px;color:#b87900}.provider-rating-stars{color:#e5a326;letter-spacing:2px}.provider-rating-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.provider-review{padding:15px;border:1px solid #dce7e9;border-radius:17px;background:linear-gradient(145deg,#fff,#f8fbfb)}.provider-review-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.provider-review p{margin:9px 0;color:#526979;line-height:1.7}.provider-review small{color:#758695}.service-blocked-shell{min-height:calc(100dvh - 78px);display:grid;place-items:center}.service-blocked-card{width:min(560px,100%);padding:38px;text-align:center;border-color:#efc8d0}.service-blocked-icon{width:72px;height:72px;margin:0 auto 18px;display:grid;place-items:center;border-radius:23px;color:#fff;background:linear-gradient(145deg,#8b1930,#d34b62);font-size:38px;font-weight:900;box-shadow:0 0 0 9px #fff0f3}.service-blocked-card h1{margin:0 0 10px}.service-blocked-card .notice{margin:18px 0}@media(max-width:700px){.provider-rating-list{grid-template-columns:1fr}.service-blocked-card{padding:28px 20px}}
+</style>
 
 <style id="karwaWhatsAppLinksStyle">
 .karwa-whatsapp-panel{display:grid;gap:9px;margin-top:12px;padding:13px;border:1px solid #cce8df;border-radius:15px;background:linear-gradient(145deg,#f1fbf7,#fff)}
@@ -172,8 +175,10 @@
 
   <main class="shell hidden" id="providerView">
     <section class="hero"><div><span class="eyebrow">مساحة مزود الخدمة</span><h1>أهلًا، <span id="providerHeroName">شريك كروة</span></h1><p>حدّث ملف نشاطك والخدمات التي يراها العملاء من مكان واحد.</p></div><span class="badge">✓ حساب معتمد</span></section>
+    <section class="provider-admin-notice" id="providerAdminNotice" hidden><span>!</span><div><strong>تنبيه من إدارة كروة</strong><small id="providerAdminNoticeText"></small></div></section>
     <nav class="service-quick-nav" aria-label="التنقل داخل لوحة الخدمة"><a href="#providerView"><span aria-hidden="true">▦</span>نظرة عامة</a><a href="#serviceWalletSection"><span aria-hidden="true">💳</span>المحفظة</a><a href="#profileSection"><span aria-hidden="true">✎</span>ملف النشاط</a><a href="#requestsSection"><span aria-hidden="true">⌁</span>الطلبات</a></nav>
-    <section class="metrics"><div class="metric"><small>حالة الظهور</small><strong id="activeMetric">نشط</strong></div><div class="metric"><small>تصنيف النشاط</small><strong id="categoryMetric">—</strong></div><div class="metric"><small>الخدمات والمنتجات</small><strong id="itemsMetric">0</strong></div><div class="metric" id="requestsMetricCard"><small>طلبات العملاء</small><strong id="requestsMetric">0</strong><span class="metric-notification" id="requestAlertCount" hidden>0</span></div><div class="metric"><small>الرصيد المتاح</small><strong id="serviceWalletMetric">0 د.ع</strong></div><div class="metric"><small>حالة الاعتماد</small><strong style="color:var(--ok)">معتمد ✓</strong></div></section>
+    <section class="metrics"><div class="metric"><small>حالة الظهور</small><strong id="activeMetric">نشط</strong></div><div class="metric"><small>تصنيف النشاط</small><strong id="categoryMetric">—</strong></div><div class="metric"><small>الخدمات والمنتجات</small><strong id="itemsMetric">0</strong></div><div class="metric" id="requestsMetricCard"><small>طلبات العملاء</small><strong id="requestsMetric">0</strong><span class="metric-notification" id="requestAlertCount" hidden>0</span></div><div class="metric"><small>الرصيد المتاح</small><strong id="serviceWalletMetric">0 د.ع</strong></div><div class="metric"><small>تقييم العملاء</small><strong id="providerRatingMetric">جديد</strong><small id="providerRatingCount">لا توجد تقييمات بعد</small></div></section>
+    <section class="card card-body provider-ratings" id="providerRatingsSection"><div class="card-head"><div><h2>تقييمات العملاء</h2><p class="muted">متوسط التقييم وآخر الآراء بعد اكتمال الطلبات.</p></div><div class="provider-rating-summary"><strong class="provider-rating-score" id="providerRatingAverage">—</strong><span class="provider-rating-stars" id="providerRatingStars">☆☆☆☆☆</span></div></div><div class="provider-rating-list" id="providerRatingsList"><div class="empty">لا توجد تقييمات بعد.</div></div></section>
     <section class="card card-body unified-wallet" id="serviceWalletSection" aria-labelledby="serviceWalletTitle">
       <div class="unified-wallet-head"><div><span class="eyebrow" style="color:var(--brand-dark);border-color:#c7e5e1;background:#eaf7f5">المحفظة</span><h2 id="serviceWalletTitle" style="margin:8px 0 0">الرصيد والشحن</h2></div><span class="status ok" id="serviceBonusStatus">الرصيد المشحون</span></div>
       <div class="unified-wallet-balance"><small>الرصيد المتاح</small><strong id="serviceWalletBalance">0 د.ع</strong><span id="serviceFeeSummary">نشر 1,000 د.ع • طلب 250 د.ع</span></div>
@@ -220,6 +225,8 @@
     <section class="card card-body provider-requests" id="requestsSection"><div class="card-head"><div><h2>طلبات العملاء</h2><p class="muted">طلبات مباشرة مرتبطة باسم نشاطك وموقعه.</p></div><span class="status" id="requestsStatus">مباشر</span></div><div class="request-list" id="providerRequestsList"><div class="empty">لا توجد طلبات جديدة.</div></div></section>
   </main>
 
+  <section class="shell hidden service-blocked-shell" id="serviceBlockedView"><div class="card service-blocked-card"><div class="service-blocked-icon">!</div><h1>حساب الخدمة محظور</h1><p class="muted" id="serviceBlockedReason">راجع الإدارة لمعرفة سبب إيقاف الحساب.</p><div class="notice bad">تم إخفاء النشاط وإيقاف نشر التغييرات والتعامل مع الطلبات حتى ترفع الإدارة الحظر.</div><button class="button danger wide" id="serviceBlockedLogout" type="button">تسجيل الخروج</button></div></section>
+
   <section class="shell hidden" id="deniedView"><div class="card auth-card" style="max-width:520px;margin:8vh auto;text-align:center"><div style="font-size:44px">🔐</div><h1>هذه البوابة مخصصة لمزودي الخدمات</h1><p class="muted" id="deniedText">نوع الحساب الحالي لا يملك صلاحية فتح هذه الصفحة.</p><button class="button danger wide" id="deniedLogout" type="button">تسجيل الخروج</button></div></section>
 
   <div class="image-library-backdrop" id="serviceImageLibrary" role="dialog" aria-modal="true" aria-labelledby="serviceImageLibraryTitle">
@@ -231,10 +238,10 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=107"></script>
+  <script src="./native-notifications.js?v=111"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./service-image-library.js?v=89"></script>
-  <script type="module" src="./services.js?v=107"></script>
-  <script src="./pwa.js?v=98"></script>
+  <script type="module" src="./services.js?v=111"></script>
+  <script src="./pwa.js?v=111"></script>
 </body>
 </html>

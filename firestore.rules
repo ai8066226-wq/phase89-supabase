@@ -328,6 +328,7 @@ service cloud.firestore { match /databases/{database}/documents {
        && linkedServiceRequest().totalPrice==request.resource.data.serviceTotal
        && linkedServiceRequest().deliveryFee==request.resource.data.price)
      || (serviceProvider()
+       && get(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('blocked',false)!=true
        && request.resource.data.type=='serviceDelivery'
        && request.resource.data.providerId==request.auth.uid
        && request.resource.data.serviceRequestId is string
@@ -544,7 +545,7 @@ service cloud.firestore { match /databases/{database}/documents {
  }
  match /supportTickets/{id}{allow create:if signed()&&request.resource.data.userId==request.auth.uid;allow read:if signed()&&(resource.data.userId==request.auth.uid||admin());allow update:if admin();allow delete:if admin();}
  match /coupons/{id}{allow read:if signed();allow write:if admin();}
- match /walletTransactions/{id}{allow read:if signed()&&(resource.data.driverId==request.auth.uid||admin());allow write:if false;}
+ match /walletTransactions/{id}{allow read:if signed()&&(resource.data.get('userId',resource.data.get('driverId',''))==request.auth.uid||admin());allow create,update:if false;allow delete:if admin();}
  match /auditLogs/{id}{allow read:if admin();allow write:if false;}
  match /notificationQueue/{id}{allow read:if admin();allow write:if false;}
  match /authChallenges/{id}{allow read,write:if false;}
@@ -624,6 +625,7 @@ service cloud.firestore { match /databases/{database}/documents {
    allow create:if admin()||(own(uid)&&serviceProvider()&&validProfile(request.resource.data)&&request.resource.data.get('publishFeePaid',false)==true&&request.resource.data.get('publishFeeAmount',0)==publishFee()&&walletCharged(uid,publishFee()));
    allow update:if admin()||(own(uid)
      && serviceProvider()
+     && resource.data.get('blocked',false)!=true
      && validProfile(request.resource.data)
      && request.resource.data.ownerId==resource.data.ownerId
      && request.resource.data.category==resource.data.category
@@ -915,6 +917,7 @@ service cloud.firestore { match /databases/{database}/documents {
        && request.resource.data.deliveryChosenAt is timestamp
        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryRequested','deliveryFee','totalPrice','deliveryStatus','customerAddress','customerLocation','deliveryChosenAt','updatedAt']))
      || (serviceProvider()
+       && get(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('blocked',false)!=true
        && resource.data.providerId==request.auth.uid
        && request.resource.data.providerId==request.auth.uid
        && request.resource.data.get('providerNote','') is string
@@ -963,6 +966,7 @@ service cloud.firestore { match /databases/{database}/documents {
      && serviceProvider()
      && getAfter(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('category','')=='restaurant'
      && getAfter(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('approvalStatus','')=='approved'
+     && getAfter(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('blocked',false)!=true
      && request.resource.data.active is bool
      && request.resource.data.approvalStatus=='approved'
      && request.resource.data.name is string && request.resource.data.name.size()>=2 && request.resource.data.name.size()<=80
@@ -978,6 +982,7 @@ service cloud.firestore { match /databases/{database}/documents {
      && serviceProvider()
      && get(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('category','')=='restaurant'
      && get(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('approvalStatus','')=='approved'
+     && get(/databases/$(database)/documents/serviceProfiles/$(request.auth.uid)).data.get('blocked',false)!=true
      && request.resource.data.approvalStatus==resource.data.approvalStatus
      && request.resource.data.name is string && request.resource.data.name.size()>=2 && request.resource.data.name.size()<=80
      && request.resource.data.address is string && request.resource.data.address.size()>=3 && request.resource.data.address.size()<=160

@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=107";
+import { initializeApp } from "./supabase-compat.js?v=111";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=107";
+} from "./supabase-compat.js?v=111";
 import {
   collection,
   doc,
@@ -21,9 +21,10 @@ import {
   updateDoc,
   writeBatch,
   karwaSensitiveAction,
+  karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=107";
+} from "./supabase-compat.js?v=111";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -54,17 +55,23 @@ const state = {
   serviceProfiles: [],
   restaurants: [],
   drivers: [],
+  accountDirectory: [],
+  accountDirectoryLoadedAt: 0,
+  accountDirectoryLoading: false,
   ratings: [],
   ratingsFilter: "all",
   orders: [],
   serviceRequests: [],
   topupRequests: [],
+  topupLocks: [],
+  walletTransactions: [],
   topupCards: [],
   lastGeneratedTopupCardCode: "",
   deviceBindings: [],
   deviceLinks: [],
   deviceChangeRequests: [],
   pricingSettings: {},
+  financeSettings: {},
   areaMap: null,
   areaBaseLayer: null,
   areaCenter: null,
@@ -109,6 +116,209 @@ function notifyNewServiceRequestForAdmin(request={}){
 }
 
 const money = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
+
+function financeTimestampMillis(value) {
+  if (!value) return 0;
+  if (Number.isFinite(Number(value?.seconds))) return Number(value.seconds) * 1000 + Math.floor(Number(value.nanoseconds || 0) / 1e6);
+  if (typeof value?.toMillis === "function") return Number(value.toMillis()) || 0;
+  if (value instanceof Date) return value.getTime();
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function financeRecordTime(item = {}, fields = []) {
+  for (const field of fields) {
+    const value = financeTimestampMillis(item?.[field]);
+    if (value) return value;
+  }
+  return recordCreatedMillis(item);
+}
+
+function financeRoleKey(user = {}) {
+  const role = String(user.role || "customer");
+  if (["driver", "driverApplicant"].includes(role)) return "driver";
+  if (["serviceProvider", "serviceApplicant"].includes(role)) return "serviceProvider";
+  if (role === "admin") return "admin";
+  return "customer";
+}
+
+function financeRoleLabel(role = "") {
+  return ({ customer: "عميل", driver: "كابتن", serviceProvider: "خدمات أخرى", admin: "إدارة" })[role] || "حساب";
+}
+
+function financeWalletOf(user = {}) {
+  const paid = Math.max(0, Number(user.balance || 0));
+  const storedBonus = Math.max(0, Number(user.bonusBalance || 0));
+  const bonus = storedBonus > 0 && financeTimestampMillis(user.bonusExpiresAt) > Date.now() ? storedBonus : 0;
+  return { paid, bonus, storedBonus, available: paid + bonus };
+}
+
+function financeAccounts() {
+  return state.users
+    .filter(user => financeRoleKey(user) !== "admin")
+    .map(user => ({ ...user, financeRole: financeRoleKey(user), wallet: financeWalletOf(user) }));
+}
+
+function financePeriodStart() {
+  const now = new Date();
+  const selected = byId("financePeriod")?.value || "all";
+  let selectedStart = 0;
+  if (selected === "today") selectedStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (selected === "7d") selectedStart = Date.now() - 7 * 86400000;
+  if (selected === "30d") selectedStart = Date.now() - 30 * 86400000;
+  if (selected === "month") selectedStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const resetStart = financeTimestampMillis(state.financeSettings?.reportStartAt);
+  return Math.max(selectedStart, resetStart);
+}
+
+function financePeriodText() {
+  const labels = { all: "منذ بداية السجل", today: "اليوم", "7d": "آخر 7 أيام", "30d": "آخر 30 يومًا", month: "هذا الشهر" };
+  const selected = byId("financePeriod")?.value || "all";
+  const resetStart = financeTimestampMillis(state.financeSettings?.reportStartAt);
+  const suffix = resetStart ? ` • بعد آخر تصفير ${new Date(resetStart).toLocaleString("ar-IQ")}` : "";
+  return `${labels[selected] || labels.all}${suffix}`;
+}
+
+function financeSnapshot() {
+  const start = financePeriodStart();
+  const inPeriod = value => {
+    const time = financeTimestampMillis(value);
+    return start <= 0 ? true : time >= start;
+  };
+  const recordInPeriod = (record, fields) => inPeriod(financeRecordTime(record, fields));
+  const completedTrips = state.orders.filter(order => !order.cancelled && Number(order.statusIndex || 0) >= 4 && recordInPeriod(order, ["completedAt", "updatedAt", "createdAt"]));
+  const completedServices = state.serviceRequests.filter(request => request.status === "completed" && recordInPeriod(request, ["statusUpdatedAt", "updatedAt", "createdAt"]));
+  const approvedTopups = state.topupRequests.filter(request => request.status === "approved" && recordInPeriod(request, ["reviewedAt", "updatedAt", "createdAt"]));
+
+  const fees = {
+    customerTaxi: state.orders.filter(order => order.type === "ride" && (order.customerFeeCharged === true || Number(order.customerPlatformFee || 0) > 0) && recordInPeriod(order, ["createdAt"])).reduce((sum, order) => sum + Number(order.customerPlatformFee || 0), 0),
+    customerDelivery: state.orders.filter(order => order.type !== "ride" && (order.customerFeeCharged === true || Number(order.customerPlatformFee || 0) > 0) && recordInPeriod(order, ["createdAt"])).reduce((sum, order) => sum + Number(order.customerPlatformFee || 0), 0),
+    captainTaxi: state.orders.filter(order => order.type === "ride" && (order.captainFeeCharged === true || Number(order.captainPlatformFee || 0) > 0) && recordInPeriod(order, ["acceptedAt", "updatedAt"])).reduce((sum, order) => sum + Number(order.captainPlatformFee || 0), 0),
+    captainDelivery: state.orders.filter(order => order.type !== "ride" && (order.captainFeeCharged === true || Number(order.captainPlatformFee || 0) > 0) && recordInPeriod(order, ["acceptedAt", "updatedAt"])).reduce((sum, order) => sum + Number(order.captainPlatformFee || 0), 0),
+    customerService: state.serviceRequests.filter(request => (request.customerFeeCharged === true || Number(request.customerPlatformFee || 0) > 0) && recordInPeriod(request, ["createdAt"])).reduce((sum, request) => sum + Number(request.customerPlatformFee || 0), 0),
+    providerRestaurant: state.serviceRequests.filter(request => request.providerCategory === "restaurant" && (request.providerFeeCharged === true || Number(request.providerPlatformFee || 0) > 0) && recordInPeriod(request, ["statusUpdatedAt", "updatedAt"])).reduce((sum, request) => sum + Number(request.providerPlatformFee || 0), 0),
+    providerService: state.serviceRequests.filter(request => request.providerCategory !== "restaurant" && (request.providerFeeCharged === true || Number(request.providerPlatformFee || 0) > 0) && recordInPeriod(request, ["statusUpdatedAt", "updatedAt"])).reduce((sum, request) => sum + Number(request.providerPlatformFee || 0), 0),
+    publish: state.serviceProfiles.filter(profile => profile.publishFeePaid === true && recordInPeriod(profile, ["publishFeePaidAt", "updatedAt"])).reduce((sum, profile) => sum + Number(profile.publishFeeAmount || 0), 0)
+  };
+  const platformFees = Object.values(fees).reduce((sum, value) => sum + Number(value || 0), 0);
+  const tripSales = completedTrips.reduce((sum, order) => sum + Number(order.price || 0), 0);
+  const providerSales = completedServices.reduce((sum, request) => sum + Number(request.subtotal || request.itemPrice || 0), 0);
+  const captainEarnings = completedTrips.reduce((sum, order) => sum + Number(order.driverEarnings || 0), 0);
+  const manualTopups = approvedTopups.reduce((sum, request) => sum + Number(request.amount || 0), 0);
+  const ledger = state.walletTransactions.filter(transaction => recordInPeriod(transaction, ["createdAt"]));
+  const creditTransactions = ledger.filter(transaction => transaction.direction === "credit");
+  const ledgerCredits = creditTransactions.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+  const ledgerDebits = ledger.filter(transaction => transaction.direction === "debit").reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+  const topupCreditTransactions = creditTransactions.filter(transaction => ["topup_credit", "topup_card_credit"].includes(String(transaction.kind || "")));
+  const topupCredits = topupCreditTransactions.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+  const topups = topupCredits > 0 ? topupCredits : manualTopups;
+  const topupCount = topupCreditTransactions.length || approvedTopups.length;
+  const accounts = financeAccounts();
+  const walletByRole = role => {
+    const rows = accounts.filter(account => account.financeRole === role);
+    return rows.reduce((summary, account) => ({ count: summary.count + 1, paid: summary.paid + account.wallet.paid, bonus: summary.bonus + account.wallet.bonus, available: summary.available + account.wallet.available }), { count: 0, paid: 0, bonus: 0, available: 0 });
+  };
+  const wallets = { customer: walletByRole("customer"), driver: walletByRole("driver"), serviceProvider: walletByRole("serviceProvider") };
+  wallets.all = Object.values(wallets).reduce((summary, row) => ({ count: summary.count + row.count, paid: summary.paid + row.paid, bonus: summary.bonus + row.bonus, available: summary.available + row.available }), { count: 0, paid: 0, bonus: 0, available: 0 });
+  return { start, fees, platformFees, completedTrips, completedServices, approvedTopups, tripSales, providerSales, grossSales: tripSales + providerSales, captainEarnings, topups, topupCount, ledgerCredits, ledgerDebits, wallets, accounts };
+}
+
+function renderFinanceAccounts(snapshot = financeSnapshot()) {
+  const table = byId("financeAccountTable");
+  if (!table) return;
+  const search = String(byId("financeAccountSearch")?.value || "").trim().toLocaleLowerCase("ar");
+  const role = byId("financeRoleFilter")?.value || "all";
+  const rows = snapshot.accounts
+    .filter(account => role === "all" || account.financeRole === role)
+    .filter(account => !search || [account.name, account.email, financeRoleLabel(account.financeRole)].some(value => String(value || "").toLocaleLowerCase("ar").includes(search)))
+    .sort((a, b) => b.wallet.available - a.wallet.available || String(a.name || "").localeCompare(String(b.name || ""), "ar"));
+  if (byId("financeAccountsCount")) byId("financeAccountsCount").textContent = `${rows.length} حساب`;
+  const header = `<div class="finance-account-row header"><span>الحساب</span><span>النوع</span><span>المشحون</span><span>المجاني الصالح</span><span>المتاح الفعلي</span></div>`;
+  table.innerHTML = header + (rows.length ? rows.map(account => {
+    const expired = account.wallet.storedBonus > 0 && account.wallet.bonus === 0 ? ` • منتهي ${money(account.wallet.storedBonus)}` : "";
+    return `<div class="finance-account-row"><span class="finance-account-identity"><strong>${escapeHtml(account.name || "مستخدم كروة")}</strong><small>${escapeHtml(account.email || account.firestoreId || "—")}</small></span><span class="finance-account-role">${financeRoleLabel(account.financeRole)}</span><span>${money(account.wallet.paid)}</span><span title="${escapeHtml(expired.trim())}">${money(account.wallet.bonus)}${expired ? " *" : ""}</span><strong class="finance-account-total">${money(account.wallet.available)}</strong></div>`;
+  }).join("") : `<div class="finance-account-row"><span class="muted">لا توجد حسابات مطابقة.</span></div>`);
+}
+
+function renderFinancialReport() {
+  if (!byId("financialReport")) return;
+  const snapshot = financeSnapshot();
+  const setWallet = (prefix, wallet) => {
+    const value = byId(`finance${prefix}Wallet`), meta = byId(`finance${prefix}WalletMeta`);
+    if (value) value.textContent = money(wallet.available);
+    if (meta) meta.textContent = `${wallet.count} حساب • مشحون ${money(wallet.paid)} • مجاني ${money(wallet.bonus)}`;
+  };
+  setWallet("Customer", snapshot.wallets.customer);
+  setWallet("Captain", snapshot.wallets.driver);
+  setWallet("Service", snapshot.wallets.serviceProvider);
+  setWallet("All", snapshot.wallets.all);
+  if (byId("customerWalletBalance")) byId("customerWalletBalance").textContent = money(snapshot.wallets.customer.available);
+  if (byId("captainWalletBalance")) byId("captainWalletBalance").textContent = money(snapshot.wallets.driver.available);
+  if (byId("serviceWalletBalance")) byId("serviceWalletBalance").textContent = money(snapshot.wallets.serviceProvider.available);
+  const completedCount = snapshot.completedTrips.length + snapshot.completedServices.length;
+  if (byId("financialReportBadge")) byId("financialReportBadge").textContent = `${completedCount} عملية مكتملة`;
+  if (byId("financePeriodLabel")) byId("financePeriodLabel").textContent = financePeriodText();
+  if (byId("financeUpdatedAt")) byId("financeUpdatedAt").textContent = `آخر تحديث: ${new Date().toLocaleString("ar-IQ")}`;
+  byId("financeKpiGrid").innerHTML = [
+    ["إجمالي المبيعات المكتملة", snapshot.grossSales, `${snapshot.completedTrips.length} رحلة • ${snapshot.completedServices.length} خدمة`],
+    ["إيراد كروة من الرسوم", snapshot.platformFees, "رسوم ثابتة بدون عمولة نسبية"],
+    ["أرباح الكباتن", snapshot.captainEarnings, `${snapshot.completedTrips.length} رحلة مكتملة`],
+    ["مبيعات مزودي الخدمات", snapshot.providerSales, `${snapshot.completedServices.length} طلب خدمة مكتمل`],
+    ["الشحنات المضافة للمحافظ", snapshot.topups, `${snapshot.topupCount} عملية شحن يدوي أو كرت`],
+    ["حركة سجل المحفظة", snapshot.ledgerCredits - snapshot.ledgerDebits, `دائن ${money(snapshot.ledgerCredits)} • مدين ${money(snapshot.ledgerDebits)}`]
+  ].map(([label, value, note]) => `<div class="finance-kpi"><small>${label}</small><strong>${money(value)}</strong><em>${note}</em></div>`).join("");
+  const feeRows = [
+    ["رسوم العملاء — تكسي", snapshot.fees.customerTaxi], ["رسوم العملاء — توصيل", snapshot.fees.customerDelivery],
+    ["رسوم العملاء — خدمات ومطاعم", snapshot.fees.customerService], ["رسوم الكباتن — تكسي", snapshot.fees.captainTaxi],
+    ["رسوم الكباتن — توصيل", snapshot.fees.captainDelivery], ["رسوم المطاعم", snapshot.fees.providerRestaurant],
+    ["رسوم الخدمات الأخرى", snapshot.fees.providerService], ["رسوم نشر الأنشطة", snapshot.fees.publish]
+  ];
+  byId("financeFeeBreakdown").innerHTML = feeRows.map(([label, value]) => `<div class="finance-fee-row"><span>${label}</span><strong>${money(value)}</strong></div>`).join("");
+  const resetAt = financeTimestampMillis(state.financeSettings?.reportStartAt);
+  if (byId("financeResetMeta")) byId("financeResetMeta").textContent = resetAt ? `يبدأ التقرير الحالي من ${new Date(resetAt).toLocaleString("ar-IQ")}. آخر منفذ: ${state.financeSettings?.lastResetByEmail || "مدير النظام"}` : "لم يتم تصفير التقرير سابقًا.";
+  renderFinanceAccounts(snapshot);
+}
+
+function financeCsvCell(value) {
+  const text = String(value ?? "");
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function exportFinancialReportCsv() {
+  const snapshot = financeSnapshot();
+  const lines = [
+    ["تقرير كروة المالي", financePeriodText()],
+    ["تاريخ التصدير", new Date().toLocaleString("ar-IQ")],
+    [],
+    ["المؤشر", "القيمة (د.ع)"],
+    ["إجمالي المبيعات المكتملة", snapshot.grossSales],
+    ["إيراد كروة من الرسوم", snapshot.platformFees],
+    ["أرباح الكباتن", snapshot.captainEarnings],
+    ["مبيعات مزودي الخدمات", snapshot.providerSales],
+    ["الشحنات المضافة للمحافظ", snapshot.topups],
+    [],
+    ["اسم الحساب", "البريد", "النوع", "الرصيد المشحون", "الرصيد المجاني الصالح", "الرصيد المتاح الفعلي"],
+    ...snapshot.accounts.sort((a, b) => b.wallet.available - a.wallet.available).map(account => [account.name || "مستخدم كروة", account.email || "", financeRoleLabel(account.financeRole), account.wallet.paid, account.wallet.bonus, account.wallet.available])
+  ];
+  const csv = "\ufeff" + lines.map(row => row.map(financeCsvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `karwa-financial-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast("تم تجهيز التقرير المالي بصيغة CSV");
+}
+
+async function commitFinanceBatches(items, apply, size = 35) {
+  for (let index = 0; index < items.length; index += size) {
+    const batch = writeBatch(db);
+    items.slice(index, index + size).forEach(item => apply(batch, item));
+    await batch.commit();
+  }
+}
 
 function isBikeVehicle(record = {}) {
   return String(record.vehicleType || "").trim().includes("دراجة");
@@ -266,6 +476,7 @@ function adminNotificationCounts() {
   const completedTrips = state.orders.filter(order =>
     !order.cancelled && Number(order.statusIndex || 0) >= 4
   ).length;
+  const completedServices = state.serviceRequests.filter(request => request.status === "completed").length;
   const deviceChanges = state.deviceChangeRequests.filter(item => (item.status || "pending") === "pending").length;
 
   return {
@@ -276,6 +487,7 @@ function adminNotificationCounts() {
     pendingServiceRequests,
     driversAttention,
     completedTrips,
+    completedFinancial: completedTrips + completedServices,
     deviceChanges,
     ratings: state.ratings.length
   };
@@ -304,7 +516,7 @@ function renderAdminNotifications() {
   setModuleNotification("navCaptainsCount", counts.captainApplications);
   setModuleNotification("navDriversCount", counts.driversAttention);
   setModuleNotification("navOrdersCount", counts.waitingOrders + counts.pendingServiceRequests);
-  setModuleNotification("navFinanceCount", counts.completedTrips, false);
+  setModuleNotification("navFinanceCount", counts.completedFinancial, false);
   setModuleNotification("navRatingsCount", counts.ratings, false);
 
   setPanelNotification("pendingTopupsBadge", counts.topups, "بانتظار المراجعة");
@@ -312,7 +524,7 @@ function renderAdminNotifications() {
   setPanelNotification("captainApplicationsBadge", counts.captainApplications, "بانتظار المراجعة");
   setPanelNotification("driversAttentionBadge", counts.driversAttention, "يحتاج متابعة");
   setPanelNotification("waitingOrdersBadge", counts.waitingOrders + counts.pendingServiceRequests, "طلب وارد الآن");
-  setPanelNotification("financialReportBadge", counts.completedTrips, "رحلة مكتملة");
+  setPanelNotification("financialReportBadge", counts.completedFinancial, "عملية مكتملة");
   setPanelNotification("ratingsBadge", counts.ratings, "تقييم");
 
   const actionable = counts.topups + counts.serviceApplications + counts.captainApplications + counts.driversAttention + counts.waitingOrders + counts.pendingServiceRequests + counts.deviceChanges;
@@ -475,16 +687,16 @@ function renderMetrics() {
   byId("cancelledTripsCount").textContent = state.orders.filter(o => o.cancelled).length;
   byId("onlineDriversCount").textContent = state.drivers.filter(d => d.online === true && d.blocked !== true).length;
   const completed=state.orders.filter(o=>!o.cancelled&&Number(o.statusIndex||0)>=4);
-  const gross=completed.reduce((n,o)=>n+Number(o.price||0),0);
+  const completedServices=state.serviceRequests.filter(request=>request.status==="completed");
+  const gross=completed.reduce((n,o)=>n+Number(o.price||0),0)+completedServices.reduce((n,request)=>n+Number(request.subtotal||request.itemPrice||0),0);
   const orderFees=state.orders.reduce((n,o)=>n+Number(o.customerPlatformFee||0)+Number(o.captainPlatformFee||0),0);
   const serviceFees=state.serviceRequests.reduce((n,r)=>n+Number(r.customerPlatformFee||0)+Number(r.providerPlatformFee||0),0);
   const publishFees=state.serviceProfiles.reduce((n,p)=>n+(p.publishFeePaid===true?Number(p.publishFeeAmount||0):0),0);
   const platformFees=orderFees+serviceFees+publishFees;
   const payout=completed.reduce((n,o)=>n+Number(o.driverEarnings||0),0);
   byId("grossRevenue").textContent=money(gross);byId("commissionRevenue").textContent=money(platformFees);byId("driversPayout").textContent=money(payout);
-  const byDriver={};completed.forEach(o=>{const k=o.driverName||"غير معيّن";byDriver[k]=(byDriver[k]||0)+Number(o.driverEarnings||0)});
-  byId("financialReport").innerHTML=completed.length?`<div class="order-meta"><span>رحلات مكتملة: ${completed.length}</span><span>متوسط الطلب: ${money(gross/completed.length)}</span></div>${Object.entries(byDriver).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([name,value])=>`<div class="order-meta"><strong>${escapeHtml(name)}</strong><span>${money(value)}</span></div>`).join("")}`:`<p class="muted">لا توجد رحلات مكتملة بعد.</p>`;
   renderAdminNotifications();
+  renderFinancialReport();
 }
 
 function ratingSummary(driverId) {
@@ -556,7 +768,9 @@ function driverCard(driver) {
   const completedOrders = driverOrders.filter(o => !o.cancelled && Number(o.statusIndex || 0) >= 4);
   const activeOrders = driverOrders.filter(o => !o.cancelled && Number(o.statusIndex || 0) < 4);
   const cancelledOrders = driverOrders.filter(o => o.cancelled === true);
-  const captainBalance = completedOrders.reduce((sum,o) => sum + Number(o.driverEarnings || 0), 0);
+  const captainEarnings = completedOrders.reduce((sum,o) => sum + Number(o.driverEarnings || 0), 0);
+  const captainUser = state.users.find(user => user.firestoreId === driver.firestoreId) || {};
+  const captainWallet = financeWalletOf(captainUser);
   const blocked = driver.blocked === true;
   const status = blocked ? "محظور" : driver.online ? "متصل" : "غير متصل";
   const statusClass = blocked ? "rejected" : driver.online ? "approved" : "pending";
@@ -579,7 +793,7 @@ function driverCard(driver) {
         <span><small>رقم اللوحة</small><b>${escapeHtml(driver.plate || "-")}</b></span>
         ${!isBikeVehicle(driver) ? `<span><small>السيارة / الموديل</small><b>${escapeHtml(driver.vehicleMake || "-")} ${escapeHtml(driver.vehicleModel || "")}</b></span><span><small>حالة السيارة</small><b>${escapeHtml(driver.vehicleCondition || "غير محددة")}</b></span>` : `<span><small>نطاق العمل</small><b>توصيل أغراض وطعام</b></span>`}
       </div>
-      <div class="captain-balance"><small>رصيد الكابتن من الرحلات المكتملة</small><strong>${money(captainBalance)}</strong></div>
+      <div class="captain-balance"><small>الرصيد الفعلي المتاح في محفظة الكابتن</small><strong>${money(captainWallet.available)}</strong><div class="actual-balance-detail"><span>مشحون: <b>${money(captainWallet.paid)}</b></span><span>مجاني صالح: <b>${money(captainWallet.bonus)}</b></span><span>أرباح الرحلات المكتملة: <b>${money(captainEarnings)}</b></span></div></div>
       <div class="order-meta driver-trip-stats">
         <span><strong>${trips.completed}</strong> مكتملة</span>
         <span><strong>${trips.cancelled}</strong> ملغاة</span>
@@ -594,7 +808,8 @@ function driverCard(driver) {
       </div>
       ${driver.warningMessage ? `<p class="admin-note">آخر تنبيه: ${escapeHtml(driver.warningMessage)}</p>` : ""}
       ${blocked && driver.blockReason ? `<p class="admin-note danger-note">سبب الحظر: ${escapeHtml(driver.blockReason)}</p>` : ""}
-      <div class="order-actions"><button class="secondary" data-action="warn-driver" data-id="${driver.firestoreId}">إرسال تنبيه</button>${blockAction}</div>
+      <div class="order-meta account-activity-inline">${accountLastActivityInline(driver.firestoreId)}</div>
+      <div class="order-actions"><button class="secondary" data-action="warn-driver" data-id="${driver.firestoreId}">إرسال تنبيه</button>${blockAction}<button class="danger" data-action="delete-account" data-id="${escapeHtml(driver.firestoreId)}" data-name="${escapeHtml(driver.name || captainUser.name || "كابتن كروة")}" data-email="${escapeHtml(driver.email || captainUser.email || "")}" data-role="driver" data-category="${escapeHtml(captainServiceLabel(driver))}">حذف الكابتن نهائيًا</button></div>
     </article>`;
 }
 function renderDrivers() {
@@ -652,6 +867,14 @@ byId("ratingsTypeFilter")?.addEventListener("change", event => {
   state.ratingsFilter = event.target.value || "all";
   renderRatings();
 });
+byId("financePeriod")?.addEventListener("change", renderFinancialReport);
+byId("financeAccountSearch")?.addEventListener("input", () => renderFinanceAccounts());
+byId("financeRoleFilter")?.addEventListener("change", () => renderFinanceAccounts());
+byId("exportFinanceCsv")?.addEventListener("click", exportFinancialReportCsv);
+byId("printFinanceReport")?.addEventListener("click", () => {
+  renderFinancialReport();
+  window.print();
+});
 
 function applicationCard(application) {
   const status = application.status || "pending";
@@ -685,27 +908,42 @@ function serviceApplicationCard(application) {
   const status = application.status || "pending";
   const labels = { pending: "قيد المراجعة", approved: "مقبول", rejected: "مرفوض" };
   const source = application.legacy ? "legacy" : "service";
-  const restaurant = state.restaurants.find(item => item.firestoreId === application.firestoreId || item.ownerId === application.userId);
-  const profile = state.serviceProfiles.find(item => item.firestoreId === application.firestoreId || item.ownerId === application.userId);
+  const applicationUid = String(application.userId || application.ownerId || application.firestoreId || "");
+  const restaurant = state.restaurants.find(item => item.firestoreId === applicationUid || item.firestoreId === application.firestoreId || item.ownerId === applicationUid);
+  const profile = state.serviceProfiles.find(item => item.firestoreId === applicationUid || item.firestoreId === application.firestoreId || item.ownerId === applicationUid);
   const category = application.category || profile?.category || (restaurant ? "restaurant" : "other");
   const businessName = application.businessName || profile?.businessName || restaurant?.name || application.name || "مزود خدمة";
-  const ownerName = application.ownerName || application.name || "—";
+  const ownerName = application.ownerName || profile?.ownerName || application.name || "—";
   const address = application.address || profile?.address || restaurant?.address || "—";
   const location = application.location || profile?.location || restaurant?.location;
   const gps = location?.latitude != null && location?.longitude != null ? `${Number(location.latitude).toFixed(5)}, ${Number(location.longitude).toFixed(5)}` : "غير محدد";
   const items = profile?.items || restaurant?.meals || [];
   const hasLocation = Number.isFinite(Number(location?.latitude)) && Number.isFinite(Number(location?.longitude));
-  const providerRating = providerRatingSummary(application.firestoreId || application.userId);
-  const actions = status === "pending" ? `<div class="order-actions"><button class="primary" data-action="approve-service" data-source="${source}" data-id="${application.firestoreId}" ${hasLocation ? "" : 'disabled title="يجب أن يحدد المزود موقع GPS أولًا"'}>${hasLocation ? "قبول وتفعيل" : "GPS مطلوب قبل القبول"}</button><button class="danger" data-action="reject-service" data-source="${source}" data-id="${application.firestoreId}">رفض مع ملاحظة</button></div>` : "";
-  return `<article class="order-card service-application-card">
-    <div class="order-top"><h3>🧰 ${escapeHtml(businessName)}</h3><span class="status-chip ${status}">${labels[status] || escapeHtml(status)}</span></div>
+  const providerUid = String(profile?.firestoreId || profile?.ownerId || restaurant?.ownerId || applicationUid);
+  const providerRating = providerRatingSummary(providerUid);
+  const providerUser = state.users.find(user => user.firestoreId === providerUid) || {};
+  const providerWallet = financeWalletOf(providerUser);
+  const blocked = profile?.blocked === true || restaurant?.blocked === true;
+  const warningCount = Number(profile?.warningCount || 0);
+  const visibleStatus = blocked ? "محظور" : labels[status] || status;
+  const statusClass = blocked ? "rejected" : status;
+  const reviewActions = status === "pending" ? `<div class="order-actions"><button class="primary" data-action="approve-service" data-source="${source}" data-id="${application.firestoreId}" ${hasLocation ? "" : 'disabled title="يجب أن يحدد المزود موقع GPS أولًا"'}>${hasLocation ? "قبول وتفعيل" : "GPS مطلوب قبل القبول"}</button><button class="danger" data-action="reject-service" data-source="${source}" data-id="${application.firestoreId}">رفض مع ملاحظة</button></div>` : "";
+  const moderationActions = providerUid && (status === "approved" || profile?.approvalStatus === "approved")
+    ? `<div class="order-actions service-moderation-actions"><button class="secondary" data-action="warn-service-provider" data-id="${escapeHtml(providerUid)}">إرسال تنبيه</button>${blocked ? `<button class="secondary" data-action="unblock-service-provider" data-id="${escapeHtml(providerUid)}">إعادة التفعيل</button>` : `<button class="danger" data-action="block-service-provider" data-id="${escapeHtml(providerUid)}">حظر صاحب الخدمة</button>`}<button class="danger" data-action="delete-account" data-id="${escapeHtml(providerUid)}" data-name="${escapeHtml(businessName)}" data-email="${escapeHtml(application.email || providerUser.email || "")}" data-role="serviceProvider" data-category="${escapeHtml(serviceCategoryLabels[category] || serviceCategoryLabels.other)}">حذف الحساب نهائيًا</button></div>`
+    : "";
+  return `<article class="order-card service-application-card ${blocked ? "is-blocked" : ""}">
+    <div class="order-top"><h3>🧰 ${escapeHtml(businessName)}</h3><span class="status-chip ${statusClass}">${escapeHtml(visibleStatus)}</span></div>
     <p class="order-route">${escapeHtml(serviceCategoryLabels[category] || serviceCategoryLabels.other)} • ${escapeHtml(application.city || profile?.city || "—")}</p>
     <div class="order-meta"><span>صاحب الخدمة: ${escapeHtml(ownerName)}</span><span>الهاتف: ${escapeHtml(application.phone || profile?.phone || restaurant?.phone || "—")}</span></div>
     <div class="order-meta"><span>البريد: ${escapeHtml(application.email || "—")}</span><span>العنوان: ${escapeHtml(address)}</span><span>GPS: ${escapeHtml(gps)}</span></div>
     ${application.description ? `<p class="admin-note">${escapeHtml(application.description)}</p>` : ""}
-    <div class="order-meta"><span>العناصر المضافة: ${Array.isArray(items) ? items.length : 0}</span><span>★ ${providerRating.count ? providerRating.average.toFixed(1) : "جديد"} • ${providerRating.count} تقييم</span>${application.legacy ? `<span>طلب قديم — مدعوم تلقائيًا</span>` : ""}</div>
+    <div class="order-meta"><span>العناصر المضافة: ${Array.isArray(items) ? items.length : 0}</span><span>★ ${providerRating.count ? providerRating.average.toFixed(1) : "جديد"} • ${providerRating.count} تقييم</span><span>⚠ ${warningCount} تنبيه</span>${application.legacy ? `<span>طلب قديم — مدعوم تلقائيًا</span>` : ""}</div>
+    <div class="captain-balance"><small>الرصيد الفعلي المتاح للخدمة</small><strong>${money(providerWallet.available)}</strong><div class="actual-balance-detail"><span>مشحون: <b>${money(providerWallet.paid)}</b></span><span>مجاني صالح: <b>${money(providerWallet.bonus)}</b></span></div></div>
     ${application.reviewNote ? `<p class="admin-note danger-note">ملاحظة المراجعة: ${escapeHtml(application.reviewNote)}</p>` : ""}
-    ${actions}
+    ${profile?.warningMessage ? `<p class="admin-note">آخر تنبيه: ${escapeHtml(profile.warningMessage)}</p>` : ""}
+    ${blocked && profile?.blockReason ? `<p class="admin-note danger-note">سبب الحظر: ${escapeHtml(profile.blockReason)}</p>` : ""}
+    <div class="order-meta account-activity-inline">${accountLastActivityInline(providerUid)}</div>
+    ${reviewActions}${moderationActions}
   </article>`;
 }
 
@@ -714,15 +952,43 @@ function renderServiceApplications() {
   const legacyApplications = state.applications
     .filter(item => item.serviceType === "other" && !modernIds.has(item.firestoreId))
     .map(item => ({ ...item, legacy: true }));
-  const sorted = [...state.serviceApplications, ...legacyApplications].sort((a, b) => {
+  const baseApplications = [...state.serviceApplications, ...legacyApplications];
+  const knownProviderIds = new Set(baseApplications.flatMap(item => [item.firestoreId, item.userId, item.ownerId].filter(Boolean).map(String)));
+  const profileApplications = state.serviceProfiles
+    .filter(profile => !knownProviderIds.has(String(profile.firestoreId)) && !knownProviderIds.has(String(profile.ownerId || "")))
+    .map(profile => ({ ...profile, userId: profile.ownerId || profile.firestoreId, status: profile.approvalStatus || "approved", profileOnly: true }));
+  const allProviders = [...baseApplications, ...profileApplications];
+  const categoryFilter = byId("serviceCategoryFilter")?.value || "all";
+  const term = String(byId("serviceProviderSearchInput")?.value || "").trim().toLocaleLowerCase("ar");
+  const filtered = allProviders.filter(application => {
+    const uid = String(application.userId || application.ownerId || application.firestoreId || "");
+    const profile = state.serviceProfiles.find(item => item.firestoreId === uid || item.ownerId === uid || item.firestoreId === application.firestoreId);
+    const restaurant = state.restaurants.find(item => item.firestoreId === uid || item.ownerId === uid || item.firestoreId === application.firestoreId);
+    const category = application.category || profile?.category || (restaurant ? "restaurant" : "other");
+    if (categoryFilter !== "all" && category !== categoryFilter) return false;
+    if (!term) return true;
+    return [application.businessName, profile?.businessName, restaurant?.name, application.ownerName, profile?.ownerName, application.name, application.phone, profile?.phone, restaurant?.phone, application.email, application.city, profile?.city, serviceCategoryLabels[category]]
+      .some(value => String(value || "").toLocaleLowerCase("ar").includes(term));
+  });
+  const sorted = filtered.sort((a, b) => {
+    const auid = String(a.userId || a.ownerId || a.firestoreId || "");
+    const buid = String(b.userId || b.ownerId || b.firestoreId || "");
+    const ap = state.serviceProfiles.find(item => item.firestoreId === auid || item.ownerId === auid || item.firestoreId === a.firestoreId);
+    const bp = state.serviceProfiles.find(item => item.firestoreId === buid || item.ownerId === buid || item.firestoreId === b.firestoreId);
+    if (ap?.blocked === true && bp?.blocked !== true) return -1;
+    if (bp?.blocked === true && ap?.blocked !== true) return 1;
     if (a.status === "pending" && b.status !== "pending") return -1;
     if (b.status === "pending" && a.status !== "pending") return 1;
     return Number(b.submittedAt?.seconds || b.updatedAt?.seconds || 0) - Number(a.submittedAt?.seconds || a.updatedAt?.seconds || 0);
   });
+  if (byId("serviceProviderSearchCount")) byId("serviceProviderSearchCount").textContent = (term || categoryFilter !== "all") ? `${sorted.length} من ${allProviders.length}` : `${allProviders.length} مزود خدمة`;
   byId("serviceApplicationsList").innerHTML = sorted.length
     ? sorted.map(serviceApplicationCard).join("")
-    : `<div class="empty"><span>🧰</span>لا توجد طلبات مزودي خدمات بعد.</div>`;
+    : `<div class="empty"><span>🧰</span>${term || categoryFilter !== "all" ? "لا يوجد مزود خدمة مطابق للبحث أو الصنف المحدد." : "لا توجد طلبات مزودي خدمات بعد."}</div>`;
 }
+
+byId("serviceProviderSearchInput")?.addEventListener("input", renderServiceApplications);
+byId("serviceCategoryFilter")?.addEventListener("change", renderServiceApplications);
 
 function orderCard(order) {
   const statusIndex = Number(order.statusIndex || 0);
@@ -1153,10 +1419,14 @@ function openDashboard() {
     .then(() => { initializeAdminAreaMap(); window.setTimeout(()=>{state.areaMap?.invalidateSize();renderAdminAreaMap();},80); })
     .catch(error => { console.warn("تعذر تحميل خريطة الإدارة", error); showAdminMapLoadError(); });
   refreshTopupCardsAdmin();
+  loadAccountDirectory().catch(error => console.warn("تعذر تحميل دليل الحسابات", error));
   const topupCardsPoll=setInterval(refreshTopupCardsAdmin,8000);
+  const accountDirectoryPoll=setInterval(()=>loadAccountDirectory({quiet:true}).catch(()=>{}),5*60*1000);
   const usersUnsubscribe = onSnapshot(collection(db, "users"), snapshot => {
     state.users = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderMetrics();
+    renderDrivers();
+    renderServiceApplications();
     renderCancellations();
     renderDeviceManagement();
     renderAdminAreaMap();
@@ -1243,7 +1513,19 @@ function openDashboard() {
     state.topupRequests=incoming;
     previousTopups=new Map(incoming.map(item=>[item.firestoreId,item]));topupsReady=true;
     renderTopupRequests();
+    renderMetrics();
   });
+  const topupLocksUnsubscribe = onSnapshot(collection(db,"topupLocks"), snapshot => {
+    state.topupLocks = snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+  });
+  const walletTransactionsUnsubscribe = onSnapshot(collection(db,"walletTransactions"), snapshot => {
+    state.walletTransactions = snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+    renderFinancialReport();
+  });
+  const financeSettingsUnsubscribe = onSnapshot(doc(db,"appSettings","finance"), snapshot => {
+    state.financeSettings = snapshot.exists() ? (snapshot.data() || {}) : {};
+    renderFinancialReport();
+  }, error => console.warn("تعذر تحميل إعدادات التقرير المالي", error));
   const deviceBindingsUnsubscribe = onSnapshot(collection(db,"deviceBindings"), snapshot => {
     state.deviceBindings = snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
     renderDeviceManagement();
@@ -1278,13 +1560,165 @@ function openDashboard() {
     driversUnsubscribe,
     ratingsUnsubscribe,
     topupsUnsubscribe,
+    topupLocksUnsubscribe,
+    walletTransactionsUnsubscribe,
+    financeSettingsUnsubscribe,
     deviceBindingsUnsubscribe,
     deviceLinksUnsubscribe,
     deviceChangesUnsubscribe,
     pricingUnsubscribe,
-    ()=>clearInterval(topupCardsPoll)
+    ()=>clearInterval(topupCardsPoll),
+    ()=>clearInterval(accountDirectoryPoll)
   );
 }
+
+function accountRoleLabel(role) {
+  return ({ customer:"عميل", driver:"كابتن", serviceProvider:"خدمات أخرى" })[role] || "حساب";
+}
+function accountActivityMillis(account = {}) {
+  const parsed = new Date(account.lastActivityAt || account.lastSignInAt || account.createdAt || "").getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function accountActivityText(account = {}) {
+  const millis = accountActivityMillis(account);
+  if (!millis) return "لا يوجد نشاط مسجل";
+  const days = Math.max(0, Number(account.idleDays || Math.floor((Date.now() - millis) / 86400000)));
+  if (days === 0) return "نشط اليوم";
+  if (days === 1) return "منذ يوم";
+  if (days < 30) return `منذ ${days.toLocaleString("ar-IQ")} يوم`;
+  const months = Math.floor(days / 30);
+  if (months === 1) return "منذ شهر";
+  if (months === 2) return "منذ شهرين";
+  if (months < 12) return `منذ ${months.toLocaleString("ar-IQ")} أشهر`;
+  const years = Math.floor(months / 12);
+  return years === 1 ? "منذ سنة" : `منذ ${years.toLocaleString("ar-IQ")} سنوات`;
+}
+function accountDirectoryEntry(uid) {
+  return state.accountDirectory.find(account => account.id === uid) || null;
+}
+function accountLastActivityInline(uid) {
+  const account = accountDirectoryEntry(uid);
+  return account ? `<span><b>آخر نشاط:</b> ${escapeHtml(accountActivityText(account))}</span>` : `<span><b>آخر نشاط:</b> جارٍ التحقق</span>`;
+}
+function renderAccountDirectory() {
+  const accounts = state.accountDirectory.filter(account => account.role !== "admin");
+  const term = String(byId("accountDirectorySearch")?.value || "").trim().toLocaleLowerCase("ar");
+  const role = byId("accountDirectoryRole")?.value || "all";
+  const category = byId("accountDirectoryCategory")?.value || "all";
+  const minimumIdle = Math.max(0, Number(byId("accountDirectoryIdle")?.value || 0));
+  const filtered = accounts.filter(account => {
+    if (role !== "all" && account.role !== role) return false;
+    if (category === "driver-taxi" && (account.role !== "driver" || !String(account.serviceType || "").toLowerCase().match(/taxi|ride|تكسي/))) return false;
+    if (category === "driver-delivery" && (account.role !== "driver" || !String(account.serviceType || "").toLowerCase().match(/delivery|parcel|food|توصيل/))) return false;
+    if (category !== "all" && !category.startsWith("driver-") && (account.role !== "serviceProvider" || account.category !== category)) return false;
+    if (minimumIdle && Number(account.idleDays || 0) < minimumIdle) return false;
+    if (!term) return true;
+    return [account.name, account.businessName, account.email, account.phone, account.city, account.categoryLabel, accountRoleLabel(account.role)]
+      .some(value => String(value || "").toLocaleLowerCase("ar").includes(term));
+  }).sort((a,b) => Number(b.idleDays || 0) - Number(a.idleDays || 0));
+  const month = accounts.filter(account => Number(account.idleDays || 0) >= 30).length;
+  const twoMonths = accounts.filter(account => Number(account.idleDays || 0) >= 60).length;
+  if (byId("accountDirectoryTotal")) byId("accountDirectoryTotal").textContent = String(accounts.length);
+  if (byId("accountDirectoryMonth")) byId("accountDirectoryMonth").textContent = String(month);
+  if (byId("accountDirectoryTwoMonths")) byId("accountDirectoryTwoMonths").textContent = String(twoMonths);
+  if (byId("accountDirectoryFiltered")) byId("accountDirectoryFiltered").textContent = String(filtered.length);
+  if (byId("inactiveAccountsBadge")) byId("inactiveAccountsBadge").textContent = `${month} خامل`;
+  if (byId("navInactiveAccountsCount")) byId("navInactiveAccountsCount").textContent = String(month);
+  const host = byId("accountDirectoryList");
+  if (!host) return;
+  host.innerHTML = filtered.length ? filtered.map(account => {
+    const idle = Number(account.idleDays || 0);
+    const name = account.businessName || account.name || account.email || "حساب كروة";
+    const categoryText = account.role === "serviceProvider" ? (serviceCategoryLabels[account.category] || serviceCategoryLabels.other) : account.role === "driver" ? (account.serviceTypeLabel || "كابتن") : "عميل كروة";
+    const activityDate = accountActivityMillis(account) ? new Date(accountActivityMillis(account)).toLocaleString("ar-IQ") : "غير مسجل";
+    const cardClass = idle >= 60 ? "is-critical" : idle >= 30 ? "is-idle" : "";
+    return `<article class="account-directory-card ${cardClass}">
+      <div class="account-directory-identity"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(account.email || "بدون بريد")}</small><span class="account-directory-role">${escapeHtml(accountRoleLabel(account.role))}</span></div>
+      <div class="account-directory-cell"><small>الهاتف</small><b>${escapeHtml(account.phone || "—")}</b></div>
+      <div class="account-directory-cell"><small>الصنف</small><b>${escapeHtml(categoryText)}</b></div>
+      <div class="account-directory-cell"><small>آخر نشاط</small><b>${escapeHtml(accountActivityText(account))}</b><small>${escapeHtml(activityDate)}</small></div>
+      <button class="danger" type="button" data-action="delete-account" data-id="${escapeHtml(account.id)}" data-name="${escapeHtml(name)}" data-email="${escapeHtml(account.email || "")}" data-role="${escapeHtml(account.role)}" data-category="${escapeHtml(categoryText)}">حذف نهائي</button>
+    </article>`;
+  }).join("") : `<div class="empty"><span>🔎</span>${state.accountDirectoryLoading ? "جاري تحميل الحسابات…" : "لا توجد حسابات مطابقة للتصفية المحددة."}</div>`;
+}
+async function loadAccountDirectory({quiet=false} = {}) {
+  if (state.accountDirectoryLoading) return;
+  state.accountDirectoryLoading = true;
+  if (!quiet) {
+    const host = byId("accountDirectoryList");
+    if (host && !state.accountDirectory.length) host.innerHTML = `<div class="empty"><span>⏳</span>جاري قراءة آخر نشاط للحسابات…</div>`;
+  }
+  const refresh = byId("refreshAccountDirectory");
+  if (!quiet) busy(refresh, true, "جاري التحديث…");
+  try {
+    const result = await karwaAdminAccountAction("list");
+    state.accountDirectory = Array.isArray(result?.accounts) ? result.accounts : [];
+    state.accountDirectoryLoadedAt = Date.now();
+    if (byId("accountDirectoryUpdated")) byId("accountDirectoryUpdated").textContent = `آخر تحديث: ${new Date().toLocaleString("ar-IQ")} • النشاط الأحدث بين تسجيل الدخول واستخدام التطبيق`;
+    renderAccountDirectory();
+    renderDrivers();
+    renderServiceApplications();
+  } catch (error) {
+    console.error("Account directory load failed", error);
+    if (!quiet) toast(error?.code === "permission-denied" ? "لا تملك صلاحية قراءة سجل الحسابات" : "تعذر تحميل آخر نشاط للحسابات");
+    if (byId("accountDirectoryUpdated")) byId("accountDirectoryUpdated").textContent = "تعذر تحديث الحسابات. تحقق من الاتصال ثم أعد المحاولة.";
+  } finally {
+    state.accountDirectoryLoading = false;
+    renderAccountDirectory();
+    if (!quiet) busy(refresh, false);
+  }
+}
+
+let pendingAccountDeletion = null;
+function openAccountDeleteModal(target) {
+  pendingAccountDeletion = target;
+  byId("accountDeleteName").textContent = target.name || "حساب كروة";
+  byId("accountDeleteMeta").textContent = `${accountRoleLabel(target.role)}${target.category ? ` • ${target.category}` : ""}${target.email ? ` • ${target.email}` : ""}`;
+  byId("accountDeletePhrase").value = "";
+  byId("accountDeleteError").textContent = "";
+  byId("accountDeleteModal").hidden = false;
+  window.setTimeout(() => byId("accountDeletePhrase")?.focus(), 30);
+}
+function closeAccountDeleteModal() {
+  byId("accountDeleteModal").hidden = true;
+  pendingAccountDeletion = null;
+  byId("accountDeleteError").textContent = "";
+}
+byId("accountDeleteClose")?.addEventListener("click", closeAccountDeleteModal);
+byId("accountDeleteCancel")?.addEventListener("click", closeAccountDeleteModal);
+byId("accountDeleteModal")?.addEventListener("click", event => { if (event.target === event.currentTarget) closeAccountDeleteModal(); });
+byId("accountDeleteForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const target = pendingAccountDeletion;
+  if (!target) return;
+  const phrase = String(byId("accountDeletePhrase")?.value || "").trim();
+  if (phrase !== "حذف نهائي") {
+    byId("accountDeleteError").textContent = "اكتب عبارة «حذف نهائي» كما هي للمتابعة.";
+    byId("accountDeletePhrase")?.focus();
+    return;
+  }
+  const button = byId("accountDeleteSubmit");
+  busy(button, true, "جارٍ الحذف الكامل…");
+  byId("accountDeleteError").textContent = "";
+  try {
+    await karwaAdminAccountAction("delete", { userId: target.id, confirmation: phrase });
+    state.accountDirectory = state.accountDirectory.filter(account => account.id !== target.id);
+    closeAccountDeleteModal();
+    renderAccountDirectory();
+    toast("تم حذف الحساب نهائيًا مع بياناته وملفاته المرتبطة");
+    window.setTimeout(() => loadAccountDirectory({quiet:true}).catch(()=>{}), 900);
+  } catch (error) {
+    console.error("Account deletion failed", error);
+    const message = String(error?.message || "");
+    byId("accountDeleteError").textContent = message.includes("ADMIN_SELF_DELETE_FORBIDDEN") ? "لا يمكن للمدير حذف حسابه أثناء استخدام لوحة الإدارة." : message.includes("ADMIN_ACCOUNT_DELETE_FORBIDDEN") ? "لا يمكن حذف حساب إدارة بهذه الأداة." : "تعذر إكمال الحذف. لم يتم حذف حساب المصادقة، أعد المحاولة بعد التحقق من الاتصال.";
+  } finally {
+    busy(button, false);
+  }
+});
+for (const id of ["accountDirectorySearch","accountDirectoryRole","accountDirectoryCategory","accountDirectoryIdle"]) {
+  byId(id)?.addEventListener(id === "accountDirectorySearch" ? "input" : "change", renderAccountDirectory);
+}
+byId("refreshAccountDirectory")?.addEventListener("click", () => loadAccountDirectory());
 
 document.addEventListener("click", async event => {
   const button = event.target.closest("button[data-action]");
@@ -1292,7 +1726,80 @@ document.addEventListener("click", async event => {
   const id = button.dataset.id;
   busy(button, true);
   try {
-    if (button.dataset.action === "approve-device-change") {
+    if (button.dataset.action === "delete-account") {
+      openAccountDeleteModal({
+        id,
+        name: button.dataset.name || "حساب كروة",
+        email: button.dataset.email || "",
+        role: button.dataset.role || "customer",
+        category: button.dataset.category || ""
+      });
+    } else if (button.dataset.action === "zero-wallet-balances") {
+      const confirmation = prompt('هذه العملية ستجعل الرصيد المشحون والمجاني لكل العملاء والكباتن والخدمات صفرًا. اكتب "تصفير" للمتابعة:')?.trim();
+      if (confirmation !== "تصفير") return toast("تم إلغاء تصفير الأرصدة");
+      const targets = financeAccounts().filter(account => account.wallet.paid > 0 || account.wallet.storedBonus > 0 || account.bonusExpiresAt);
+      await commitFinanceBatches(targets, (batch, account) => batch.update(doc(db, "users", account.firestoreId), {
+        balance: 0,
+        bonusBalance: 0,
+        bonusExpiresAt: null,
+        updatedAt: serverTimestamp()
+      }));
+      await setDoc(doc(db, "appSettings", "finance"), {
+        lastBalanceResetAt: serverTimestamp(),
+        lastBalanceResetBy: state.user.uid,
+        lastBalanceResetByEmail: state.user.email || "",
+        lastBalanceResetCount: targets.length,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      const resetIds = new Set(targets.map(account => account.firestoreId));
+      state.users = state.users.map(user => resetIds.has(user.firestoreId) ? { ...user, balance: 0, bonusBalance: 0, bonusExpiresAt: null } : user);
+      renderMetrics();
+      renderDrivers();
+      renderServiceApplications();
+      toast(`تم تصفير أرصدة ${targets.length} حساب بنجاح`);
+    } else if (button.dataset.action === "reset-finance-report") {
+      const confirmation = prompt('سيبدأ التقرير المالي من هذه اللحظة مع إبقاء الطلبات القديمة محفوظة. اكتب "تصفير التقرير" للمتابعة:')?.trim();
+      if (confirmation !== "تصفير التقرير") return toast("تم إلغاء تصفير التقرير");
+      const resetAt = serverTimestamp();
+      const localResetAt = { seconds: Math.floor(Date.now() / 1000), nanoseconds: (Date.now() % 1000) * 1000000 };
+      await setDoc(doc(db, "appSettings", "finance"), {
+        reportStartAt: resetAt,
+        lastResetBy: state.user.uid,
+        lastResetByEmail: state.user.email || "",
+        updatedAt: resetAt
+      }, { merge: true });
+      state.financeSettings = { ...(state.financeSettings || {}), reportStartAt: localResetAt, lastResetBy: state.user.uid, lastResetByEmail: state.user.email || "" };
+      renderFinancialReport();
+      toast("تم تصفير التقرير المالي وبدأت فترة جديدة");
+    } else if (button.dataset.action === "delete-financial-records") {
+      const confirmation = prompt('سيتم حذف طلبات الشحن وسجل حركات المحفظة وأقفال الشحن نهائيًا، وبدء التقرير من جديد، من دون حذف الطلبات التشغيلية. اكتب "حذف السجلات" للمتابعة:')?.trim();
+      if (confirmation !== "حذف السجلات") return toast("تم إلغاء حذف السجلات المالية");
+      const records = [
+        ...state.topupRequests.map(item => ({ collection: "topupRequests", id: item.firestoreId })),
+        ...state.walletTransactions.map(item => ({ collection: "walletTransactions", id: item.firestoreId })),
+        ...state.topupLocks.map(item => ({ collection: "topupLocks", id: item.firestoreId }))
+      ].filter(item => item.id);
+      await commitFinanceBatches(records, (batch, item) => batch.delete(doc(db, item.collection, item.id)));
+      const deletedAt = serverTimestamp();
+      const localDeletedAt = { seconds: Math.floor(Date.now() / 1000), nanoseconds: (Date.now() % 1000) * 1000000 };
+      await setDoc(doc(db, "appSettings", "finance"), {
+        reportStartAt: deletedAt,
+        lastResetBy: state.user.uid,
+        lastResetByEmail: state.user.email || "",
+        lastRecordsDeletedAt: deletedAt,
+        lastRecordsDeletedBy: state.user.uid,
+        lastRecordsDeletedByEmail: state.user.email || "",
+        lastRecordsDeletedCount: records.length,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      state.financeSettings = { ...(state.financeSettings || {}), reportStartAt: localDeletedAt, lastResetBy: state.user.uid, lastResetByEmail: state.user.email || "" };
+      state.topupRequests = [];
+      state.walletTransactions = [];
+      state.topupLocks = [];
+      renderTopupRequests();
+      renderMetrics();
+      toast(`تم حذف ${records.length} سجلًا ماليًا`);
+    } else if (button.dataset.action === "approve-device-change") {
       await runTransaction(db, async transaction => {
         const requestRef=doc(db,"deviceChangeRequests",id);
         const requestSnap=await transaction.get(requestRef);
@@ -1433,6 +1940,64 @@ document.addEventListener("click", async event => {
       }
       await batch.commit();
       toast("تم رفض الطلب وإرسال الملاحظة لمزود الخدمة");
+    } else if (button.dataset.action === "warn-service-provider") {
+      const profile = state.serviceProfiles.find(item => item.firestoreId === id || item.ownerId === id);
+      if (!profile) throw new Error("SERVICE_PROFILE_NOT_FOUND");
+      const note = prompt(`اكتب التنبيه الذي سيظهر لصاحب ${serviceCategoryLabels[profile.category] || "الخدمة"}:`, "يرجى الالتزام بسياسة الخدمة")?.trim();
+      if (!note) return;
+      await setDoc(doc(db, "serviceProfiles", id), {
+        warningCount: increment(1),
+        warningMessage: note.slice(0, 300),
+        lastWarnedAt: serverTimestamp(),
+        lastWarnedBy: state.user.uid,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      toast("تم إرسال التنبيه لصاحب الخدمة");
+    } else if (button.dataset.action === "block-service-provider") {
+      const profile = state.serviceProfiles.find(item => item.firestoreId === id || item.ownerId === id);
+      if (!profile) throw new Error("SERVICE_PROFILE_NOT_FOUND");
+      const reason = prompt(`اكتب سبب حظر صاحب ${serviceCategoryLabels[profile.category] || "الخدمة"}:`, "مخالفة سياسة الخدمة")?.trim();
+      if (!reason) return;
+      const batch = writeBatch(db);
+      batch.set(doc(db, "serviceProfiles", id), {
+        blocked: true,
+        active: false,
+        blockReason: reason.slice(0, 300),
+        blockedAt: serverTimestamp(),
+        blockedBy: state.user.uid,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      const restaurant = state.restaurants.find(item => item.firestoreId === id || item.ownerId === id);
+      if (restaurant) batch.set(doc(db, "restaurants", restaurant.firestoreId), {
+        blocked: true,
+        active: false,
+        blockReason: reason.slice(0, 300),
+        blockedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      await batch.commit();
+      toast("تم حظر صاحب الخدمة وإخفاء نشاطه وإيقاف استقبال الطلبات");
+    } else if (button.dataset.action === "unblock-service-provider") {
+      if (!confirm("هل تريد رفع الحظر؟ سيبقى النشاط غير منشور حتى يفعّله صاحبه من جديد.")) return;
+      const batch = writeBatch(db);
+      batch.set(doc(db, "serviceProfiles", id), {
+        blocked: false,
+        active: false,
+        blockReason: "",
+        unblockedAt: serverTimestamp(),
+        unblockedBy: state.user.uid,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      const restaurant = state.restaurants.find(item => item.firestoreId === id || item.ownerId === id);
+      if (restaurant) batch.set(doc(db, "restaurants", restaurant.firestoreId), {
+        blocked: false,
+        active: false,
+        blockReason: "",
+        unblockedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      await batch.commit();
+      toast("تم رفع الحظر. يستطيع صاحب الخدمة نشر نشاطه من جديد.");
     } else if (button.dataset.action === "approve") {
       const application = state.applications.find(item => item.firestoreId === id);
       if (!application) throw new Error("NOT_FOUND");

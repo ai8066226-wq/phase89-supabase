@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=107";
+import { initializeApp } from "./supabase-compat.js?v=111";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=107";
+} from "./supabase-compat.js?v=111";
 import {
   addDoc,
   collection,
@@ -25,13 +25,14 @@ import {
   runTransaction,
   where,
   writeBatch,
+  karwaTouchActivity,
   karwaSensitiveAction,
   karwaSensitiveAux,
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=107";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=107";
+} from "./supabase-compat.js?v=111";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=111";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -3269,6 +3270,7 @@ onAuthStateChanged(auth, async user => {
       return;
     }
     await startVerifiedCustomerSession(user);
+    karwaTouchActivity("customer").catch(error => console.warn("تعذر تحديث آخر نشاط للعميل", error));
     registerNativePushToken(user);
     window.setTimeout(()=>registerNativePushToken(user),5000);
   } catch (error) {

@@ -1,8 +1,8 @@
 {
   "phase": 90,
-  "version": "2.8.17",
+  "version": "2.8.21",
   "webBasePhase": 87,
-  "updateMode": "single-transient-update-notice-no-repeat-v107",
+  "updateMode": "single-transient-update-notice-no-repeat-v111",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -11,7 +11,7 @@
   "serviceThemes": "24-preloaded-textless-auto-by-service-type",
   "ratings": "unified-customer-taxi-delivery-service-admin-analytics",
   "quantitySystem": "unit-aware-restaurant-services-piece-person-weight-liter-pack-meter-hour-day",
-  "updateFix": "whatsapp-group-and-private-topup-links-all-portals-v107",
+  "updateFix": "admin-account-inactivity-directory-and-complete-account-purge-v111",
   "arrivalFallback": "taxi-no-otp-both-gps-near-destination-120m-8s-single-settlement",
   "cancellationAudit": "required-reason-actor-name-email-role-for-customer-driver-service-admin",
   "customerOrderEditing": "owner-edits-service-quantity-notes-and-parcel-delivery-details-until-courier-pickup-status3-atomic-guarded",
@@ -57,5 +57,15 @@
   "walletTopupCards": "admin-generated-16-digit-sha256-unique-single-use-atomic-method-toggle-v107",
   "manualTopupDenominations": "5000-multiples-only-admin-toggle-v107",
   "topupMethodControls": "admin-transfer-card-independent-on-off-server-enforced-realtime-v107",
-  "whatsappLinks": "group-all-portals-private-topup-transfer-v107"
+  "whatsappLinks": "group-all-portals-private-topup-transfer-v107",
+  "financialDashboard": "actual-customer-captain-service-wallets-role-account-table-period-kpis-fee-breakdown-csv-print-v109",
+  "financialDataControls": "admin-confirmed-zero-wallets-reset-report-delete-topups-wallet-transactions-and-locks-batched-v109",
+  "financialAudit": "report-baseline-balance-reset-and-record-deletion-metadata-v109",
+  "serviceProviderModeration": "admin-search-category-filter-individual-warning-block-unblock-hide-stop-v109",
+  "providerRatingPortal": "customer-service-ratings-average-count-recent-reviews-v109",
+  "moderationNotifications": "realtime-provider-warning-and-block-reason-v109",
+  "verificationCodeUi": "four-digit-professional-in-app-card-arabic-english-digits-paste-no-appassets-origin-v110",
+  "accountInactivity": "admin-last-sign-in-plus-app-activity-role-category-and-30-60-90-180-365-day-filters-v111",
+  "accountDeletion": "admin-only-confirmed-auth-database-storage-related-data-complete-purge-v111",
+  "accountDeletionSecurity": "verified-admin-jwt-no-self-or-admin-deletion-server-secret-never-client-v111"
 }
