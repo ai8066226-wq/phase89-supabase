@@ -268,7 +268,7 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
 export async function createUserWithEmailAndPassword(_auth, email, password) {
   let phone = signupPhoneFromPage();
   if (!phone && typeof globalThis.prompt === "function") {
-    phone = normalizedSignupPhone(globalThis.prompt("أدخل رقم الهاتف لإنشاء حساب كروة:", "") || "");
+    phone = normalizedSignupPhone(globalThis.prompt("أدخل رقم الهاتف لإنشاء حساب آمرني:", "") || "");
   }
   if (!phone) {
     const e = new Error("INVALID_PHONE");

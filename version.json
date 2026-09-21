@@ -1,8 +1,8 @@
 {
   "phase": 90,
-  "version": "2.8.23",
+  "version": "2.8.25",
   "webBasePhase": 87,
-  "updateMode": "single-transient-update-notice-no-repeat-v113",
+  "updateMode": "single-transient-update-notice-no-repeat-v115",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -11,7 +11,7 @@
   "serviceThemes": "24-preloaded-textless-auto-by-service-type",
   "ratings": "unified-customer-taxi-delivery-service-admin-analytics",
   "quantitySystem": "unit-aware-restaurant-services-piece-person-weight-liter-pack-meter-hour-day",
-  "updateFix": "iraq-19-governorates-admin-availability-and-collapsible-sections-v113",
+  "updateFix": "restored-previous-icon-design-new-palette-and-amrni-name-v115",
   "arrivalFallback": "taxi-no-otp-both-gps-near-destination-120m-8s-single-settlement",
   "cancellationAudit": "required-reason-actor-name-email-role-for-customer-driver-service-admin",
   "customerOrderEditing": "owner-edits-service-quantity-notes-and-parcel-delivery-details-until-courier-pickup-status3-atomic-guarded",
@@ -73,5 +73,6 @@
   "serviceImageCompression": "automatic-client-webp-maximum-102400-bytes-with-original-and-final-size-preview-v112",
   "iraqGovernorates": "19-canonical-governorates-including-halabja-with-mosul-nineveh-and-diwaniyah-qadisiyah-aliases-v113",
   "governorateAvailability": "admin-realtime-enable-disable-registration-publishing-marketplace-and-acceptance-server-enforced-v113",
-  "adminSections": "command-center-single-open-collapsible-accessible-panels-v113"
+  "adminSections": "command-center-single-open-collapsible-accessible-panels-v113",
+  "brand": "amrni-previous-icon-layout-navy-teal-gold-palette-v115"
 }

@@ -1,1 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#0b4f70"/><circle cx="256" cy="256" r="174" fill="#fff"/><text x="256" y="335" text-anchor="middle" font-size="250" font-family="Arial,sans-serif" font-weight="700" fill="#0b4f70">ك</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768" role="img" aria-labelledby="title desc">
+  <title id="title">أيقونة تطبيق آمرني</title>
+  <desc id="desc">أيقونة آمرني بتصميم السيارة وعلامة الموقع ومعالم المدينة وألوان كحلية وفيروزية وذهبية</desc>
+  <image href="./karwa-app-icon-source.png" width="768" height="768" preserveAspectRatio="xMidYMid meet"/>
+</svg>

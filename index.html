@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b6f75">
-  <meta name="description" content="كروة — تطبيق عربي لحجز المشاوير وتوصيل الأغراض والطعام">
-  <title>كروة | الحجز والتوصيل</title>
+  <meta name="description" content="آمرني — تطبيق عربي لحجز المشاوير وتوصيل الأغراض والطعام">
+  <title>آمرني | الحجز والتوصيل</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
 
@@ -1562,7 +1562,7 @@
 </style>
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
-  <link rel="icon" href="./karwa-icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./karwa-icon-192.png" type="image/png">
 
 <style id="phase20-map-first">
 /* خريطة العميل بملء المساحة المرئية مع درج خدمات جانبي */
@@ -1614,7 +1614,7 @@ body.customer-map-mode main{max-width:none;margin:0;padding:0}
 @media(prefers-reduced-motion:reduce){#customerOptionsPanel,.map-options-toggle,.map-options-scrim{transition:none}}
 </style>
 <style id="phase21-navigation-ui">
-/* واجهة ملاحة مستوحاة من تطبيقات الخرائط الحديثة مع هوية كروة */
+/* واجهة ملاحة مستوحاة من تطبيقات الخرائط الحديثة مع هوية آمرني */
 body.customer-map-mode{--navy:#0a2540;--navy-light:#164b78;--orange:#d3401f;--orange-light:#c83c1d;--mint:#00746f;--mint-dark:#006b66;--line:#cbd6e2;--muted:#43536a;color:#0a2540}
 body.customer-map-mode .topbar{border-color:#d9e2eb;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(10,37,64,.1)}
 body.customer-map-mode .location-button small{color:#526278}body.customer-map-mode .location-button strong{color:#0a2540}
@@ -2260,7 +2260,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
     linear-gradient(155deg,#0b2944,#0b4f70 58%,#087b75 128%);
 }
 #authModal .auth-brand::before {
-  content: "منصة كروة";
+  content: "منصة آمرني";
   margin-bottom: 22px;
   padding: 6px 10px;
   border: 1px solid rgba(255,255,255,.18);
@@ -2502,9 +2502,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">ك</div>
+        <div class="brand-logo">آ</div>
         <div>
-          <strong>كروة</strong>
+          <strong>آمرني</strong>
           <small>الحجز والتوصيل</small>
         </div>
       </div>
@@ -2795,7 +2795,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <div class="center-pin" id="centerPin">📍</div><div id="customerMap"></div>
               <div class="customer-map-credit" aria-label="مصادر بيانات الخريطة"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><span>·</span><a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a></div>
               <div class="map-information">
-                <strong id="mapInfoTitle">خريطة كروة المباشرة</strong>
+                <strong id="mapInfoTitle">خريطة آمرني المباشرة</strong>
                 <small id="mapInfoText">اضغط على الخريطة لتحديد نقطة الانطلاق، ثم الوجهة.</small>
               </div>
             </div>
@@ -2805,13 +2805,13 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           <div class="customer-settings-scrim" id="customerSettingsScrim" aria-hidden="true"></div>
           <aside class="customer-settings-panel" id="customerSettingsPanel" role="dialog" aria-modal="true" aria-label="معلومات وإعدادات العميل" aria-hidden="true">
             <div class="customer-settings-header">
-              <div><small>كروة للعملاء</small><strong>الحساب والإعدادات</strong></div>
+              <div><small>آمرني للعملاء</small><strong>الحساب والإعدادات</strong></div>
               <button type="button" class="customer-settings-close" id="customerSettingsClose" aria-label="إغلاق الإعدادات">×</button>
             </div>
             <div class="customer-settings-body">
               <section class="customer-profile-card" aria-label="معلومات العميل">
                 <div class="customer-settings-avatar" id="customerSettingsAvatar">م</div>
-                <div class="customer-profile-copy"><strong id="customerSettingsName">مستخدم كروة</strong><small id="customerSettingsEmail">—</small></div>
+                <div class="customer-profile-copy"><strong id="customerSettingsName">مستخدم آمرني</strong><small id="customerSettingsEmail">—</small></div>
                 <span class="customer-account-badge" id="customerSettingsAccountStatus">✓ حساب متصل</span>
               </section>
               <dl class="customer-info-grid">
@@ -2895,7 +2895,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           <div class="wallet-card">
             <p>الرصيد المتاح</p>
             <div class="balance"><span id="walletBalance">0</span> د.ع</div>
-            <small class="wallet-note" id="walletBonusStatus">الرصيد المتاح من الشحن. عند اعتماد 10,000 د.ع يضاف 10,000 د.ع بالكامل.</small><small class="wallet-note">رسم كروة على كل طلب: <b id="customerOrderFeeLabel">250 د.ع</b> — يجب توفر الرصيد قبل إرسال الطلب.</small>
+            <small class="wallet-note" id="walletBonusStatus">الرصيد المتاح من الشحن. عند اعتماد 10,000 د.ع يضاف 10,000 د.ع بالكامل.</small><small class="wallet-note">رسم آمرني على كل طلب: <b id="customerOrderFeeLabel">250 د.ع</b> — يجب توفر الرصيد قبل إرسال الطلب.</small>
           </div>
 
           <div class="wallet-grid wallet-topup-grid">
@@ -2903,10 +2903,10 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <h2>شحن محلي عبر Mastercard</h2>
               <div class="topup-destination">
                 <span>💳</span>
-                <div><small id="topupTransferLabel">Mastercard محلي</small><strong id="topupTransferId">معرف التحويل يظهر هنا</strong><small>اسم المستلم: <b id="topupCardHolder">إدارة كروة</b></small></div>
+                <div><small id="topupTransferLabel">Mastercard محلي</small><strong id="topupTransferId">معرف التحويل يظهر هنا</strong><small>اسم المستلم: <b id="topupCardHolder">إدارة آمرني</b></small></div>
               </div>
               <p class="muted">حوّل المبلغ من تطبيق البنك/المحفظة التي تدعم التحويل إلى Mastercard، ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
-              <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>يمكنك التواصل مباشرة مع إدارة كروة بخصوص الشحن والتحويل.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
+              <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>يمكنك التواصل مباشرة مع إدارة آمرني بخصوص الشحن والتحويل.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
               <form id="topupForm" class="topup-form">
                 <div class="field"><label for="topupAmount">المبلغ المحوّل (د.ع)</label><input id="topupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
                 <div class="field"><label for="topupReference">رقم/مرجع التحويل</label><input id="topupReference" maxlength="80" placeholder="مثال: رقم العملية أو آخر أرقام المرجع" required></div>
@@ -2916,7 +2916,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 
             <div class="card topup-card" id="customerCardTopupMethod">
               <h2>شحن بكرت رقمي</h2>
-              <div class="topup-destination"><span>🔢</span><div><small>كرت شحن كروة</small><strong>16 رقمًا • استخدام واحد</strong><small>أدخل الرقم الذي حصلت عليه من الإدارة.</small></div></div>
+              <div class="topup-destination"><span>🔢</span><div><small>كرت شحن آمرني</small><strong>16 رقمًا • استخدام واحد</strong><small>أدخل الرقم الذي حصلت عليه من الإدارة.</small></div></div>
               <form id="topupCardRedeemForm" class="topup-form">
                 <div class="field"><label for="topupCardCode">رقم الكرت</label><input id="topupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div>
                 <button class="primary-button" id="redeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button>
@@ -2924,8 +2924,8 @@ body.customer-map-mode #home>.welcome::after { display: none; }
             </div>
 
             <div class="card topup-card whatsapp-community-card">
-              <h2>مجتمع كروة على واتساب</h2>
-              <div class="karwa-whatsapp-panel"><strong>مجموعة العملاء والكباتن والخدمات</strong><small>انضم إلى مجموعة كروة الرسمية للتواصل ومتابعة المستجدات.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب كروة</a></div></div>
+              <h2>مجتمع آمرني على واتساب</h2>
+              <div class="karwa-whatsapp-panel"><strong>مجموعة العملاء والكباتن والخدمات</strong><small>انضم إلى مجموعة آمرني الرسمية للتواصل ومتابعة المستجدات.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب آمرني</a></div></div>
             </div>
 
             <div class="topup-method-off" id="customerTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة. لا توجد طريقة شحن مفعلة حاليًا.</div>
@@ -3072,9 +3072,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="modal-backdrop" id="ratingModal" role="dialog" aria-modal="true" aria-labelledby="ratingTitle">
     <div class="modal rating-modal">
       <h2 id="ratingTitle">قيّم تجربتك</h2>
-      <p id="ratingIntro">يساعد تقييمك في تحسين جودة خدمات كروة.</p>
+      <p id="ratingIntro">يساعد تقييمك في تحسين جودة خدمات آمرني.</p>
       <div class="rating-driver-card">
-        <strong id="ratingDriverName">كابتن كروة</strong>
+        <strong id="ratingDriverName">كابتن آمرني</strong>
         <small id="ratingOrderCode"></small>
       </div>
       <form id="ratingForm">
@@ -3137,9 +3137,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="modal-backdrop show" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal auth-modal role-auth-modal">
       <div class="auth-brand">
-        <div class="brand-logo">ك</div>
-        <div class="auth-brand-copy"><h2 id="authTitle">مرحبًا بك في كروة</h2><p>وجهتك الأقرب للرحلات والتوصيل والخدمات اليومية.</p></div>
-        <div class="auth-brand-points" aria-label="مزايا كروة">
+        <div class="brand-logo">آ</div>
+        <div class="auth-brand-copy"><h2 id="authTitle">مرحبًا بك في آمرني</h2><p>وجهتك الأقرب للرحلات والتوصيل والخدمات اليومية.</p></div>
+        <div class="auth-brand-points" aria-label="مزايا آمرني">
           <span><b>✓</b> تسجيل آمن وسريع</span>
           <span><b>⌖</b> تتبع مباشر للطلبات</span>
           <span><b>☆</b> خدمات موثوقة في مكان واحد</span>
@@ -3178,11 +3178,11 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=113"></script>
+  <script src="./native-notifications.js?v=115"></script>
   <script src="./service-themes.js?v=81"></script>
-  <script src="./iraq-governorates.js?v=113"></script>
-  <script type="module" src="./app.js?v=113"></script>
-  <script src="./pwa.js?v=113"></script>
+  <script src="./iraq-governorates.js?v=115"></script>
+  <script type="module" src="./app.js?v=115"></script>
+  <script src="./pwa.js?v=115"></script>
 
 <script id="phase20-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{

@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b6f75">
-  <meta name="description" content="بوابة كابتن كروة لاستلام الطلبات وتحديث الرحلات">
-  <title>كروة | بوابة الكابتن</title>
+  <meta name="description" content="بوابة كابتن آمرني لاستلام الطلبات وتحديث الرحلات">
+  <title>آمرني | بوابة الكابتن</title>
   <link rel="stylesheet" href="./portal.css?v=85">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
-  <link rel="icon" href="./karwa-icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./karwa-icon-192.png" type="image/png">
 <style>
 .maplibregl-canvas{direction:ltr!important}.leaflet-tooltip,.leaflet-popup-content{direction:rtl;text-align:right;unicode-bidi:plaintext}.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.report-grid button{border:1px solid #e1e7ef;background:#fff;border-radius:12px;padding:10px;font-weight:800;cursor:pointer}.report-grid button:hover{background:#eaf7f5;border-color:#8ccfc8}.report-note{width:100%;box-sizing:border-box;margin:0 0 8px;border:1px solid #dfe5ed;border-radius:11px;padding:10px;direction:rtl}.road-report-marker{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff;box-shadow:0 5px 18px rgba(0,0,0,.22);font-size:19px;border:2px solid #087b75}.landmark-marker{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#0b4f70;color:#fff;box-shadow:0 5px 18px rgba(0,0,0,.2);font-size:17px}.report-confirm{margin-top:8px;border:0;border-radius:9px;padding:7px 10px;font-weight:800;cursor:pointer}.driver-landmark-panel{margin-top:12px}.driver-landmark-panel summary{cursor:pointer;font-weight:900}.landmark-form{display:grid;gap:8px;margin-top:10px}
 .road-report-marker{position:relative}.confirm-badge{position:absolute;top:-7px;left:-7px;min-width:18px;height:18px;border-radius:10px;background:#0b4f70;color:#fff;font:700 11px/18px Arial;text-align:center;border:2px solid #fff}
@@ -353,8 +353,8 @@ body.driver-map-mode{background:#edf3f6}
 <body>
   <header class="topbar">
     <a class="brand" href="./index.html">
-      <span class="logo">ك</span>
-      <span><strong>كروة</strong><small>بوابة الكابتن</small></span>
+      <span class="logo">آ</span>
+      <span><strong>آمرني</strong><small>بوابة الكابتن</small></span>
     </a>
     <div class="top-actions">
       
@@ -402,7 +402,7 @@ body.driver-map-mode{background:#edf3f6}
 
   <main class="shell hidden" id="applicationView">
     <section class="hero">
-      <div><h1 id="applicationHeroTitle">انضم إلى كباتن كروة</h1><p id="applicationHeroText">أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.</p></div>
+      <div><h1 id="applicationHeroTitle">انضم إلى كباتن آمرني</h1><p id="applicationHeroText">أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.</p></div>
       <span class="role-badge" id="applicationHeroBadge">طلب انضمام</span>
     </section>
 
@@ -508,7 +508,7 @@ body.driver-map-mode{background:#edf3f6}
                 <option value="القادسية">القادسية (الديوانية)</option>
                 <option value="حلبجة">حلبجة</option>
               </select>
-              <small class="muted" id="driverGovernorateAvailability">تعمل كروة في المحافظات التي تفعلها الإدارة.</small>
+              <small class="muted" id="driverGovernorateAvailability">تعمل آمرني في المحافظات التي تفعلها الإدارة.</small>
             </div>
           </div>
           <button class="primary wide" id="submitApplication" type="submit">إرسال طلب الانضمام</button>
@@ -527,7 +527,7 @@ body.driver-map-mode{background:#edf3f6}
 
   <main class="shell hidden" id="driverView">
     <section class="hero">
-      <div><h1>هلا كابتن <span id="captainName">كروة</span></h1><p>استلم الطلبات وحدّث حالة الرحلة مباشرةً.</p></div>
+      <div><h1>هلا كابتن <span id="captainName">آمرني</span></h1><p>استلم الطلبات وحدّث حالة الرحلة مباشرةً.</p></div>
       <span class="role-badge">حساب كابتن معتمد</span>
     </section>
 
@@ -603,7 +603,7 @@ body.driver-map-mode{background:#edf3f6}
     <button type="button" class="driver-notification-toggle" id="driverNotificationsToggle" aria-controls="driverNotificationsPanel" aria-expanded="false" aria-label="إشعارات الكابتن" title="الإشعارات"><span class="bell" aria-hidden="true">🔔</span><b class="driver-notification-badge" id="driverNotificationsBadge" hidden>0</b></button>
     <div class="driver-notifications-scrim" id="driverNotificationsScrim" aria-hidden="true"></div>
     <aside class="driver-notifications-panel" id="driverNotificationsPanel" role="dialog" aria-modal="true" aria-label="مركز إشعارات الكابتن" aria-hidden="true">
-      <div class="driver-notifications-header"><div><small>كروة للكباتن</small><strong>مركز الإشعارات</strong></div><button type="button" class="driver-notifications-close" id="driverNotificationsClose" aria-label="إغلاق الإشعارات">×</button></div>
+      <div class="driver-notifications-header"><div><small>آمرني للكباتن</small><strong>مركز الإشعارات</strong></div><button type="button" class="driver-notifications-close" id="driverNotificationsClose" aria-label="إغلاق الإشعارات">×</button></div>
       <div class="driver-notifications-toolbar"><span id="driverNotificationsSummary">لا توجد إشعارات جديدة</span><div class="driver-notifications-actions"><button type="button" class="driver-notifications-mark" id="driverNotificationsMarkAll">تحديد الكل كمقروء</button><button type="button" class="driver-notifications-mark danger" id="driverNotificationsClear">حذف الكل</button></div></div>
       <div class="driver-notifications-list" id="driverNotificationsList" aria-live="polite"><div class="driver-notification-empty"><span aria-hidden="true">🔔</span><strong>لا توجد إشعارات</strong><small>ستظهر الطلبات الجديدة وتحديثات الرحلات وتنبيهات الإدارة هنا.</small></div></div>
     </aside>
@@ -612,13 +612,13 @@ body.driver-map-mode{background:#edf3f6}
     <div class="driver-settings-scrim" id="driverSettingsScrim" aria-hidden="true"></div>
     <aside class="driver-settings-panel" id="driverSettingsPanel" role="dialog" aria-modal="true" aria-label="إعدادات ومعلومات الكابتن" aria-hidden="true">
       <div class="driver-settings-header">
-        <div><small>كروة للكباتن</small><strong>الحساب والإعدادات</strong></div>
+        <div><small>آمرني للكباتن</small><strong>الحساب والإعدادات</strong></div>
         <button type="button" class="driver-settings-close" id="driverSettingsClose" aria-label="إغلاق الإعدادات">×</button>
       </div>
       <div class="driver-settings-body">
         <section class="driver-profile-card" aria-label="معلومات الكابتن">
-          <div class="driver-settings-avatar" id="driverSettingsAvatar">ك</div>
-          <div class="driver-profile-copy"><strong id="driverSettingsName">كابتن كروة</strong><small id="driverSettingsEmail">—</small></div>
+          <div class="driver-settings-avatar" id="driverSettingsAvatar">آ</div>
+          <div class="driver-profile-copy"><strong id="driverSettingsName">كابتن آمرني</strong><small id="driverSettingsEmail">—</small></div>
           <span class="driver-verified">✓ كابتن معتمد</span>
         </section>
         <dl class="driver-info-grid">
@@ -631,19 +631,19 @@ body.driver-map-mode{background:#edf3f6}
         </dl>
         <section class="driver-settings-group unified-wallet" id="driverSettingsWallet" aria-labelledby="driverWalletTitle">
           <div class="unified-wallet-head"><div><small>المحفظة</small><h3 id="driverWalletTitle">الرصيد والشحن</h3></div><span class="status-chip approved" id="driverBonusStatus">الرصيد المشحون</span></div>
-          <div class="unified-wallet-balance"><small>الرصيد المتاح</small><strong id="driverWalletBalance">0 د.ع</strong><span>رسم كروة عند قبول الطلب: <b id="driverOrderFeeLabel">250 د.ع</b></span></div>
+          <div class="unified-wallet-balance"><small>الرصيد المتاح</small><strong id="driverWalletBalance">0 د.ع</strong><span>رسم آمرني عند قبول الطلب: <b id="driverOrderFeeLabel">250 د.ع</b></span></div>
           <div id="driverTransferTopupMethod">
-          <div class="unified-topup-destination"><span class="unified-wallet-icon">💳</span><div><small id="driverTopupTransferLabel">Mastercard محلي</small><strong id="driverTopupTransferId">معرف التحويل يظهر هنا</strong><span>اسم المستلم: <b id="driverTopupCardHolder">إدارة كروة</b></span></div></div>
+          <div class="unified-topup-destination"><span class="unified-wallet-icon">💳</span><div><small id="driverTopupTransferLabel">Mastercard محلي</small><strong id="driverTopupTransferId">معرف التحويل يظهر هنا</strong><span>اسم المستلم: <b id="driverTopupCardHolder">إدارة آمرني</b></span></div></div>
           <p class="muted unified-wallet-help">حوّل المبلغ إلى حساب Mastercard المحدد من الإدارة ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
-          <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>تواصل مباشرة مع إدارة كروة بخصوص شحن رصيد الكابتن.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
+          <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>تواصل مباشرة مع إدارة آمرني بخصوص شحن رصيد الكابتن.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
           <form id="driverTopupForm" class="unified-topup-form">
             <div class="field"><label for="driverTopupAmount">المبلغ المحوّل (د.ع)</label><input id="driverTopupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
             <div class="field"><label for="driverTopupReference">رقم/مرجع التحويل</label><input id="driverTopupReference" maxlength="80" placeholder="مثال: رقم العملية" required></div>
             <button class="driver-settings-action primary" id="driverTopupSubmit" type="submit">إرسال طلب الشحن</button>
           </form>
           </div>
-          <div class="unified-topup-history-wrap" id="driverCardTopupMethod"><h4>شحن بكرت رقمي</h4><p class="muted unified-wallet-help">أدخل كرت كروة المكوّن من 16 رقمًا. كل كرت يُستخدم مرة واحدة فقط.</p><form id="driverTopupCardRedeemForm" class="unified-topup-form"><div class="field"><label for="driverTopupCardCode">رقم الكرت</label><input id="driverTopupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div><button class="driver-settings-action primary" id="driverRedeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button></form></div>
-          <div class="karwa-whatsapp-panel"><strong>مجموعة واتساب كروة</strong><small>مجموعة مشتركة للعملاء والكباتن والخدمات لمتابعة مستجدات كروة.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب كروة</a></div></div>
+          <div class="unified-topup-history-wrap" id="driverCardTopupMethod"><h4>شحن بكرت رقمي</h4><p class="muted unified-wallet-help">أدخل كرت آمرني المكوّن من 16 رقمًا. كل كرت يُستخدم مرة واحدة فقط.</p><form id="driverTopupCardRedeemForm" class="unified-topup-form"><div class="field"><label for="driverTopupCardCode">رقم الكرت</label><input id="driverTopupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div><button class="driver-settings-action primary" id="driverRedeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button></form></div>
+          <div class="karwa-whatsapp-panel"><strong>مجموعة واتساب آمرني</strong><small>مجموعة مشتركة للعملاء والكباتن والخدمات لمتابعة مستجدات آمرني.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب آمرني</a></div></div>
           <div class="topup-method-off" id="driverTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة.</div>
           <div class="unified-topup-history-wrap"><h4>طلبات الشحن</h4><div id="driverTopupRequestsList" class="unified-topup-history"><p class="muted">لا توجد طلبات شحن بعد.</p></div></div>
         </section>
@@ -719,7 +719,7 @@ body.driver-map-mode{background:#edf3f6}
   <div id="verificationCodeModal" class="verification-code-modal hidden" role="dialog" aria-modal="true" aria-labelledby="verificationCodeTitle" aria-describedby="verificationCodeDescription" aria-hidden="true">
     <section class="verification-code-sheet">
       <div class="verification-code-accent"></div>
-      <div class="verification-code-brand"><span>ك</span> كروة الآمن</div>
+      <div class="verification-code-brand"><span>آ</span> آمرني الآمن</div>
       <button id="verificationCodeClose" class="verification-code-close" type="button" aria-label="إغلاق بطاقة رمز التحقق">×</button>
       <div class="verification-code-icon" id="verificationCodeIcon" aria-hidden="true">🔐</div>
       <span class="verification-code-context" id="verificationCodeContext">تأكيد آمن</span>
@@ -733,16 +733,16 @@ body.driver-map-mode{background:#edf3f6}
       </div>
       <p class="verification-code-error" id="verificationCodeError" aria-live="polite"></p>
       <div class="verification-code-actions"><button class="verification-code-submit" id="verificationCodeSubmit" type="button">تأكيد الرمز والمتابعة</button><button class="verification-code-cancel" id="verificationCodeCancel" type="button">رجوع</button></div>
-      <small class="verification-code-trust">بطاقة تحقق داخل تطبيق كروة — لا يتم عرض عنوان الموقع</small>
+      <small class="verification-code-trust">بطاقة تحقق داخل تطبيق آمرني — لا يتم عرض عنوان الموقع</small>
     </section>
   </div>
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
-  <script src="./iraq-governorates.js?v=113"></script>
-  <script type="module" src="./driver.js?v=113"></script>
-  <script src="./pwa.js?v=113"></script>
+  <script src="./iraq-governorates.js?v=115"></script>
+  <script type="module" src="./driver.js?v=115"></script>
+  <script src="./pwa.js?v=115"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
   const view=document.getElementById("driverView");

@@ -87,8 +87,8 @@
     throw makeError(
       "PRECISE_PERMISSION_REQUIRED",
       state.approximate
-        ? "تم السماح بالموقع التقريبي فقط. فعّل خيار «الموقع الدقيق» لكروة من إعدادات التطبيق."
-        : "يلزم السماح لكروة باستخدام الموقع الدقيق.",
+        ? "تم السماح بالموقع التقريبي فقط. فعّل خيار «الموقع الدقيق» لآمرني من إعدادات التطبيق."
+        : "يلزم السماح لآمرني باستخدام الموقع الدقيق.",
       { approximate: !!state.approximate }
     );
   }
@@ -105,9 +105,9 @@
       <div style="width:min(100%,460px);background:#fff;border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);color:#0e2e43">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
           <div style="width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:#e6f7f4;color:#087b75;font-size:25px">⌖</div>
-          <div><strong style="font-size:18px">الموقع الدقيق مطلوب</strong><div style="font-size:12px;color:#67808f;margin-top:2px">لرحلات وتحديدات أدق في كروة</div></div>
+          <div><strong style="font-size:18px">الموقع الدقيق مطلوب</strong><div style="font-size:12px;color:#67808f;margin-top:2px">لرحلات وتحديدات أدق في آمرني</div></div>
         </div>
-        <p style="margin:0 0 16px;line-height:1.8;font-size:14px;color:#415c6d">${String(message || "فعّل خيار الموقع الدقيق لكروة، ثم حاول مرة أخرى. هذا يمنع اعتماد موقع تقريبي مثل 200 متر.")}</p>
+        <p style="margin:0 0 16px;line-height:1.8;font-size:14px;color:#415c6d">${String(message || "فعّل خيار الموقع الدقيق لآمرني، ثم حاول مرة أخرى. هذا يمنع اعتماد موقع تقريبي مثل 200 متر.")}</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
           <button id="karwaPreciseOpenSettings" type="button" style="border:0;border-radius:14px;padding:13px;font-weight:800;background:#087b75;color:#fff">فتح الإعدادات</button>
           <button id="karwaPreciseClose" type="button" style="border:1px solid #dbe6e9;border-radius:14px;padding:13px;font-weight:800;background:#fff;color:#27495d">لاحقًا</button>

@@ -1,4 +1,4 @@
-# كروة — Phase 88 — الانتقال إلى Supabase
+# آمرني — Phase 88 — الانتقال إلى Supabase
 
 هذه المرحلة تنقل Auth وبيانات التطبيق وRealtime وStorage إلى مشروع Supabase الخاص بك.
 

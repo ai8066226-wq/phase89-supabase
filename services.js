@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=113";
+import { initializeApp } from "./supabase-compat.js?v=115";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=113";
+} from "./supabase-compat.js?v=115";
 import {
   collection,
   doc,
@@ -28,9 +28,9 @@ import {
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=113";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=113";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=113";
+} from "./supabase-compat.js?v=115";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=115";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=115";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -138,7 +138,7 @@ function renderServiceWallet(){
   if(bonusStatus)bonusStatus.textContent=bonus>0?`مجاني ${bonus.toLocaleString("ar-IQ")} د.ع حتى ${new Date(timestampMillis(currentUserData?.bonusExpiresAt)).toLocaleString("ar-IQ")}`:"الرصيد المشحون";
   if(byId("serviceTopupTransferLabel"))byId("serviceTopupTransferLabel").textContent=pricingSettings.topupTransferLabel||"Mastercard محلي";
   if(byId("serviceTopupTransferId"))byId("serviceTopupTransferId").textContent=pricingSettings.topupTransferId||"أضف معرف التحويل من الإدارة";
-  if(byId("serviceTopupCardHolder"))byId("serviceTopupCardHolder").textContent=pricingSettings.topupCardHolder||"إدارة كروة";
+  if(byId("serviceTopupCardHolder"))byId("serviceTopupCardHolder").textContent=pricingSettings.topupCardHolder||"إدارة آمرني";
   renderServiceTopupMethods();
   if(byId("serviceFeeSummary")){
     const publish=fixedFee("publishFee",1000).toLocaleString("ar-IQ");
@@ -199,7 +199,7 @@ function renderProviderRatings() {
     const score = Math.max(0, Math.min(5, Number(rating.score || 0)));
     const createdAt = rating.createdAt?.seconds ? new Date(Number(rating.createdAt.seconds) * 1000).toLocaleString("ar-IQ") : "";
     const tags = Array.isArray(rating.tags) ? rating.tags.slice(0, 4).join(" • ") : "";
-    return `<article class="provider-review"><div class="provider-review-head"><strong>${escapeHtml(rating.customerName || "عميل كروة")}</strong><span class="provider-rating-stars">${"★".repeat(score)}${"☆".repeat(5 - score)}</span></div><p>${escapeHtml(rating.comment || tags || "تقييم بدون تعليق مكتوب.")}</p><small>${escapeHtml(rating.referenceCode || rating.itemName || "طلب خدمة")}${createdAt ? ` • ${escapeHtml(createdAt)}` : ""}</small></article>`;
+    return `<article class="provider-review"><div class="provider-review-head"><strong>${escapeHtml(rating.customerName || "عميل آمرني")}</strong><span class="provider-rating-stars">${"★".repeat(score)}${"☆".repeat(5 - score)}</span></div><p>${escapeHtml(rating.comment || tags || "تقييم بدون تعليق مكتوب.")}</p><small>${escapeHtml(rating.referenceCode || rating.itemName || "طلب خدمة")}${createdAt ? ` • ${escapeHtml(createdAt)}` : ""}</small></article>`;
   }).join("") : `<div class="empty">لا توجد تقييمات بعد. تظهر التقييمات هنا بعد إكمال العملاء لطلباتهم.</div>`;
 }
 
@@ -215,7 +215,7 @@ function renderProviderModeration(profile = currentProfile || {}) {
   const noticeKey = warningCount > 0 && warningMessage ? `${warningCount}:${warningMessage}` : "";
   if (noticeKey && noticeKey !== lastProviderModerationNotice) {
     window.KarwaNotify?.push?.({
-      title: "تنبيه من إدارة كروة",
+      title: "تنبيه من إدارة آمرني",
       body: warningMessage,
       type: "warning",
       route: "./services.html#providerView",
@@ -611,7 +611,7 @@ async function getServicePrecisePosition(options = {}) {
 function handleServiceLocationError(error) {
   console.warn("service precise location",error);
   const code=String(error?.code||"");
-  if(code==="PRECISE_PERMISSION_REQUIRED"||code==="PERMISSION_DENIED"||error?.code===1){toast("فعّل «الموقع الدقيق» لكروة");window.KarwaGeo?.promptPreciseSettings?.("موقع النشاط يحتاج دقة عالية حتى يصل العميل والكابتن للمكان الصحيح.");return;}
+  if(code==="PRECISE_PERMISSION_REQUIRED"||code==="PERMISSION_DENIED"||error?.code===1){toast("فعّل «الموقع الدقيق» لآمرني");window.KarwaGeo?.promptPreciseSettings?.("موقع النشاط يحتاج دقة عالية حتى يصل العميل والكابتن للمكان الصحيح.");return;}
   if(code==="GPS_DISABLED"){toast("شغّل GPS ثم حاول مجددًا");try{window.KarwaNative?.openLocationSettings?.();}catch{}return;}
   if(code==="ACCURACY_TOO_LOW"){const a=Number(error?.bestAccuracy||0);toast(a?`دقة GPS الحالية ${Math.round(a)} م؛ انتقل لمكان مفتوح وحاول مجددًا`:"لم تصل إشارة GPS للدقة المطلوبة");return;}
   toast("تعذر تحديد الموقع بدقة. تحقق من GPS والصلاحيات.");
@@ -782,8 +782,8 @@ byId("authForm").addEventListener("submit", async event => {
       const deviceMessage = error?.message === "GOVERNORATE_DISABLED"
         ? "التسجيل متوقف حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة."
         : error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
-        ? "إنشاء حساب خدمة جديد متاح من تطبيق كروة على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
-        : (String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بالفعل بحساب كروة آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة." : "");
+        ? "إنشاء حساب خدمة جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
+        : (String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بالفعل بحساب آمرني آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة." : "");
       byId("authMessage").textContent = deviceMessage || authErrorMessage(error);
     } finally {
       setBusy(submit, false);
@@ -1135,7 +1135,7 @@ function renderPreview() {
 
 function fillProviderForm(data) {
   const category = data.category || currentApplication?.category || "other";
-  byId("providerHeroName").textContent = data.businessName || currentApplication?.businessName || currentUserData?.name || "شريك كروة";
+  byId("providerHeroName").textContent = data.businessName || currentApplication?.businessName || currentUserData?.name || "شريك آمرني";
   byId("pBusinessName").value = data.businessName || currentApplication?.businessName || "";
   byId("pCategory").value = categoryLabel(category);
   byId("pPhone").value = data.phone || currentApplication?.phone || "";
@@ -1204,7 +1204,7 @@ function renderProviderRequests(requests) {
         return `<article class="request-card request-${requestVisualStatus}">
           <div class="request-card-head"><div><small>${escapeHtml(request.providerName || "نشاطك")}</small><h3>${escapeHtml(providerItemsTitle(request))}</h3></div><span class="status ${status === "completed" || status === "accepted" ? "ok" : status === "rejected" || status === "cancelled" ? "bad" : ""}">${escapeHtml(requestStatusLabels[status] || status)}</span></div>
           <p>${escapeHtml(request.requestText || "بدون تفاصيل إضافية")}</p>
-          <div class="request-meta"><span>العميل: ${escapeHtml(request.customerName || "عميل كروة")}</span><span>${providerRequestItems(request).length} ${providerRequestItems(request).length===1?"صنف":"أصناف"}</span><span>قيمة الحاجة: ${money(request.subtotal || request.itemPrice)}</span></div>${providerItemsHtml(request)}
+          <div class="request-meta"><span>العميل: ${escapeHtml(request.customerName || "عميل آمرني")}</span><span>${providerRequestItems(request).length} ${providerRequestItems(request).length===1?"صنف":"أصناف"}</span><span>قيمة الحاجة: ${money(request.subtotal || request.itemPrice)}</span></div>${providerItemsHtml(request)}
           ${request.customerEditedAt ? `<div class="notice" style="margin-top:10px"><strong>✏️ عدّل العميل الطلب ${Number(request.customerEditCount || 1).toLocaleString("ar-IQ")} مرة</strong><span>هذه هي أحدث كمية وملاحظات معتمدة. يبقى التعديل متاحًا للعميل حتى استلام مندوب التوصيل.</span></div>` : ""}
           <div class="request-meta"><span>${deliveryText}</span></div>
           ${request.pickupOtp && request.deliveryRequested ? `<div class="notice" style="margin-top:10px"><strong>🔐 رمز استلام الكابتن: ${escapeHtml(request.pickupOtp)}</strong><span>أعطِ هذا الرمز للكابتن فقط بعد وصوله فعليًا واستلامه الطلب منك. لا يبدأ التوصيل للعميل بدونه.</span></div>` : ""}

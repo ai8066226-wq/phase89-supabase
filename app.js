@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=113";
+import { initializeApp } from "./supabase-compat.js?v=115";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=113";
+} from "./supabase-compat.js?v=115";
 import {
   addDoc,
   collection,
@@ -31,8 +31,8 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=113";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=113";
+} from "./supabase-compat.js?v=115";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=115";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -61,12 +61,12 @@ function firestoreErrorKey(error) {
 
 function customerSupabaseMessage(error, action = "تنفيذ العملية") {
   const e = firestoreErrorKey(error);
-  if (e.named === "OUTSIDE_SERVICE_AREA") return "نقطة الانطلاق أو الوجهة خارج نطاق خدمة كروة الحالي.";
+  if (e.named === "OUTSIDE_SERVICE_AREA") return "نقطة الانطلاق أو الوجهة خارج نطاق خدمة آمرني الحالي.";
   if (e.named === "AUTH_REQUIRED" || e.code === "unauthenticated") return "انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد المحاولة.";
   if (e.named === "CUSTOMER_ONLY" || e.code === "permission-denied") return "هذا الحساب غير مخوّل لإنشاء طلب راكب. تحقق من نوع الحساب وصلاحياته.";
   if (e.named === "INVALID_ROUTE" || e.code === "invalid-argument") return "تعذر اعتماد المسار. أعد تحديد الانطلاق والوجهة وانتظر حساب المسافة والوقت.";
   if (e.code === "not-found") return "تعذر العثور على البيانات المطلوبة. حدّث الطلب وحاول مجددًا.";
-  if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الوصول إلى خادم كروة. تحقق من الإنترنت ثم أعد المحاولة.";
+  if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الوصول إلى خادم آمرني. تحقق من الإنترنت ثم أعد المحاولة.";
   if (e.code === "failed-precondition") return `تعذر ${action} بسبب شرط في قاعدة البيانات. راجع بيانات الحساب والطلب.`;
   if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصال Supabase.`;
   return `تعذر ${action}. ${error?.message ? "التفاصيل: " + String(error.message).replace(/^FirebaseError:\s*/i, "") : "تحقق من إعدادات Supabase."}`;
@@ -374,7 +374,7 @@ function customerCancellationMeta(reason) {
     cancelledBy: "customer",
     cancelledByRole: "customer",
     cancelledByUserId: state.user?.uid || "",
-    cancelledByName: state.name || state.user?.displayName || "عميل كروة",
+    cancelledByName: state.name || state.user?.displayName || "عميل آمرني",
     cancelledByEmail: state.user?.email || "",
     cancelledAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -657,7 +657,7 @@ async function autoCompleteTaxiFromCustomer(order){
   state.autoArrivalCompleting=true;
   try{
     await karwaSensitiveAux("customer_auto_complete_order",{orderId:order.firestoreId});
-    showToast("تم تأكيد الوصول تلقائيًا عبر GPS وإكمال الرحلة. رسوم كروة محسوبة للطرفين مرة واحدة فقط.");
+    showToast("تم تأكيد الوصول تلقائيًا عبر GPS وإكمال الرحلة. رسوم آمرني محسوبة للطرفين مرة واحدة فقط.");
     state.customerAutoArrivalSince=0;
   }catch(error){
     const message=String(error?.message||"");
@@ -685,7 +685,7 @@ function syncTrackingSubscription() {
   syncCustomerTripLocationSharing();
 
   if (!nextId) {
-    byId("mapInfoTitle").textContent = order ? "بانتظار قبول كابتن" : "خريطة كروة المباشرة";
+    byId("mapInfoTitle").textContent = order ? "بانتظار قبول كابتن" : "خريطة آمرني المباشرة";
     byId("mapInfoText").textContent = order
       ? "سيظهر موقع الكابتن هنا فور قبول الطلب وتفعيل موقعه."
       : "حدد موقعك، وسيظهر الكابتن هنا بعد قبول الطلب.";
@@ -815,7 +815,7 @@ function renderTopupDestination(){
   if(byId("customerOrderFeeLabel"))byId("customerOrderFeeLabel").textContent=customerFeeSummary();
   if(byId("topupTransferLabel"))byId("topupTransferLabel").textContent=cfg.topupTransferLabel||"Mastercard محلي";
   if(byId("topupTransferId"))byId("topupTransferId").textContent=cfg.topupTransferId||"أضف معرف التحويل من لوحة الإدارة";
-  if(byId("topupCardHolder"))byId("topupCardHolder").textContent=cfg.topupCardHolder||"إدارة كروة";
+  if(byId("topupCardHolder"))byId("topupCardHolder").textContent=cfg.topupCardHolder||"إدارة آمرني";
   renderCustomerTopupMethods();
 }
 function subscribeToAppSettings(){
@@ -885,7 +885,7 @@ async function loadUserProfile(user) {
     const storedName = typeof data.name === "string" ? data.name.trim() : "";
     const storedBalance = Number(data.balance ?? 0);
     state.role = typeof data.role === "string" && data.role ? data.role : "customer";
-    state.name = storedName || user.displayName || user.email?.split("@")[0] || "مستخدم كروة";
+    state.name = storedName || user.displayName || user.email?.split("@")[0] || "مستخدم آمرني";
     state.balance = Number.isFinite(storedBalance) ? storedBalance : 0;
     state.bonusBalance = Math.max(0,Number(data.bonusBalance||0));
     state.bonusExpiresAt = data.bonusExpiresAt || null;
@@ -918,7 +918,7 @@ async function loadUserProfile(user) {
     }
   } else {
     state.role = "customer";
-    state.name = user.displayName || user.email?.split("@")[0] || "مستخدم كروة";
+    state.name = user.displayName || user.email?.split("@")[0] || "مستخدم آمرني";
     state.balance = 0;
     const settingsSnapshot = await getDoc(doc(db, "appSettings", "pricing"));
     state.appSettings = settingsSnapshot.exists() ? settingsSnapshot.data() : {};
@@ -1117,9 +1117,9 @@ byId("authForm").addEventListener("submit", async event => {
     customerRegistrationInProgress = false;
     console.error(error);
     const deviceError = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
-      ? "إنشاء حساب جديد متاح من تطبيق كروة على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
+      ? "إنشاء حساب جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
       : (state.authMode === "register" && String(error?.code||"").includes("permission-denied")
-        ? "هذا الهاتف مرتبط بالفعل بحساب كروة آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة."
+        ? "هذا الهاتف مرتبط بالفعل بحساب آمرني آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة."
         : "");
     byId("authMessage").textContent = deviceError || authErrorMessage(error);
   } finally {
@@ -1206,7 +1206,7 @@ function handlePreciseLocationFailure(error) {
   console.warn("Karwa precise location", error);
   const code = String(error?.code || "");
   if (code === "PRECISE_PERMISSION_REQUIRED" || code === "PERMISSION_DENIED" || error?.code === 1) {
-    showToast("فعّل «الموقع الدقيق» لكروة ثم حاول مرة أخرى");
+    showToast("فعّل «الموقع الدقيق» لآمرني ثم حاول مرة أخرى");
     window.KarwaGeo?.promptPreciseSettings?.("اختر إذن الموقع ثم فعّل «استخدام الموقع الدقيق». الموقع التقريبي قد يعطي خطأ يصل إلى مئات الأمتار.");
     return;
   }
@@ -1292,7 +1292,7 @@ async function createOrder(type, title, route, price, options = {}) {
   const createdAtISO = new Date().toISOString();
   const orderRef = doc(collection(db, "orders"));
   const order = {
-    id: "KW-" + String(Date.now()).slice(-6), userId: state.user.uid, customerName: state.name || state.user.displayName || "عميل كروة",
+    id: "KW-" + String(Date.now()).slice(-6), userId: state.user.uid, customerName: state.name || state.user.displayName || "عميل آمرني",
     type, requiredDriverService: type === "ride" ? "taxi" : (["parcel", "food", "serviceDelivery"].includes(type) ? "delivery" : ""),
     title, route, price: Number(price), payment: options.payment || "نقدًا",
     pickupLocation: options.pickupLocation || (state.customerLocation ? { ...state.customerLocation } : null), destinationLocation: options.destinationLocation || null,
@@ -1924,8 +1924,8 @@ function renderOtherServices() {
       <div class="other-service-theme" aria-hidden="true"><span class="other-service-theme-icon">${icon}</span></div>
       <div class="other-service-copy">
         <small>${restaurantSafeText(category)} • مزود معتمد</small>
-        <h3>${restaurantSafeText(profile.businessName || "نشاط كروة")}</h3>
-        <p>${restaurantSafeText(profile.description || "خدمة موثقة ومتاحة للطلب عبر كروة.")}</p>
+        <h3>${restaurantSafeText(profile.businessName || "نشاط آمرني")}</h3>
+        <p>${restaurantSafeText(profile.description || "خدمة موثقة ومتاحة للطلب عبر آمرني.")}</p>
         <div class="other-service-location"><span>📍 ${restaurantSafeText(profile.address || profile.city || "العنوان غير محدد")}</span><span>GPS: ${restaurantSafeText(serviceLocationText(profile.location))}</span></div>
         <div class="other-service-actions"><button class="secondary-button" type="button" data-show-service-location="${restaurantSafeText(profile.firestoreId)}" ${locationAvailable ? "" : "disabled"}>عرض موقع النشاط</button><span>${items.length ? `${items.length} خدمة/منتج` : "لا توجد عناصر منشورة"}</span></div>
         <div class="other-item-grid">${items.map((item, index) => `<article class="other-item-card">${marketplaceImageHtml(item.image, "other-item-picture", item.name || "صورة المنتج", icon)}<div class="other-item-body"><h4>${restaurantSafeText(item.name)}</h4><p>${restaurantSafeText(item.description || "لا توجد تفاصيل إضافية.")}</p><div class="other-item-price"><strong>${formatMoney(item.price)}</strong><small>لكل ${restaurantSafeText(otherItemUnitLabels[item.unit])}</small></div><small>${item.deliveryAvailable ? `يمكن اختيار التوصيل بعد موافقة النشاط • ${formatMoney(item.deliveryFee)}` : "استلام من النشاط بعد الموافقة"}</small><button type="button" data-select-service="${restaurantSafeText(profile.firestoreId)}" data-item-index="${index}">عرض التفاصيل واختيار الحاجة</button></div></article>`).join("") || '<div class="restaurant-empty">لم ينشر صاحب النشاط خدمات أو وجبات بعد.</div>'}</div>
@@ -2000,7 +2000,7 @@ function selectServiceProfile(profile, itemIndex = 0) {
   state.selectedServiceProfile = profile;
   const [, category] = otherServiceCategories[profile.category] || otherServiceCategories.other;
   byId("selectedServiceCategory").textContent = category;
-  byId("selectedServiceName").textContent = profile.businessName || "نشاط كروة";
+  byId("selectedServiceName").textContent = profile.businessName || "نشاط آمرني";
   byId("selectedServiceAddress").textContent = profile.address || profile.city || "العنوان غير محدد";
   byId("selectedServiceGps").textContent = serviceLocationText(profile.location);
   byId("locateSelectedService").disabled = !validServiceLocation(profile.location);
@@ -2045,7 +2045,7 @@ function subscribeServiceProfiles() {
         const freshProfile = state.serviceProfiles.find(item => item.firestoreId === state.selectedServiceProfile.firestoreId && marketplaceGovernorateEnabled(item));
         if (freshProfile) {
           state.selectedServiceProfile = freshProfile;
-          byId("selectedServiceName").textContent = freshProfile.businessName || "نشاط كروة";
+          byId("selectedServiceName").textContent = freshProfile.businessName || "نشاط آمرني";
           byId("selectedServiceAddress").textContent = freshProfile.address || freshProfile.city || "العنوان غير محدد";
           updateSelectedServicePrice();
         }
@@ -2441,7 +2441,7 @@ function renderTracking() {
   byId("trackingCode").textContent = "رقم الطلب: " + order.id;
   byId("trackingDriver").textContent = order.driverName ? ` • الكابتن: ${order.driverName}` : " • بانتظار قبول كابتن";
   const call=byId("callDriver"); if(call){call.classList.toggle("hidden",!order.driverPhone);call.href=order.driverPhone?`tel:${String(order.driverPhone).replace(/[^+\d]/g,"")}`:"#";}
-  const stageHint=byId("tripStageHint"); if(stageHint)stageHint.textContent=order.type==="serviceDelivery"?(statusIndex===0?"بانتظار كابتن توصيل":statusIndex===1?"الكابتن في الطريق إلى المطعم":statusIndex===2?"الكابتن وصل إلى المطعم لاستلام الطلب":statusIndex===3?"الطلب في الطريق إليك — أعطِ رمز التسليم للكابتن فقط عند وصوله":"تم تسليم الطلب"):(statusIndex===0?"نبحث عن كابتن قريب":statusIndex===1?"الكابتن في الطريق إلى نقطة الانطلاق":statusIndex===2?"الكابتن وصل — أعطه رمز الرحلة. وإذا لم يُدخل الرمز، سيتحقق كروة تلقائيًا عند وصولكما معًا إلى الوجهة":statusIndex===3?"الرحلة جارية نحو الوجهة":"وصلت بالسلامة");
+  const stageHint=byId("tripStageHint"); if(stageHint)stageHint.textContent=order.type==="serviceDelivery"?(statusIndex===0?"بانتظار كابتن توصيل":statusIndex===1?"الكابتن في الطريق إلى المطعم":statusIndex===2?"الكابتن وصل إلى المطعم لاستلام الطلب":statusIndex===3?"الطلب في الطريق إليك — أعطِ رمز التسليم للكابتن فقط عند وصوله":"تم تسليم الطلب"):(statusIndex===0?"نبحث عن كابتن قريب":statusIndex===1?"الكابتن في الطريق إلى نقطة الانطلاق":statusIndex===2?"الكابتن وصل — أعطه رمز الرحلة. وإذا لم يُدخل الرمز، سيتحقق آمرني تلقائيًا عند وصولكما معًا إلى الوجهة":statusIndex===3?"الرحلة جارية نحو الوجهة":"وصلت بالسلامة");
   if(order.driverId && state.driverMarker) drawLiveRoute(true);
   byId("trackingStatus").textContent = order.type === "serviceDelivery"
     ? (["بانتظار كابتن", "الكابتن في الطريق إلى الاستلام", "وصل الكابتن إلى نقطة الاستلام", "الطلب في الطريق إليك", "تم التسليم"][statusIndex] || "قيد المتابعة")
@@ -2714,7 +2714,7 @@ byId("ratingForm").addEventListener("submit", async event => {
       referenceId: context.referenceId,
       referenceCode: context.referenceCode || "",
       customerId: state.user.uid,
-      customerName: state.name || "عميل كروة",
+      customerName: state.name || "عميل آمرني",
       score: state.ratingScore,
       comment: byId("ratingComment").value.trim().slice(0, 300),
       tags: [...state.ratingTags],
@@ -2794,8 +2794,8 @@ byId("topupCardRedeemForm")?.addEventListener("submit",async event=>{
 
 byId("shareReferral")?.addEventListener("click",async()=>{
   if(!requireUser())return; const code=state.referralCode||await ensureReferralCode(state.user);
-  const text=`حمّل كروة واستخدم كود الدعوة ${code} للحصول على خصم على أول مشوار.`;
-  try{if(navigator.share)await navigator.share({title:"دعوة كروة",text});else await navigator.clipboard.writeText(text);showToast("تم تجهيز كود الدعوة للمشاركة");}catch(error){if(error?.name!=="AbortError")showToast("تعذر فتح المشاركة");}
+  const text=`حمّل آمرني واستخدم كود الدعوة ${code} للحصول على خصم على أول مشوار.`;
+  try{if(navigator.share)await navigator.share({title:"دعوة آمرني",text});else await navigator.clipboard.writeText(text);showToast("تم تجهيز كود الدعوة للمشاركة");}catch(error){if(error?.name!=="AbortError")showToast("تعذر فتح المشاركة");}
 });
 byId("copyReferral")?.addEventListener("click",async()=>{if(!state.referralCode)return;try{await navigator.clipboard.writeText(state.referralCode);showToast("تم نسخ كود الدعوة");}catch(_){showToast(state.referralCode);}});
 
@@ -2947,7 +2947,7 @@ document.addEventListener("keydown", event => {
 });
 
 
-function printInvoice(order){const w=window.open("","_blank","width=520,height=700");if(!w)return showToast("اسمح بالنوافذ المنبثقة لعرض الفاتورة");w.document.write(`<html dir="rtl"><head><title>فاتورة ${order.id}</title><style>body{font-family:Arial;padding:30px}h1{color:#0b4f70}.row{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:10px 0}</style></head><body><h1>كروة — فاتورة رحلة</h1><div class="row"><b>رقم الرحلة</b><span>${order.id}</span></div><div class="row"><b>المسار</b><span>${order.route}</span></div><div class="row"><b>الكابتن</b><span>${order.driverName||"—"}</span></div><div class="row"><b>المبلغ</b><span>${formatMoney(order.price)}</span></div><div class="row"><b>الدفع</b><span>${order.payment||"—"}</span></div><div class="row"><b>التاريخ</b><span>${new Date(order.createdAtISO||Date.now()).toLocaleString("ar-IQ")}</span></div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close();}
+function printInvoice(order){const w=window.open("","_blank","width=520,height=700");if(!w)return showToast("اسمح بالنوافذ المنبثقة لعرض الفاتورة");w.document.write(`<html dir="rtl"><head><title>فاتورة ${order.id}</title><style>body{font-family:Arial;padding:30px}h1{color:#0b4f70}.row{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:10px 0}</style></head><body><h1>آمرني — فاتورة رحلة</h1><div class="row"><b>رقم الرحلة</b><span>${order.id}</span></div><div class="row"><b>المسار</b><span>${order.route}</span></div><div class="row"><b>الكابتن</b><span>${order.driverName||"—"}</span></div><div class="row"><b>المبلغ</b><span>${formatMoney(order.price)}</span></div><div class="row"><b>الدفع</b><span>${order.payment||"—"}</span></div><div class="row"><b>التاريخ</b><span>${new Date(order.createdAtISO||Date.now()).toLocaleString("ar-IQ")}</span></div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close();}
 let geoTimer;
 const placeSearchCache=new Map();
 function normalizeArabicSearch(v){return String(v||"").trim().replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/[\u064B-\u065F]/g,"").replace(/\s+/g," ");}
@@ -2966,7 +2966,7 @@ async function searchPlaces(q,options={}){
   const queries=[base,`${base} العراق`,...(category?[q]:[])]; let out=[];
   for(const term of queries){try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&namedetails=1&extratags=1&dedupe=1&limit=18&countrycodes=iq&accept-language=ar,ku,en${view}&bounded=${scope==="nearby"?1:0}&q=${encodeURIComponent(term)}`,{headers:{Accept:"application/json"},signal:AbortSignal.timeout(7000)});if(r.ok)out.push(...await r.json())}catch(e){} if(out.length>=14)break;}
   const needle=normalizeArabicSearch(q).toLowerCase();
-  const local=(customerCommunity?.landmarkData||[]).filter(x=>normalizeArabicSearch(x.name).toLowerCase().includes(needle)&&localPlaceMatchesCategory(x,category)).map(x=>({lat:x.latitude,lon:x.longitude,name:x.name,display_name:`${x.name} — معلم مضاف في كروة`,namedetails:{"name:ar":x.name},category:x.category||"place",class:"place",importance:1.4,osm_type:"karwa",osm_id:x.id})); out.unshift(...local);
+  const local=(customerCommunity?.landmarkData||[]).filter(x=>normalizeArabicSearch(x.name).toLowerCase().includes(needle)&&localPlaceMatchesCategory(x,category)).map(x=>({lat:x.latitude,lon:x.longitude,name:x.name,display_name:`${x.name} — معلم مضاف في آمرني`,namedetails:{"name:ar":x.name},category:x.category||"place",class:"place",importance:1.4,osm_type:"karwa",osm_id:x.id})); out.unshift(...local);
   const seen=new Set(); const result=out.filter(x=>{const k=x.osm_type&&x.osm_id?`${x.osm_type}:${x.osm_id}`:`${Number(x.lat).toFixed(5)},${Number(x.lon).toFixed(5)}`;if(seen.has(k)||!Number.isFinite(Number(x.lat))||!Number.isFinite(Number(x.lon)))return false;seen.add(k);return true}).sort((a,b)=>placeRank(b,q,center)-placeRank(a,q,center)).slice(0,12);
   placeSearchCache.set(key,result); if(placeSearchCache.size>50)placeSearchCache.delete(placeSearchCache.keys().next().value); return result;
 }
@@ -3096,7 +3096,7 @@ function setupCustomerMapPlaceTool() {
         latitude: Number(point.latitude),
         longitude: Number(point.longitude),
         createdBy: user.uid,
-        createdByName: state.name || "مستخدم كروة",
+        createdByName: state.name || "مستخدم آمرني",
         createdByRole: "customer",
         status: "active",
         createdAt: serverTimestamp(),
@@ -3105,7 +3105,7 @@ function setupCustomerMapPlaceTool() {
       byId("customerMapLandmarkName").value = "";
       placeSearchCache.clear();
       selection.textContent = `تمت إضافة المعلم: ${name}`;
-      showToast("تمت إضافة المعلم إلى خريطة كروة");
+      showToast("تمت إضافة المعلم إلى خريطة آمرني");
     } catch (error) {
       console.error(error);
       showToast("تعذر إضافة المعلم — تحقق من الاتصال والصلاحيات");
@@ -3154,7 +3154,7 @@ async function startVerifiedCustomerSession(user) {
   try {
     startCustomerCommunityLayers();
   } catch (communityError) {
-    console.warn("تعذر تشغيل طبقة مجتمع كروة دون التأثير على مزامنة الحساب", communityError);
+    console.warn("تعذر تشغيل طبقة مجتمع آمرني دون التأثير على مزامنة الحساب", communityError);
   }
   byId("connectionBadge").textContent = profileStatus?.profileNeedsMigration
     ? "متصل • مزامنة الحساب قيد التحديث"
@@ -3291,7 +3291,7 @@ onAuthStateChanged(auth, async user => {
       byId("connectionBadge").textContent = "متصل • إعادة المزامنة تلقائيًا";
       scheduleProfileRetry(user);
     }
-    state.name = user.displayName || user.email?.split("@")[0] || "مستخدم كروة";
+    state.name = user.displayName || user.email?.split("@")[0] || "مستخدم آمرني";
     renderProfile();
   }
 });
@@ -3306,8 +3306,8 @@ byId("shareTrip")?.addEventListener("click",async()=>{
   try{
     const token=karwaShareToken();
     await setDoc(doc(db,"tripShares",token),{token,orderId:state.activeOrder.firestoreId,customerId:state.user.uid,createdAt:serverTimestamp(),expiresAtMs:Date.now()+6*60*60*1000});
-    const text=`كروة — مشاركة رحلة ${state.activeOrder.id}\nرمز مشاركة آمن: ${token}\nصالح لمدة 6 ساعات.`;
-    if(navigator.share)await navigator.share({title:"مشاركة رحلة كروة",text});else await navigator.clipboard.writeText(text);
+    const text=`آمرني — مشاركة رحلة ${state.activeOrder.id}\nرمز مشاركة آمن: ${token}\nصالح لمدة 6 ساعات.`;
+    if(navigator.share)await navigator.share({title:"مشاركة رحلة آمرني",text});else await navigator.clipboard.writeText(text);
     showToast("تم تجهيز مشاركة الرحلة");
   }catch(e){console.error(e);showToast("تعذر إنشاء مشاركة آمنة");}
 });
@@ -3328,7 +3328,7 @@ const customerReportMeta={traffic:["🚦","ازدحام"],accident:["💥","حا
 function customerCommunityIcon(kind,type="report",confirmations=0,name=""){
  const meta=customerReportMeta[kind]||["📌","بلاغ"],badge=type==='report'&&confirmations?`<b class="confirm-badge">${confirmations}</b>`:"";
  if(type==='landmark'){
-  const label=restaurantSafeText(name||"معلم كروة");
+  const label=restaurantSafeText(name||"معلم آمرني");
   return window.L.divIcon({className:"karwa-landmark-div-icon",html:`<div class="karwa-landmark-label" title="${label}"><span>${label}</span></div>`,iconSize:[180,34],iconAnchor:[90,17]});
  }
  return window.L.divIcon({className:"",html:`<div class="road-report-marker">${meta[0]}${badge}</div>`,iconSize:[38,38],iconAnchor:[19,19]});
@@ -3336,8 +3336,8 @@ function customerCommunityIcon(kind,type="report",confirmations=0,name=""){
 function customerReportLifetime(x){const c=Number(x.confirmations||0);if(x.type==='closure')return c>=2?6*3600000:2*3600000;if(c>=3)return 4*3600000;if(c>=1)return 2*3600000;return 60*60000;}
 function customerReportLive(x){const ts=x.createdAt?.toMillis?.()||Date.parse(x.createdAtISO||0);return x.active!==false&&ts&&Date.now()-ts<customerReportLifetime(x);}
 function startCustomerCommunityLayers(){if(customerCommunity.started||!state.map||!auth.currentUser)return;customerCommunity.started=true;
- onSnapshot(collection(db,"roadReports"),snap=>{const live=new Set();snap.forEach(d=>{const x=d.data();if(!customerReportLive(x))return;live.add(d.id);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;const c=Number(x.confirmations||0);let m=customerCommunity.reports.get(d.id);if(!m){m=window.L.marker(ll,{icon:customerCommunityIcon(x.type,"report",c)}).addTo(state.map);customerCommunity.reports.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(customerCommunityIcon(x.type,"report",c));}const label=customerReportMeta[x.type]?.[1]||"بلاغ طريق";m.bindPopup(`<div dir="rtl"><b>${label}</b>${x.note?`<br>${x.note}`:""}<br><small>${c?`مؤكد من ${c} كابتن`:'بلاغ حديث من مجتمع كروة'}</small></div>`)});for(const [id,m] of customerCommunity.reports)if(!live.has(id)){state.map.removeLayer(m);customerCommunity.reports.delete(id)}});
- onSnapshot(collection(db,"landmarks"),snap=>{const live=new Set(),data=[];snap.forEach(d=>{const x=d.data();if(x.status==="hidden")return;data.push({...x,id:d.id});live.add(d.id);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;let m=customerCommunity.landmarks.get(d.id);const landmarkName=x.name||"معلم كروة",landmarkCategory=x.category||"معلم محلي",landmarkIcon=customerCommunityIcon(null,"landmark",0,landmarkName);if(!m){m=window.L.marker(ll,{icon:landmarkIcon,riseOnHover:true,title:landmarkName}).addTo(state.map);customerCommunity.landmarks.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(landmarkIcon)}m.bindPopup(`<div dir="rtl"><b>${restaurantSafeText(landmarkName)}</b><br><small>${restaurantSafeText(landmarkCategory)} · أضيف بواسطة ${x.createdByRole==='driver'?'كابتن':'عميل'}</small></div>`)});customerCommunity.landmarkData=data;placeSearchCache.clear();for(const [id,m] of customerCommunity.landmarks)if(!live.has(id)){state.map.removeLayer(m);customerCommunity.landmarks.delete(id)}});
+ onSnapshot(collection(db,"roadReports"),snap=>{const live=new Set();snap.forEach(d=>{const x=d.data();if(!customerReportLive(x))return;live.add(d.id);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;const c=Number(x.confirmations||0);let m=customerCommunity.reports.get(d.id);if(!m){m=window.L.marker(ll,{icon:customerCommunityIcon(x.type,"report",c)}).addTo(state.map);customerCommunity.reports.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(customerCommunityIcon(x.type,"report",c));}const label=customerReportMeta[x.type]?.[1]||"بلاغ طريق";m.bindPopup(`<div dir="rtl"><b>${label}</b>${x.note?`<br>${x.note}`:""}<br><small>${c?`مؤكد من ${c} كابتن`:'بلاغ حديث من مجتمع آمرني'}</small></div>`)});for(const [id,m] of customerCommunity.reports)if(!live.has(id)){state.map.removeLayer(m);customerCommunity.reports.delete(id)}});
+ onSnapshot(collection(db,"landmarks"),snap=>{const live=new Set(),data=[];snap.forEach(d=>{const x=d.data();if(x.status==="hidden")return;data.push({...x,id:d.id});live.add(d.id);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;let m=customerCommunity.landmarks.get(d.id);const landmarkName=x.name||"معلم آمرني",landmarkCategory=x.category||"معلم محلي",landmarkIcon=customerCommunityIcon(null,"landmark",0,landmarkName);if(!m){m=window.L.marker(ll,{icon:landmarkIcon,riseOnHover:true,title:landmarkName}).addTo(state.map);customerCommunity.landmarks.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(landmarkIcon)}m.bindPopup(`<div dir="rtl"><b>${restaurantSafeText(landmarkName)}</b><br><small>${restaurantSafeText(landmarkCategory)} · أضيف بواسطة ${x.createdByRole==='driver'?'كابتن':'عميل'}</small></div>`)});customerCommunity.landmarkData=data;placeSearchCache.clear();for(const [id,m] of customerCommunity.landmarks)if(!live.has(id)){state.map.removeLayer(m);customerCommunity.landmarks.delete(id)}});
 }
 
 const karwaBonusExpiryRefresh=setInterval(()=>{if(state.user)renderBalance();},60000);

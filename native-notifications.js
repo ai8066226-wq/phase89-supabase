@@ -54,7 +54,7 @@
   function updatePermissionCard(){const box=document.getElementById('karwaNotificationPermission');if(!box)return;let granted=false;try{if(window.KarwaNative?.notificationPermissionGranted)granted=!!window.KarwaNative.notificationPermissionGranted()}catch{}if(!granted&&'Notification'in window)granted=Notification.permission==='granted';box.hidden=granted}
   function push(input={}){
     if(!enabled())return null;
-    const title=String(input.title||'كروة').trim().slice(0,90),body=String(input.body||'لديك تحديث جديد').trim().slice(0,240),type=String(input.type||'system'),route=String(input.route||''),tag=String(input.tag||'');
+    const title=String(input.title||'آمرني').trim().slice(0,90),body=String(input.body||'لديك تحديث جديد').trim().slice(0,240),type=String(input.type||'system'),route=String(input.route||''),tag=String(input.tag||'');
     if(tag&&items.some(x=>x.tag===tag&&now()-Number(x.at||0)<90000))return null;
     const item={id:`n_${now()}_${Math.random().toString(36).slice(2,8)}`,title,body,type,route,tag,at:now(),read:false};items.unshift(item);items=items.slice(0,MAX);save();render();
     if(input.native!==false){
@@ -65,7 +65,7 @@
   function setEnabled(v){localStorage.setItem(ENABLED_KEY,v?'1':'0');if(v)requestPermission(false)}
   function getNativePushToken(){try{return window.KarwaNative?.getPushToken?.()||''}catch{return''}}
   window.addEventListener('karwa-native-notification-open',event=>{const d=event.detail||{};if(d.route)navigate(d.route)});
-  window.addEventListener('karwa-native-push-received',event=>{const d=event.detail||{};push({title:d.title||'كروة',body:d.body||'لديك تحديث جديد',type:d.type||'system',route:d.route||'',tag:d.tag||'',native:false});});
+  window.addEventListener('karwa-native-push-received',event=>{const d=event.detail||{};push({title:d.title||'آمرني',body:d.body||'لديك تحديث جديد',type:d.type||'system',route:d.route||'',tag:d.tag||'',native:false});});
   window.KarwaNotify={push,open,close,setEnabled,isEnabled:enabled,requestPermission,getNativePushToken,render};
   load(); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureUi);else ensureUi();
 })();

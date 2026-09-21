@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=113";
+import { initializeApp } from "./supabase-compat.js?v=115";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=113";
+} from "./supabase-compat.js?v=115";
 import {
   collection,
   doc,
@@ -24,7 +24,7 @@ import {
   karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=113";
+} from "./supabase-compat.js?v=115";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -101,7 +101,7 @@ function isNewRealtimeRecord(previous,item){return !previous&&!!item?.firestoreI
 function notifyNewOrderForAdmin(order={}){
   const type=String(order.type||"");
   const label=type==="ride"?"طلب تكسي جديد":type==="parcel"?"طلب توصيل أغراض جديد":type==="serviceDelivery"?"طلب توصيل طعام/خدمة جديد":type==="food"?"طلب توصيل طعام جديد":"طلب جديد";
-  const customer=order.customerName||order.userName||"عميل كروة";
+  const customer=order.customerName||order.userName||"عميل آمرني";
   const route=order.route?` • ${String(order.route).slice(0,90)}`:"";
   adminNotify({title:label,body:`${customer}${route}`,type:"order",route:"#waitingOrdersPanel",tag:`admin-order-${order.firestoreId}`,forceNative:true});
   toast(label);
@@ -109,7 +109,7 @@ function notifyNewOrderForAdmin(order={}){
 function notifyNewServiceRequestForAdmin(request={}){
   const restaurant=String(request.providerCategory||"").toLowerCase()==="restaurant";
   const label=restaurant?"طلب طعام جديد":"طلب خدمة جديد";
-  const customer=request.customerName||"عميل كروة";
+  const customer=request.customerName||"عميل آمرني";
   const provider=request.providerName||request.businessName||"مزود الخدمة";
   const delivery=request.deliveryRequested===true?" • مع توصيل":"";
   adminNotify({title:label,body:`${customer} ← ${provider}${delivery}`,type:"service",route:"#waitingOrdersPanel",tag:`admin-service-request-${request.firestoreId}`,forceNative:true});
@@ -237,7 +237,7 @@ function renderFinanceAccounts(snapshot = financeSnapshot()) {
   const header = `<div class="finance-account-row header"><span>الحساب</span><span>النوع</span><span>المشحون</span><span>المجاني الصالح</span><span>المتاح الفعلي</span></div>`;
   table.innerHTML = header + (rows.length ? rows.map(account => {
     const expired = account.wallet.storedBonus > 0 && account.wallet.bonus === 0 ? ` • منتهي ${money(account.wallet.storedBonus)}` : "";
-    return `<div class="finance-account-row"><span class="finance-account-identity"><strong>${escapeHtml(account.name || "مستخدم كروة")}</strong><small>${escapeHtml(account.email || account.firestoreId || "—")}</small></span><span class="finance-account-role">${financeRoleLabel(account.financeRole)}</span><span>${money(account.wallet.paid)}</span><span title="${escapeHtml(expired.trim())}">${money(account.wallet.bonus)}${expired ? " *" : ""}</span><strong class="finance-account-total">${money(account.wallet.available)}</strong></div>`;
+    return `<div class="finance-account-row"><span class="finance-account-identity"><strong>${escapeHtml(account.name || "مستخدم آمرني")}</strong><small>${escapeHtml(account.email || account.firestoreId || "—")}</small></span><span class="finance-account-role">${financeRoleLabel(account.financeRole)}</span><span>${money(account.wallet.paid)}</span><span title="${escapeHtml(expired.trim())}">${money(account.wallet.bonus)}${expired ? " *" : ""}</span><strong class="finance-account-total">${money(account.wallet.available)}</strong></div>`;
   }).join("") : `<div class="finance-account-row"><span class="muted">لا توجد حسابات مطابقة.</span></div>`);
 }
 
@@ -262,7 +262,7 @@ function renderFinancialReport() {
   if (byId("financeUpdatedAt")) byId("financeUpdatedAt").textContent = `آخر تحديث: ${new Date().toLocaleString("ar-IQ")}`;
   byId("financeKpiGrid").innerHTML = [
     ["إجمالي المبيعات المكتملة", snapshot.grossSales, `${snapshot.completedTrips.length} رحلة • ${snapshot.completedServices.length} خدمة`],
-    ["إيراد كروة من الرسوم", snapshot.platformFees, "رسوم ثابتة بدون عمولة نسبية"],
+    ["إيراد آمرني من الرسوم", snapshot.platformFees, "رسوم ثابتة بدون عمولة نسبية"],
     ["أرباح الكباتن", snapshot.captainEarnings, `${snapshot.completedTrips.length} رحلة مكتملة`],
     ["مبيعات مزودي الخدمات", snapshot.providerSales, `${snapshot.completedServices.length} طلب خدمة مكتمل`],
     ["الشحنات المضافة للمحافظ", snapshot.topups, `${snapshot.topupCount} عملية شحن يدوي أو كرت`],
@@ -288,18 +288,18 @@ function financeCsvCell(value) {
 function exportFinancialReportCsv() {
   const snapshot = financeSnapshot();
   const lines = [
-    ["تقرير كروة المالي", financePeriodText()],
+    ["تقرير آمرني المالي", financePeriodText()],
     ["تاريخ التصدير", new Date().toLocaleString("ar-IQ")],
     [],
     ["المؤشر", "القيمة (د.ع)"],
     ["إجمالي المبيعات المكتملة", snapshot.grossSales],
-    ["إيراد كروة من الرسوم", snapshot.platformFees],
+    ["إيراد آمرني من الرسوم", snapshot.platformFees],
     ["أرباح الكباتن", snapshot.captainEarnings],
     ["مبيعات مزودي الخدمات", snapshot.providerSales],
     ["الشحنات المضافة للمحافظ", snapshot.topups],
     [],
     ["اسم الحساب", "البريد", "النوع", "الرصيد المشحون", "الرصيد المجاني الصالح", "الرصيد المتاح الفعلي"],
-    ...snapshot.accounts.sort((a, b) => b.wallet.available - a.wallet.available).map(account => [account.name || "مستخدم كروة", account.email || "", financeRoleLabel(account.financeRole), account.wallet.paid, account.wallet.bonus, account.wallet.available])
+    ...snapshot.accounts.sort((a, b) => b.wallet.available - a.wallet.available).map(account => [account.name || "مستخدم آمرني", account.email || "", financeRoleLabel(account.financeRole), account.wallet.paid, account.wallet.bonus, account.wallet.available])
   ];
   const csv = "\ufeff" + lines.map(row => row.map(financeCsvCell).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -385,7 +385,7 @@ function activationUid(application, fallbackId = "") {
 }
 
 function activationUserPayload(application, role) {
-  const name = String(application?.ownerName || application?.name || application?.businessName || "مستخدم كروة").trim() || "مستخدم كروة";
+  const name = String(application?.ownerName || application?.name || application?.businessName || "مستخدم آمرني").trim() || "مستخدم آمرني";
   const email = String(application?.email || "").trim();
   return {
     name,
@@ -422,7 +422,7 @@ function renderDeviceManagement(){
       const uid=req.userId||req.firestoreId,user=userForDevice(uid),link=currentDeviceLink(uid),oldKey=link?.deviceKey||"غير مسجل",status=req.status||"pending";
       const statusLabel=status==="approved"?"تم الاستبدال":status==="rejected"?"مرفوض":"بانتظار القرار";
       const actions=status==="pending"?`<div class="order-actions"><button class="primary" data-action="approve-device-change" data-id="${escapeHtml(req.firestoreId)}">السماح واستبدال الجهاز</button><button class="danger" data-action="reject-device-change" data-id="${escapeHtml(req.firestoreId)}">رفض الطلب</button></div>`:"";
-      return `<article class="device-admin-card ${status}"><div class="device-admin-head"><div><strong>${escapeHtml(req.accountName||user.name||"مستخدم كروة")}</strong><small> • ${escapeHtml(req.email||user.email||"")} • ${escapeHtml(adminRoleLabel(req.accountRole||user.role))}</small></div><span class="status-chip ${status==='approved'?'approved':status==='rejected'?'cancelled':'pending'}">${statusLabel}</span></div><div class="device-pair"><div><small>المعرف الحالي</small><code class="device-id">${escapeHtml(oldKey)}</code><small>${escapeHtml(link?.deviceLabel||"—")}</small></div><div><small>المعرف الجديد المطلوب</small><code class="device-id">${escapeHtml(req.newDeviceKey||"—")}</code><small>${escapeHtml(req.newDeviceLabel||"Android")}</small></div></div>${req.reviewNote?`<p class="admin-note">${escapeHtml(req.reviewNote)}</p>`:""}${actions}</article>`;
+      return `<article class="device-admin-card ${status}"><div class="device-admin-head"><div><strong>${escapeHtml(req.accountName||user.name||"مستخدم آمرني")}</strong><small> • ${escapeHtml(req.email||user.email||"")} • ${escapeHtml(adminRoleLabel(req.accountRole||user.role))}</small></div><span class="status-chip ${status==='approved'?'approved':status==='rejected'?'cancelled':'pending'}">${statusLabel}</span></div><div class="device-pair"><div><small>المعرف الحالي</small><code class="device-id">${escapeHtml(oldKey)}</code><small>${escapeHtml(link?.deviceLabel||"—")}</small></div><div><small>المعرف الجديد المطلوب</small><code class="device-id">${escapeHtml(req.newDeviceKey||"—")}</code><small>${escapeHtml(req.newDeviceLabel||"Android")}</small></div></div>${req.reviewNote?`<p class="admin-note">${escapeHtml(req.reviewNote)}</p>`:""}${actions}</article>`;
     }).join(""):`<p class="muted">لا توجد طلبات تغيير جهاز.</p>`;
   }
   const boundHost=byId("boundDevicesList");
@@ -801,12 +801,12 @@ function driverTripDetail(order) {
   return `
     <div class="captain-trip-row">
       <div class="captain-trip-head">
-        <strong>${icons[order.type] || "🧾"} ${escapeHtml(order.title || "رحلة كروة")}</strong>
+        <strong>${icons[order.type] || "🧾"} ${escapeHtml(order.title || "رحلة آمرني")}</strong>
         <span class="status-chip ${tripState.css}">${tripState.label}</span>
       </div>
       <p class="order-route">${escapeHtml(order.route || "-")}</p>
       <div class="order-meta"><span>رمز الرحلة: <b>${escapeHtml(code)}</b></span><span>قيمة الرحلة: ${money(order.price)}</span></div>
-      ${completed ? `<div class="order-meta trip-money"><span>رسوم كروة: ${money(Number(order.customerPlatformFee||0)+Number(order.captainPlatformFee||0))}</span><span>أجرة الكابتن: <b>${money(order.driverEarnings)}</b></span></div>` : ""}
+      ${completed ? `<div class="order-meta trip-money"><span>رسوم آمرني: ${money(Number(order.customerPlatformFee||0)+Number(order.captainPlatformFee||0))}</span><span>أجرة الكابتن: <b>${money(order.driverEarnings)}</b></span></div>` : ""}
       ${order.cancelled ? `<p class="admin-note danger-note">سبب الإلغاء: ${escapeHtml(order.cancellationReason || "غير مسجل")}</p><div class="order-meta"><span>ألغى بواسطة: ${escapeHtml(order.cancelledByName || cancellationRoleLabel(order.cancelledByRole || order.cancelledBy))}</span><span>${escapeHtml(order.cancelledByEmail || "البريد غير مسجل")}</span></div>` : ""}
       <div class="order-meta trip-dates">${order.acceptedAt?.seconds ? `<span>القبول: ${new Date(order.acceptedAt.seconds*1000).toLocaleString("ar-IQ")}</span>` : ""}${order.completedAt?.seconds ? `<span>الإكمال: ${new Date(order.completedAt.seconds*1000).toLocaleString("ar-IQ")}</span>` : ""}</div>
     </div>`;
@@ -833,7 +833,7 @@ function driverCard(driver) {
   return `
     <article class="order-card driver-management-card captain-account-card">
       <div class="order-top">
-        <h3>${captainServiceIcon(driver)} ${escapeHtml(driver.name || "كابتن كروة")}</h3>
+        <h3>${captainServiceIcon(driver)} ${escapeHtml(driver.name || "كابتن آمرني")}</h3>
         <span class="status-chip ${statusClass}">${status}</span>
       </div>
       <div class="captain-profile-grid">
@@ -861,7 +861,7 @@ function driverCard(driver) {
       ${driver.warningMessage ? `<p class="admin-note">آخر تنبيه: ${escapeHtml(driver.warningMessage)}</p>` : ""}
       ${blocked && driver.blockReason ? `<p class="admin-note danger-note">سبب الحظر: ${escapeHtml(driver.blockReason)}</p>` : ""}
       <div class="order-meta account-activity-inline">${accountLastActivityInline(driver.firestoreId)}</div>
-      <div class="order-actions"><button class="secondary" data-action="warn-driver" data-id="${driver.firestoreId}">إرسال تنبيه</button>${blockAction}<button class="danger" data-action="delete-account" data-id="${escapeHtml(driver.firestoreId)}" data-name="${escapeHtml(driver.name || captainUser.name || "كابتن كروة")}" data-email="${escapeHtml(driver.email || captainUser.email || "")}" data-role="driver" data-category="${escapeHtml(captainServiceLabel(driver))}">حذف الكابتن نهائيًا</button></div>
+      <div class="order-actions"><button class="secondary" data-action="warn-driver" data-id="${driver.firestoreId}">إرسال تنبيه</button>${blockAction}<button class="danger" data-action="delete-account" data-id="${escapeHtml(driver.firestoreId)}" data-name="${escapeHtml(driver.name || captainUser.name || "كابتن آمرني")}" data-email="${escapeHtml(driver.email || captainUser.email || "")}" data-role="driver" data-category="${escapeHtml(captainServiceLabel(driver))}">حذف الكابتن نهائيًا</button></div>
     </article>`;
 }
 function renderDrivers() {
@@ -899,7 +899,7 @@ function renderRatings() {
     ? sorted.map(rating => {
       const type = normalizedRatingType(rating);
       const score = Math.max(0, Math.min(5, Number(rating.score || 0)));
-      const targetName = rating.targetName || rating.providerName || rating.driverName || "خدمة كروة";
+      const targetName = rating.targetName || rating.providerName || rating.driverName || "خدمة آمرني";
       const reference = rating.referenceCode || rating.orderCode || rating.itemName || "";
       const tags = Array.isArray(rating.tags) ? rating.tags.slice(0, 4) : [];
       const created = rating.createdAt?.seconds ? new Date(rating.createdAt.seconds * 1000).toLocaleString("ar-IQ") : "";
@@ -908,7 +908,7 @@ function renderRatings() {
         <div class="review-stars-row"><span class="stars" aria-label="${score} من 5">${"★".repeat(score)}${"☆".repeat(5 - score)}</span><b>${score.toFixed(1)}</b></div>
         ${tags.length ? `<div class="review-tags">${tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         ${rating.comment ? `<p>${escapeHtml(rating.comment)}</p>` : `<p class="muted">بدون تعليق مكتوب.</p>`}
-        <div class="review-meta"><span>العميل: ${escapeHtml(rating.customerName || "عميل كروة")}</span>${created ? `<span>${escapeHtml(created)}</span>` : ""}</div>
+        <div class="review-meta"><span>العميل: ${escapeHtml(rating.customerName || "عميل آمرني")}</span>${created ? `<span>${escapeHtml(created)}</span>` : ""}</div>
       </article>`;
     }).join("")
     : `<div class="empty"><span>★</span>لا توجد تقييمات في هذا القسم بعد.</div>`;
@@ -1066,7 +1066,7 @@ function orderCard(order) {
         ${Number(order.surgeMultiplier||1)>1?`<div class="order-meta"><span>طلب مرتفع ×${Number(order.surgeMultiplier).toFixed(2)}</span></div>`:""}
         ${Number(order.discountAmount||0)>0?`<div class="order-meta"><span>خصم ${money(order.discountAmount)}</span><span>${escapeHtml(order.couponCode||"")}</span></div>`:""}
         ${Array.isArray(order.dispatchCandidateIds)?`<div class="order-meta"><span>مرشحو التوزيع: ${order.dispatchCandidateIds.length}</span><span>الجولة ${Number(order.dispatchRound||1)}</span></div>`:""}
-        ${Number(order.statusIndex||0)>=4&&!order.cancelled?`<div class="order-meta"><span>رسوم كروة: ${money(Number(order.customerPlatformFee||0)+Number(order.captainPlatformFee||0))}</span><span>أجرة الكابتن: ${money(order.driverEarnings)}</span></div>`:""}
+        ${Number(order.statusIndex||0)>=4&&!order.cancelled?`<div class="order-meta"><span>رسوم آمرني: ${money(Number(order.customerPlatformFee||0)+Number(order.captainPlatformFee||0))}</span><span>أجرة الكابتن: ${money(order.driverEarnings)}</span></div>`:""}
         ${order.autoCompletedByGPS===true?`<div class="order-meta"><span>📍 إكمال تلقائي عبر GPS</span><span>العميل والكابتن وصلا ضمن ${Number(order.autoArrivalRadiusM||120)} م من الوجهة</span></div>`:""}
       </div>
       ${order.cancelled ? `<p class="admin-note danger-note">سبب الإلغاء: ${escapeHtml(order.cancellationReason || "غير مسجل")}</p><div class="order-meta"><span>ألغى بواسطة: ${escapeHtml(order.cancelledByName || cancellationRoleLabel(order.cancelledByRole || order.cancelledBy))}</span><span>${escapeHtml(order.cancelledByEmail || "البريد غير مسجل")}</span></div>` : ""}
@@ -1084,7 +1084,7 @@ function serviceRequestAdminCard(request) {
   const total=Number(request.totalPrice||request.subtotal||0);
   return `<article class="order-card service-request-admin-card">
     <div class="order-top"><h3>${restaurant?"🍽️":"🧰"} ${escapeHtml(title)}</h3><span class="status-chip ${status==="pending"?"pending":status==="accepted"?"approved":"cancelled"}">${escapeHtml(statusLabel)}</span></div>
-    <p class="order-route">${escapeHtml(request.customerName||"عميل كروة")} ← ${escapeHtml(request.providerName||"مزود الخدمة")}</p>
+    <p class="order-route">${escapeHtml(request.customerName||"عميل آمرني")} ← ${escapeHtml(request.providerName||"مزود الخدمة")}</p>
     <div class="order-bottom"><div class="order-meta"><span>النوع: ${restaurant?"مطعم/طعام":"خدمة"}</span><span>التوصيل: ${delivery}</span></div>${total>0?`<span class="order-price">${money(total)}</span>`:""}${request.customerAddress?`<div class="order-meta"><span>عنوان العميل: ${escapeHtml(request.customerAddress)}</span></div>`:""}</div>
   </article>`;
 }
@@ -1107,7 +1107,7 @@ function cancellationRoleLabel(role) {
 
 function cancellationOperationLabel(item, source) {
   if (source === "service") return item.providerCategory === "restaurant" ? "طلب مطعم" : "طلب خدمة";
-  return ({ ride:"تكسي", parcel:"توصيل أغراض", food:"توصيل طعام", serviceDelivery:"توصيل خدمة" })[item.type] || "طلب كروة";
+  return ({ ride:"تكسي", parcel:"توصيل أغراض", food:"توصيل طعام", serviceDelivery:"توصيل خدمة" })[item.type] || "طلب آمرني";
 }
 
 function cancellationTimestamp(item) {
@@ -1124,10 +1124,10 @@ function cancellationActor(item, source) {
   const fallbackId = item.cancelledByUserId || (role === "driver" ? item.driverId : role === "serviceProvider" ? item.providerId : source === "service" ? item.customerId : item.userId) || "";
   const user = state.users.find(entry => entry.firestoreId === fallbackId) || {};
   let fallbackName = user.name || "";
-  if (!fallbackName && role === "driver") fallbackName = item.driverName || "كابتن كروة";
+  if (!fallbackName && role === "driver") fallbackName = item.driverName || "كابتن آمرني";
   if (!fallbackName && role === "serviceProvider") fallbackName = item.providerName || "مزود خدمة";
-  if (!fallbackName && role === "customer") fallbackName = item.customerName || "عميل كروة";
-  if (!fallbackName && role === "admin") fallbackName = "إدارة كروة";
+  if (!fallbackName && role === "customer") fallbackName = item.customerName || "عميل آمرني";
+  if (!fallbackName && role === "admin") fallbackName = "إدارة آمرني";
   return {
     role,
     id: fallbackId,
@@ -1154,7 +1154,7 @@ function renderCancellations() {
     const actor = cancellationActor(item, source);
     const dateMs = cancellationTimestamp(item);
     const code = source === "service" ? (item.firestoreId || "—") : (item.id || item.orderCode || item.firestoreId || "—");
-    const title = source === "service" ? (item.itemName || item.providerName || "طلب خدمة") : (item.title || "طلب كروة");
+    const title = source === "service" ? (item.itemName || item.providerName || "طلب خدمة") : (item.title || "طلب آمرني");
     const reason = String(item.cancellationReason || item.providerNote || "لم يُسجل سبب في النسخ القديمة").trim();
     return `<article class="cancellation-card">
       <div class="cancellation-head"><div><small>${escapeHtml(cancellationOperationLabel(item, source))}</small><strong>${escapeHtml(title)}</strong></div><span class="cancellation-chip">${escapeHtml(cancellationRoleLabel(actor.role))}</span></div>
@@ -1258,7 +1258,7 @@ function renderTopupCardsAdmin(){
     const used=card.status==="redeemed";
     const date=card.createdAt?new Date(card.createdAt).toLocaleString("ar-IQ"):"—";
     const redeemed=card.redeemedAt?new Date(card.redeemedAt).toLocaleString("ar-IQ"):"";
-    const who=card.redeemedByName||card.redeemedByEmail||"مستخدم كروة";
+    const who=card.redeemedByName||card.redeemedByEmail||"مستخدم آمرني";
     return `<div class="topup-card-history-row"><div><strong>${money(card.amount)} • <span class="topup-card-code-mask">•••• •••• •••• ${escapeHtml(card.last4||"----")}</span></strong><small>توليد: ${escapeHtml(date)}${used?` • استُخدم بواسطة ${escapeHtml(who)}${redeemed?` • ${escapeHtml(redeemed)}`:""}`:" • لم يُستخدم بعد"}</small></div><span class="topup-card-state ${used?"redeemed":""}">${used?"مستخدم":"فعال"}</span></div>`;
   }).join("");
 }
@@ -1426,20 +1426,20 @@ function adminAreaEntities(){
   for(const driver of state.drivers){
     const point=adminAreaValidPoint(driver);if(!point)continue;
     const user=adminAreaUser(driver.firestoreId||driver.userId),service=normalizeCaptainServiceType(driver);
-    rows.push({key:`driver:${driver.firestoreId}`,kind:"driver",subtype:service,point,name:driver.name||user.name||"كابتن كروة",email:driver.email||user.email||"—",phone:driver.phone||user.phone||"—",online:driver.online===true&&!driver.blocked,status:driver.blocked?"محظور":driver.online?"متصل":"غير متصل",detail:captainServiceLabel(driver),updatedAt:driver.locationUpdatedAt||driver.updatedAt});
+    rows.push({key:`driver:${driver.firestoreId}`,kind:"driver",subtype:service,point,name:driver.name||user.name||"كابتن آمرني",email:driver.email||user.email||"—",phone:driver.phone||user.phone||"—",online:driver.online===true&&!driver.blocked,status:driver.blocked?"محظور":driver.online?"متصل":"غير متصل",detail:captainServiceLabel(driver),updatedAt:driver.locationUpdatedAt||driver.updatedAt});
   }
   const seenServices=new Set();
   for(const profile of state.serviceProfiles){
     const point=adminAreaValidPoint(profile.location);if(!point)continue;
     const uid=String(profile.ownerId||profile.firestoreId||"");seenServices.add(uid);
     const user=adminAreaUser(uid),category=String(profile.category||"other");
-    rows.push({key:`service:${profile.firestoreId}`,kind:"service",subtype:category,point,name:profile.businessName||profile.ownerName||user.name||"خدمة كروة",email:user.email||profile.email||"—",phone:profile.phone||user.phone||"—",online:profile.active===true,status:profile.approvalStatus==="approved"?(profile.active?"نشط":"معتمد غير منشور"):(profile.approvalStatus||"قيد المراجعة"),detail:serviceCategoryLabels[category]||serviceCategoryLabels.other,updatedAt:profile.updatedAt});
+    rows.push({key:`service:${profile.firestoreId}`,kind:"service",subtype:category,point,name:profile.businessName||profile.ownerName||user.name||"خدمة آمرني",email:user.email||profile.email||"—",phone:profile.phone||user.phone||"—",online:profile.active===true,status:profile.approvalStatus==="approved"?(profile.active?"نشط":"معتمد غير منشور"):(profile.approvalStatus||"قيد المراجعة"),detail:serviceCategoryLabels[category]||serviceCategoryLabels.other,updatedAt:profile.updatedAt});
   }
   for(const restaurant of state.restaurants){
     const uid=String(restaurant.ownerId||restaurant.firestoreId||"");if(seenServices.has(uid))continue;
     const point=adminAreaValidPoint(restaurant.location);if(!point)continue;
     const user=adminAreaUser(uid);
-    rows.push({key:`restaurant:${restaurant.firestoreId}`,kind:"service",subtype:"restaurant",point,name:restaurant.name||user.name||"مطعم كروة",email:user.email||restaurant.email||"—",phone:restaurant.phone||user.phone||"—",online:restaurant.active===true,status:restaurant.active?"نشط":"غير نشط",detail:"مطعم ومأكولات",updatedAt:restaurant.updatedAt});
+    rows.push({key:`restaurant:${restaurant.firestoreId}`,kind:"service",subtype:"restaurant",point,name:restaurant.name||user.name||"مطعم آمرني",email:user.email||restaurant.email||"—",phone:restaurant.phone||user.phone||"—",online:restaurant.active===true,status:restaurant.active?"نشط":"غير نشط",detail:"مطعم ومأكولات",updatedAt:restaurant.updatedAt});
   }
   return rows;
 }
@@ -1604,7 +1604,7 @@ function openDashboard() {
     const incoming=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
     if(topupsReady)incoming.forEach(item=>{
       const old=previousTopups.get(item.firestoreId);
-      if(changedToPending(old,item))adminNotify({title:"طلب شحن رصيد جديد",body:`${item.customerName||"مستخدم كروة"} طلب شحن ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`,forceNative:true});
+      if(changedToPending(old,item))adminNotify({title:"طلب شحن رصيد جديد",body:`${item.customerName||"مستخدم آمرني"} طلب شحن ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`,forceNative:true});
     });
     state.topupRequests=incoming;
     previousTopups=new Map(incoming.map(item=>[item.firestoreId,item]));topupsReady=true;
@@ -1634,7 +1634,7 @@ function openDashboard() {
     const incoming=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
     if(deviceChangesReady)incoming.forEach(item=>{
       const old=previousDeviceChanges.get(item.firestoreId);
-      if(changedToPending(old,item))adminNotify({title:"طلب تغيير جهاز جديد",body:`${item.accountName||"مستخدم كروة"} طلب نقل حسابه إلى جهاز جديد.`,type:"admin",route:"#deviceManagementPanel",tag:`admin-device-${item.firestoreId}`,forceNative:true});
+      if(changedToPending(old,item))adminNotify({title:"طلب تغيير جهاز جديد",body:`${item.accountName||"مستخدم آمرني"} طلب نقل حسابه إلى جهاز جديد.`,type:"admin",route:"#deviceManagementPanel",tag:`admin-device-${item.firestoreId}`,forceNative:true});
     });
     state.deviceChangeRequests = incoming;
     previousDeviceChanges=new Map(incoming.map(item=>[item.firestoreId,item]));deviceChangesReady=true;
@@ -1725,8 +1725,8 @@ function renderAccountDirectory() {
   if (!host) return;
   host.innerHTML = filtered.length ? filtered.map(account => {
     const idle = Number(account.idleDays || 0);
-    const name = account.businessName || account.name || account.email || "حساب كروة";
-    const categoryText = account.role === "serviceProvider" ? (serviceCategoryLabels[account.category] || serviceCategoryLabels.other) : account.role === "driver" ? (account.serviceTypeLabel || "كابتن") : "عميل كروة";
+    const name = account.businessName || account.name || account.email || "حساب آمرني";
+    const categoryText = account.role === "serviceProvider" ? (serviceCategoryLabels[account.category] || serviceCategoryLabels.other) : account.role === "driver" ? (account.serviceTypeLabel || "كابتن") : "عميل آمرني";
     const activityDate = accountActivityMillis(account) ? new Date(accountActivityMillis(account)).toLocaleString("ar-IQ") : "غير مسجل";
     const cardClass = idle >= 60 ? "is-critical" : idle >= 30 ? "is-idle" : "";
     return `<article class="account-directory-card ${cardClass}">
@@ -1769,7 +1769,7 @@ async function loadAccountDirectory({quiet=false} = {}) {
 let pendingAccountDeletion = null;
 function openAccountDeleteModal(target) {
   pendingAccountDeletion = target;
-  byId("accountDeleteName").textContent = target.name || "حساب كروة";
+  byId("accountDeleteName").textContent = target.name || "حساب آمرني";
   byId("accountDeleteMeta").textContent = `${accountRoleLabel(target.role)}${target.category ? ` • ${target.category}` : ""}${target.email ? ` • ${target.email}` : ""}`;
   byId("accountDeletePhrase").value = "";
   byId("accountDeleteError").textContent = "";
@@ -1826,7 +1826,7 @@ document.addEventListener("click", async event => {
     if (button.dataset.action === "delete-account") {
       openAccountDeleteModal({
         id,
-        name: button.dataset.name || "حساب كروة",
+        name: button.dataset.name || "حساب آمرني",
         email: button.dataset.email || "",
         role: button.dataset.role || "customer",
         category: button.dataset.category || ""
@@ -2111,7 +2111,7 @@ document.addEventListener("click", async event => {
         toast("نوع خدمة الكابتن غير صالح للاعتماد. اختر تكسي أو توصيل.");
         return;
       }
-      const captainName = String(application.name || existingUser?.name || "كابتن كروة").trim() || "كابتن كروة";
+      const captainName = String(application.name || existingUser?.name || "كابتن آمرني").trim() || "كابتن آمرني";
       const captainEmail = String(application.email || existingUser?.email || "").trim();
       const captainPhone = String(application.phone || "").trim();
       const vehicleType = String(application.vehicleType || "").trim();
@@ -2195,7 +2195,7 @@ document.addEventListener("click", async event => {
         cancelledBy: "admin",
         cancelledByRole: "admin",
         cancelledByUserId: state.user?.uid || "",
-        cancelledByName: adminProfile.name || state.user?.displayName || "إدارة كروة",
+        cancelledByName: adminProfile.name || state.user?.displayName || "إدارة آمرني",
         cancelledByEmail: state.user?.email || adminProfile.email || "",
         cancelledAt: serverTimestamp(),
         updatedAt: serverTimestamp()
