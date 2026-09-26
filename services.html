@@ -8,6 +8,7 @@
   <title>آمرني | بوابة الخدمات الأخرى</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
+  <script src="./app-dialogs.js?v=117" defer></script>
   <style>
     :root{--ink:#12243f;--muted:#69798f;--line:#dfe7ef;--surface:#fff;--soft:#f4f7fb;--brand:#087b75;--brand-dark:#0b4f70;--ok:#08765b;--warn:#976000;--bad:#ae263b;--shadow:0 18px 52px rgba(16,43,72,.11)}
     *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;font-family:Tahoma,Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 85% 0,rgba(27,174,158,.14),transparent 32rem),radial-gradient(circle at 5% 35%,rgba(30,97,148,.08),transparent 28rem),var(--soft)}
@@ -177,28 +178,15 @@
   <main class="shell hidden" id="providerView">
     <section class="hero"><div><span class="eyebrow">مساحة مزود الخدمة</span><h1>أهلًا، <span id="providerHeroName">شريك آمرني</span></h1><p>حدّث ملف نشاطك والخدمات التي يراها العملاء من مكان واحد.</p></div><span class="badge">✓ حساب معتمد</span></section>
     <section class="provider-admin-notice" id="providerAdminNotice" hidden><span>!</span><div><strong>تنبيه من إدارة آمرني</strong><small id="providerAdminNoticeText"></small></div></section>
-    <nav class="service-quick-nav" aria-label="التنقل داخل لوحة الخدمة"><a href="#providerView"><span aria-hidden="true">▦</span>نظرة عامة</a><a href="#serviceWalletSection"><span aria-hidden="true">💳</span>المحفظة</a><a href="#profileSection"><span aria-hidden="true">✎</span>ملف النشاط</a><a href="#requestsSection"><span aria-hidden="true">⌁</span>الطلبات</a></nav>
-    <section class="metrics"><div class="metric"><small>حالة الظهور</small><strong id="activeMetric">نشط</strong></div><div class="metric"><small>تصنيف النشاط</small><strong id="categoryMetric">—</strong></div><div class="metric"><small>الخدمات والمنتجات</small><strong id="itemsMetric">0</strong></div><div class="metric" id="requestsMetricCard"><small>طلبات العملاء</small><strong id="requestsMetric">0</strong><span class="metric-notification" id="requestAlertCount" hidden>0</span></div><div class="metric"><small>الرصيد المتاح</small><strong id="serviceWalletMetric">0 د.ع</strong></div><div class="metric"><small>تقييم العملاء</small><strong id="providerRatingMetric">جديد</strong><small id="providerRatingCount">لا توجد تقييمات بعد</small></div></section>
+    <nav class="service-quick-nav" aria-label="التنقل داخل لوحة الخدمة"><a href="#providerView"><span aria-hidden="true">▦</span>نظرة عامة</a><a href="#serviceWalletSection"><span aria-hidden="true">▶</span>الاشتراك</a><a href="#profileSection"><span aria-hidden="true">✎</span>ملف النشاط</a><a href="#requestsSection"><span aria-hidden="true">⌁</span>الطلبات</a></nav>
+    <section class="metrics"><div class="metric"><small>حالة الظهور</small><strong id="activeMetric">نشط</strong></div><div class="metric"><small>تصنيف النشاط</small><strong id="categoryMetric">—</strong></div><div class="metric"><small>الخدمات والمنتجات</small><strong id="itemsMetric">0</strong></div><div class="metric" id="requestsMetricCard"><small>طلبات العملاء</small><strong id="requestsMetric">0</strong><span class="metric-notification" id="requestAlertCount" hidden>0</span></div><div class="metric"><small>الاشتراك</small><strong id="serviceWalletMetric">مطلوب</strong></div><div class="metric"><small>تقييم العملاء</small><strong id="providerRatingMetric">جديد</strong><small id="providerRatingCount">لا توجد تقييمات بعد</small></div></section>
     <section class="card card-body provider-ratings" id="providerRatingsSection"><div class="card-head"><div><h2>تقييمات العملاء</h2><p class="muted">متوسط التقييم وآخر الآراء بعد اكتمال الطلبات.</p></div><div class="provider-rating-summary"><strong class="provider-rating-score" id="providerRatingAverage">—</strong><span class="provider-rating-stars" id="providerRatingStars">☆☆☆☆☆</span></div></div><div class="provider-rating-list" id="providerRatingsList"><div class="empty">لا توجد تقييمات بعد.</div></div></section>
     <section class="card card-body unified-wallet" id="serviceWalletSection" aria-labelledby="serviceWalletTitle">
-      <div class="unified-wallet-head"><div><span class="eyebrow" style="color:var(--brand-dark);border-color:#c7e5e1;background:#eaf7f5">المحفظة</span><h2 id="serviceWalletTitle" style="margin:8px 0 0">الرصيد والشحن</h2></div><span class="status ok" id="serviceBonusStatus">الرصيد المشحون</span></div>
-      <div class="unified-wallet-balance"><small>الرصيد المتاح</small><strong id="serviceWalletBalance">0 د.ع</strong><span id="serviceFeeSummary">نشر 1,000 د.ع • طلب 250 د.ع</span></div>
+      <div class="unified-wallet-head"><div><span class="eyebrow" style="color:var(--brand-dark);border-color:#c7e5e1;background:#eaf7f5">Google Play</span><h2 id="serviceWalletTitle" style="margin:8px 0 0">الاشتراك الشهري</h2></div><span class="status" id="subscriptionStatus">الاشتراك مطلوب</span></div>
+      <div class="unified-wallet-balance"><small>سعر الاشتراك</small><strong id="subscriptionPrice">يُحدد في Google Play</strong><span id="subscriptionNotice">يلزم اشتراك صالح لنشر النشاط وقبول الطلبات الجديدة.</span></div>
       <div class="unified-topup-grid">
-        <div>
-          <div id="serviceTransferTopupMethod">
-          <div class="unified-topup-destination"><span class="unified-wallet-icon">💳</span><div><small id="serviceTopupTransferLabel">Mastercard محلي</small><strong id="serviceTopupTransferId">معرف التحويل يظهر هنا</strong><span>اسم المستلم: <b id="serviceTopupCardHolder">إدارة آمرني</b></span></div></div>
-          <p class="muted">حوّل المبلغ إلى حساب Mastercard المحدد من الإدارة، ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
-          <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>تواصل مباشرة مع إدارة آمرني بخصوص شحن رصيد الخدمة.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
-          <form id="serviceTopupForm" class="form-grid">
-            <div class="field"><label for="serviceTopupAmount">المبلغ المحوّل (د.ع)</label><input id="serviceTopupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
-            <div class="field"><label for="serviceTopupReference">رقم/مرجع التحويل</label><input id="serviceTopupReference" maxlength="80" placeholder="مثال: رقم العملية" required></div>
-            <div class="field full"><button class="button primary wide" id="serviceTopupSubmit" type="submit">إرسال طلب الشحن إلى الإدارة</button></div>
-          </form>
-          </div>
-          <div id="serviceCardTopupMethod" style="margin-top:14px;padding-top:14px;border-top:1px solid #e1e8ed"><h3 style="margin:0 0 6px">شحن بكرت رقمي</h3><p class="muted">أدخل كرت آمرني المكوّن من 16 رقمًا. كل كرت صالح للاستخدام مرة واحدة فقط.</p><form id="serviceTopupCardRedeemForm" class="form-grid"><div class="field full"><label for="serviceTopupCardCode">رقم الكرت</label><input id="serviceTopupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div><div class="field full"><button class="button primary wide" id="serviceRedeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button></div></form></div>
-          <div class="karwa-whatsapp-panel"><strong>مجموعة واتساب آمرني</strong><small>انضم إلى مجموعة آمرني الرسمية للعملاء والكباتن ومزودي الخدمات.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب آمرني</a></div></div>          <div class="topup-method-off" id="serviceTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة.</div>
-        </div>
-        <div><h3 style="margin-top:0">طلبات الشحن</h3><div id="serviceTopupRequestsList" class="unified-topup-history"><p class="muted">لا توجد طلبات شحن بعد.</p></div></div>
+        <div><div class="unified-topup-destination"><span class="unified-wallet-icon">▶</span><div><small>بداية الاشتراك</small><strong id="subscriptionStartedAt">—</strong><span>الانتهاء: <b id="subscriptionExpiresAt">—</b></span></div></div></div>
+        <div><h3 style="margin-top:0">إدارة الاشتراك</h3><p class="muted">الدفع والتجديد حصريًا من Google Play. لا توجد حوالات يدوية أو كروت رصيد.</p><div style="display:grid;gap:8px"><button class="button primary wide" id="subscriptionButton" type="button">الاشتراك الشهري عبر Google Play</button><button class="button secondary wide" id="subscriptionRestore" type="button">استعادة / تحديث الاشتراك</button></div></div>
       </div>
     </section>
     <div class="content-grid" id="profileSection">
@@ -240,11 +228,11 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=115"></script>
+  <script src="./native-notifications.js?v=117"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./service-image-library.js?v=89"></script>
-  <script src="./iraq-governorates.js?v=115"></script>
-  <script type="module" src="./services.js?v=115"></script>
-  <script src="./pwa.js?v=115"></script>
+  <script src="./iraq-governorates.js?v=117"></script>
+  <script type="module" src="./services.js?v=117"></script>
+  <script src="./pwa.js?v=117"></script>
 </body>
 </html>

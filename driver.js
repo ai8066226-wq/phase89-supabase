@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=115";
+import { initializeApp } from "./supabase-compat.js?v=117";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=115";
+} from "./supabase-compat.js?v=117";
 import {
   addDoc,
   collection,
@@ -31,8 +31,9 @@ import {
   karwaSensitiveAction,
   karwaDriverAutoComplete,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=115";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=115";
+} from "./supabase-compat.js?v=117";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -54,13 +55,14 @@ function firestoreErrorKey(error) {
   const message = String(error?.message || "").toUpperCase();
   const details = typeof error?.details === "string" ? error.details.toUpperCase() : String(error?.details?.message || error?.details?.code || "").toUpperCase();
   const haystack = `${message} ${details}`;
-  const known = ["ORDER_TAKEN","DRIVER_NOT_AVAILABLE","DRIVER_ONLY","NOT_IN_DISPATCH_ROUND","ORDER_NOT_FOUND","NOT_ASSIGNED","INVALID_TRANSITION","OTP_INVALID"];
+  const known = ["ORDER_TAKEN","DRIVER_NOT_AVAILABLE","DRIVER_ONLY","NOT_IN_DISPATCH_ROUND","ORDER_NOT_FOUND","NOT_ASSIGNED","INVALID_TRANSITION","OTP_INVALID","SUBSCRIPTION_REQUIRED"];
   return { code, named: known.find(key => haystack.includes(key)), raw: haystack };
 }
 
 function driverSupabaseMessage(error, action = "تنفيذ العملية") {
   const e = firestoreErrorKey(error);
   if (e.named === "ORDER_TAKEN" || e.code === "already-exists") return "سبق أن قبل كابتن آخر هذا الطلب.";
+  if (e.named === "SUBSCRIPTION_REQUIRED") return "انتهى اشتراك آمرني أو لم يتم تفعيله. جدده عبر Google Play لاستقبال طلبات جديدة.";
   if (e.named === "NOT_IN_DISPATCH_ROUND") return "هذا الطلب مخصص مؤقتًا لكباتن أقرب. انتظر انتهاء جولة التوزيع ثم حاول مجددًا.";
   if (e.named === "DRIVER_NOT_AVAILABLE") return "الخادم يعتبر حسابك غير متاح. فعّل الاتصال وتأكد أن حساب الكابتن مفعل وغير محظور.";
   if (e.named === "DRIVER_ONLY" || e.code === "permission-denied" && !e.named) return "صلاحية الحساب ليست كابتن أو لا تسمح بهذه العملية. راجع تفعيل الحساب من الإدارة.";
@@ -285,7 +287,7 @@ function applyDriverGovernorateAvailability(){
   const city=normalizedDriverGovernorate(state.driverData?.city),enabled=driverGovernorateEnabled(city),notice=byId("driverGovernorateNotice"),online=byId("onlineSwitch");
   if(!state.driverData||!city){if(notice)notice.className="notice danger hidden";return;}
   if(notice){notice.className=enabled?"notice danger hidden":"notice danger driver-alert";notice.textContent=enabled?"":`الخدمة متوقفة حاليًا في ${driverGovernorates.label(city)}. لا يمكنك الاتصال أو قبول طلبات حتى تعيد الإدارة تفعيل المحافظة.`;}
-  if(online)online.disabled=!enabled||state.driverData.blocked===true;
+  if(online)online.disabled=!enabled||state.driverData.blocked===true||!hasActiveSubscription(state.userData||{});
   if(!enabled){
     byId("onlineSwitch")?.classList.remove("on");if(byId("onlineLabel"))byId("onlineLabel").textContent="المحافظة متوقفة";
     stopLocationSharing();renderOrders();
@@ -308,7 +310,7 @@ function driverTimestampMillis(value){if(!value)return 0;if(typeof value.toMilli
 function driverActiveBonus(data={}){const amount=Math.max(0,Number(data.bonusBalance||0));return amount>0&&driverTimestampMillis(data.bonusExpiresAt)>Date.now()?amount:0;}
 function driverWalletAvailable(data=state.userData||{}){return Math.max(0,Number(data?.balance||0))+driverActiveBonus(data||{});}
 function driverWalletDebitPatch(data,amount){const fee=Math.max(0,Math.round(Number(amount||0)));const paid=Math.max(0,Number(data?.balance||0));const bonus=driverActiveBonus(data||{});if(paid+bonus<fee)return null;const useBonus=Math.min(bonus,fee);return {balance:paid-(fee-useBonus),bonusBalance:Math.max(0,Number(data?.bonusBalance||0)-useBonus),updatedAt:serverTimestamp()};}
-function driverSignupBonusFields(settings=driverPricingSettings||{}){const enabled=settings.signupBonusEnabled!==false;const amount=enabled?Math.max(0,Math.round(Number(settings.signupBonusAmount??1000))):0;const hours=Math.max(1,Math.min(168,Math.round(Number(settings.signupBonusHours??24))));return {bonusBalance:amount,bonusExpiresAt:amount?new Date(Date.now()+hours*3600000):null,welcomeBonusGranted:amount>0,welcomeBonusEvaluated:true};}
+function driverSignupBonusFields(){return {bonusBalance:0,bonusExpiresAt:null,welcomeBonusGranted:false,welcomeBonusEvaluated:true};}
 function driverTransferTopupEnabled(){return driverPricingSettings?.topupTransferEnabled!==false;}
 function driverCardTopupEnabled(){return driverPricingSettings?.topupCardEnabled!==false;}
 function renderDriverTopupMethods(){
@@ -319,15 +321,29 @@ function renderDriverTopupMethods(){
   [byId("driverTopupCardCode"),byId("driverRedeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
   updateDriverTopupFormState();
 }
+function syncDriverSubscriptionUi(){
+  return mountSubscriptionUi({
+    getUser:()=>state.user,
+    getUserData:()=>state.userData||{},
+    setUserData:data=>{state.userData=data||{};renderDriverWallet();applyDriverGovernorateAvailability();},
+    toast,
+    onRender:info=>{
+      const status=byId("subscriptionStatus");if(status)status.className=`status-chip ${info.active?"approved":"pending"}`;
+      const online=byId("onlineSwitch");if(online)online.disabled=!driverGovernorateEnabled(state.driverData?.city)||state.driverData?.blocked===true||!info.active;
+    }
+  });
+}
+function requireDriverSubscription(){
+  if(hasActiveSubscription(state.userData||{}))return true;
+  syncDriverSubscriptionUi();
+  toast("يلزم اشتراك شهري صالح عبر Google Play للاتصال أو قبول طلب جديد");
+  setDriverSettingsOpen(true);
+  return false;
+}
 function renderDriverWallet(){
-  if(byId("driverWalletBalance"))byId("driverWalletBalance").textContent=`${driverWalletAvailable().toLocaleString("ar-IQ")} د.ع`;
-  const bonus=driverActiveBonus(state.userData||{});if(byId("driverBonusStatus"))byId("driverBonusStatus").textContent=bonus>0?`مجاني ${bonus.toLocaleString("ar-IQ")} د.ع حتى ${new Date(driverTimestampMillis(state.userData?.bonusExpiresAt)).toLocaleString("ar-IQ")}`:"الرصيد المشحون";
-  if(byId("driverOrderFeeLabel"))byId("driverOrderFeeLabel").textContent=driverFeeSummary();
-  if(byId("driverTopupTransferLabel"))byId("driverTopupTransferLabel").textContent=driverPricingSettings.topupTransferLabel||"Mastercard محلي";
-  if(byId("driverTopupTransferId"))byId("driverTopupTransferId").textContent=driverPricingSettings.topupTransferId||"أضف معرف التحويل من الإدارة";
-  if(byId("driverTopupCardHolder"))byId("driverTopupCardHolder").textContent=driverPricingSettings.topupCardHolder||"إدارة آمرني";
-  renderDriverTopupMethods();
-  renderDriverTopupRequests();
+  syncDriverSubscriptionUi();
+  const rate=Math.max(100,Math.min(10000,Number(state.driverData?.ratePerKm||800)));
+  if(byId("driverRatePerKm")&&document.activeElement!==byId("driverRatePerKm"))byId("driverRatePerKm").value=String(Math.round(rate));
 }
 function driverHasPendingTopup(){return state.topupRequests.some(x=>(x.status||"pending")==="pending");}
 function updateDriverTopupFormState(){
@@ -376,8 +392,12 @@ function toast(message) {
   window.driverToast = setTimeout(() => element.classList.remove("show"), 2800);
 }
 
-function requestDriverCancellationReason() {
-  const value = prompt("اكتب سبب إلغاء الطلب. السبب مطلوب وسيظهر للإدارة:", "");
+async function requestDriverCancellationReason() {
+  const value = await window.AmrniDialog.prompt("اكتب سبب إلغاء الطلب. سيُحفظ السبب في سجل الطلب ويظهر للإدارة.", "", {
+    title:"إلغاء الطلب", kicker:"تسجيل سبب الإلغاء", icon:"!", tone:"danger",
+    label:"سبب الإلغاء", placeholder:"اكتب سببًا واضحًا…", required:true, minLength:3, maxLength:300,
+    confirmText:"تأكيد الإلغاء", validationMessage:"يجب كتابة سبب واضح للإلغاء (3 أحرف على الأقل)."
+  });
   if (value === null) return null;
   const reason = String(value || "").trim();
   if (reason.length < 3) { toast("يجب كتابة سبب واضح للإلغاء (3 أحرف على الأقل)."); return null; }
@@ -1238,9 +1258,9 @@ byId("driverNotificationsMarkAll").addEventListener("click", () => {
   state.notifications.forEach(item => { item.read = true; });
   saveDriverNotifications();renderDriverNotifications();toast("تم تحديد جميع الإشعارات كمقروءة");
 });
-byId("driverNotificationsClear").addEventListener("click", () => {
+byId("driverNotificationsClear").addEventListener("click", async () => {
   if(!state.notifications.length)return toast("لا توجد إشعارات لحذفها");
-  if(confirm("حذف جميع إشعارات الكابتن المحفوظة؟")){clearDriverNotifications();toast("تم حذف جميع الإشعارات");}
+  if(await window.AmrniDialog.confirm("سيتم حذف جميع إشعارات الكابتن المحفوظة على هذا الجهاز.", { title:"حذف جميع الإشعارات", icon:"🗑", tone:"danger", confirmText:"حذف الإشعارات" })){clearDriverNotifications();toast("تم حذف جميع الإشعارات");}
 });
 byId("driverNotificationsList").addEventListener("click", event => {
   const deleteButton=event.target.closest("[data-driver-notification-delete]");
@@ -1481,7 +1501,7 @@ byId("applicationForm").addEventListener("submit", async event => {
     if (directSignup) {
       const registrationBatch=writeBatch(db);
       registrationBatch.set(doc(db, "users", accountUser.uid), {
-        name, email: registerEmail, role: "driverApplicant", balance: 0, ...welcomeBonus, notifications: true, deviceBound: true,
+        name, email: registerEmail, role: "driverApplicant", balance: 0, ...welcomeBonus, notifications: true, deviceBound: true, subscriptionStatus:"required", subscriptionEntitled:false, subscriptionProductId:"amrni_monthly_access", subscriptionPlatform:"google_play",
         createdAt: serverTimestamp(), updatedAt: serverTimestamp()
       });
       addDeviceRegistrationWrites(registrationBatch,db,accountUser.uid,"driverApplicant",deviceInfo);
@@ -1548,8 +1568,8 @@ function orderCard(order, mode) {
       ${order.customerEditedAt ? `<div class="notice" style="margin-top:8px"><strong>✏️ عدّل العميل تفاصيل الطلب</strong><span>اعتمد العناوين والملاحظات الظاهرة حاليًا؛ هذه أحدث نسخة.</span></div>` : ""}
       <div class="order-bottom">
         <div class="order-meta"><span>${escapeHtml(order.id)}</span><span>👤 ${escapeHtml(order.customerName || "عميل آمرني")}</span><span>${escapeHtml(order.payment || "نقدًا")}</span>${mode === "available" ? `<span>🗓️ ${escapeHtml(formatOrderCreatedAt(order))}</span>` : ""}${mode === "available" && Number.isFinite(distanceToOrder(order)) ? `<span>يبعد ${distanceToOrder(order).toFixed(1)} كم</span>` : ""}</div>
-        ${order.distanceKm ? `<div class="order-meta"><span>المشوار ${Number(order.distanceKm).toFixed(1)} كم</span><span>≈ ${Math.round(Number(order.durationMin||0))} دقيقة</span><span>صافي الكابتن ${money(order.driverEarnings)}</span></div>` : ""}
-        <span class="order-price">${money(order.price)}</span>
+        ${order.distanceKm ? `<div class="order-meta"><span>المشوار ${Number(order.distanceKm).toFixed(1)} كم</span><span>≈ ${Math.round(Number(order.durationMin||0))} دقيقة</span><span>${order.type==="ride"&&mode==="available"?`تسعيرتك ${money(state.driverData?.ratePerKm||800)} / كم`:`صافي الكابتن ${money(order.driverEarnings)}`}</span></div>` : ""}
+        <span class="order-price">${order.type==="ride"&&mode==="available"?`≈ ${money(Number(order.distanceKm||0)*Number(state.driverData?.ratePerKm||800))}`:money(order.price)}</span>
       </div>
       ${order.type==="ride"&&statusIndex===2?`<div class="order-meta"><span>📍 إذا لم تُدخل رمز العميل، سيؤكد آمرني الوصول تلقائيًا عندما تصلان معًا إلى الوجهة عبر GPS الدقيق.</span></div>`:""}
       ${action || scanAction ? `<div class="order-actions">${scanAction}${action}</div>` : ""}
@@ -1635,7 +1655,6 @@ function openDriverDashboard() {
       return;
     }
     showView("driver");
-    byId("onlineSwitch").disabled = false;
     byId("onlineSwitch").classList.toggle("on", state.driverData.online === true);
     byId("onlineLabel").textContent = state.driverData.online ? "متصل" : "غير متصل";
     byId("vehicleSummary").textContent = `${state.driverData.vehicleType || "مركبة"} • ${state.driverData.plate || "بدون لوحة"}`;
@@ -1706,8 +1725,19 @@ function openDriverDashboard() {
   state.viewUnsubscribes.push(driverUnsubscribe, () => { if (ordersUnsubscribe) ordersUnsubscribe(); }, ratingsUnsubscribe);
 }
 
+byId("saveDriverRate")?.addEventListener("click",async event=>{
+  if(!state.user||state.userData?.role!=="driver")return toast("هذه الإعدادات متاحة للكابتن المعتمد فقط");
+  const rate=Math.round(Number(byId("driverRatePerKm")?.value||0));
+  if(!Number.isFinite(rate)||rate<100||rate>10000)return toast("سعر الكيلومتر يجب أن يكون بين 100 و10,000 د.ع");
+  const button=event.currentTarget;busy(button,true,"جارٍ الحفظ…");
+  try{await updateDoc(doc(db,"drivers",state.user.uid),{ratePerKm:rate,rateUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});toast(`تم حفظ التسعيرة: ${money(rate)} لكل كم`);}
+  catch(error){console.error(error);toast(driverSupabaseMessage(error,"حفظ تسعيرة الكيلومتر"));}
+  finally{busy(button,false);}
+});
+
 byId("onlineSwitch").addEventListener("click", async () => {
   if (!state.user || !state.driverData) return;
+  if (!hasActiveSubscription(state.userData||{}) && state.driverData.online!==true) return requireDriverSubscription();
   if (state.driverData.blocked === true) {
     toast("الحساب محظور ولا يمكن تفعيل الاتصال");
     return;
@@ -1741,6 +1771,7 @@ document.addEventListener("click", async event => {
   busy(button, true);
   try {
     if (button.dataset.action === "accept") {
+      if (!requireDriverSubscription()) return;
       if (!state.driverData?.online) throw new Error("OFFLINE");
       if(!driverGovernorateEnabled(state.driverData?.city))throw new Error("GOVERNORATE_DISABLED");
       const result=await karwaSensitiveAction("driver_accept_order",{orderId:button.dataset.id});
@@ -1748,7 +1779,7 @@ document.addEventListener("click", async event => {
       if (state.lastPosition) await sharePosition(state.lastPosition, true);
       setTimeout(()=>drawPickupRoute(true),400); toast("تم قبول الطلب بنجاح");
     } else if (button.dataset.action === "cancel") {
-      const reason=requestDriverCancellationReason(); if(!reason)return;
+      const reason=await requestDriverCancellationReason(); if(!reason)return;
       await karwaSensitiveAction("driver_cancel_order",{orderId:button.dataset.id,reason});
       toast("تم إلغاء الطلب وتسجيل السبب للإدارة");
     } else if (button.dataset.action === "advance") {
@@ -1839,7 +1870,6 @@ onAuthStateChanged(auth, user => {
     karwaTouchActivity(state.userData.role || "driver").catch(error => console.warn("تعذر تحديث آخر نشاط للكابتن", error));
     updateDriverNotificationSetting();
     renderDriverWallet();
-    if (!state.topupUnsubscribe) subscribeDriverTopups(user);
     if (state.userData.role === "driver") {
       openDriverDashboard();
     } else if (state.userData.role === "driverApplicant" || state.userData.role === "serviceApplicant" || state.userData.role === "serviceProvider") {
@@ -1870,7 +1900,8 @@ window.addEventListener("beforeunload", () => {
 
 // Phase 11 — mutual reputation and safety
 window.karwaRateCustomer=async(orderId)=>{
-  const score=Number(prompt("قيّم الراكب من 1 إلى 5:","5"));if(!score||score<1||score>5||!state.user)return;
+  const value=await window.AmrniDialog.prompt("اختر تقييم الراكب من 1 إلى 5 نجوم.","5",{title:"تقييم الراكب",icon:"★",label:"عدد النجوم",hint:"أدخل رقمًا من 1 إلى 5",required:true,multiline:false,inputType:"number",inputMode:"numeric",maxLength:1,confirmText:"حفظ التقييم"});
+  const score=Number(value);if(!score||score<1||score>5||!state.user){if(value!==null)toast("أدخل تقييمًا صحيحًا من 1 إلى 5");return;}
   try{
     const order=state.orders.find(item=>item.firestoreId===orderId);if(!order||!order.userId)throw new Error("ORDER_NOT_FOUND");
     await setDoc(doc(db,"customerRatings",orderId),{orderId,customerId:order.userId,driverId:state.user.uid,score:Math.round(score),createdAt:serverTimestamp()});
@@ -1878,7 +1909,8 @@ window.karwaRateCustomer=async(orderId)=>{
   }catch(e){console.error(e);toast("تعذر حفظ التقييم أو تم تقييم الرحلة سابقًا");}
 };
 window.karwaDriverSOS=async(orderId)=>{
-  if(!state.user||!confirm("إرسال تنبيه سلامة عاجل للإدارة؟"))return;
+  if(!state.user)return;
+  if(!await window.AmrniDialog.confirm("سيصل تنبيه سلامة عاجل إلى الإدارة مرتبطًا بالطلب وموقعك الحالي إن كان متاحًا.",{title:"تنبيه سلامة عاجل",icon:"SOS",tone:"danger",confirmText:"إرسال التنبيه الآن"}))return;
   try{
     await addDoc(collection(db,"safetyEvents"),{orderId,reportedBy:state.user.uid,reporterRole:"driver",kind:"driver_sos",latitude:state.lastPosition?.latitude??null,longitude:state.lastPosition?.longitude??null,note:"SOS من الكابتن",createdAt:serverTimestamp()});
     toast("تم إرسال تنبيه السلامة");

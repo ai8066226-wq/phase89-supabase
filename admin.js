@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=115";
+import { initializeApp } from "./supabase-compat.js?v=117";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=115";
+} from "./supabase-compat.js?v=117";
 import {
   collection,
   doc,
@@ -24,7 +24,7 @@ import {
   karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=115";
+} from "./supabase-compat.js?v=117";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -727,13 +727,67 @@ byId("deniedLogout").addEventListener("click", async () => {
   }
 });
 
+function adminSubscriptionTimestamp(value){
+  if(!value)return 0;
+  if(typeof value?.toMillis==="function")return Number(value.toMillis())||0;
+  if(Number.isFinite(Number(value?.seconds)))return Number(value.seconds)*1000;
+  const n=Number(value);if(Number.isFinite(n)&&n>1000000000)return n>100000000000?n:n*1000;
+  const parsed=Date.parse(String(value));return Number.isFinite(parsed)?parsed:0;
+}
+function adminSubscriptionMeta(user={}){
+  const status=String(user.subscriptionStatus||"required").toLowerCase();
+  const startedAt=adminSubscriptionTimestamp(user.subscriptionStartedAt);
+  const expiresAt=adminSubscriptionTimestamp(user.subscriptionExpiresAt);
+  const active=user.subscriptionEntitled===true&&expiresAt>Date.now()&&["active","canceled","cancelled","grace"].includes(status);
+  const label=active?(status==="grace"?"فترة سماح":(["canceled","cancelled"].includes(status)?"ملغي • فعال حتى الانتهاء":"نشط")):(expiresAt&&expiresAt<=Date.now()?"منتهي":status==="on_hold"?"الدفع معلّق":status==="paused"?"متوقف مؤقتًا":status==="pending"?"بانتظار الدفع":"غير مشترك");
+  return {status,startedAt,expiresAt,active,label,css:active?(status==="grace"?"grace":"active"):"expired"};
+}
+function adminSubscriptionDate(ms){return ms?new Date(ms).toLocaleString("ar-IQ") : "—";}
+function adminSubscriptionInline(user={}){
+  const meta=adminSubscriptionMeta(user);
+  return `<span><b>الاشتراك:</b> <i class="subscription-state ${meta.css}">${escapeHtml(meta.label)}</i></span><span><b>البدء:</b> ${escapeHtml(adminSubscriptionDate(meta.startedAt))}</span><span><b>الانتهاء:</b> ${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</span>`;
+}
+function renderSubscriptions(){
+  const users=state.users.filter(user=>String(user.role||"customer")!=="admin");
+  const term=String(byId("subscriptionSearchInput")?.value||"").trim().toLocaleLowerCase("ar");
+  const role=byId("subscriptionRoleFilter")?.value||"all";
+  const filtered=users.filter(user=>{
+    if(role!=="all"&&String(user.role||"customer")!==role)return false;
+    if(!term)return true;
+    return [user.name,user.email,user.phone,user.businessName,user.city].some(value=>String(value||"").toLocaleLowerCase("ar").includes(term));
+  }).sort((a,b)=>{
+    const ma=adminSubscriptionMeta(a),mb=adminSubscriptionMeta(b);
+    if(ma.active!==mb.active)return ma.active?1:-1;
+    return Number(ma.expiresAt||0)-Number(mb.expiresAt||0);
+  });
+  const metas=users.map(adminSubscriptionMeta);
+  const active=metas.filter(x=>x.active).length,grace=metas.filter(x=>x.active&&x.status==="grace").length,expired=users.length-active;
+  if(byId("subscriptionsTotal"))byId("subscriptionsTotal").textContent=String(users.length);
+  if(byId("subscriptionsActive"))byId("subscriptionsActive").textContent=String(active);
+  if(byId("subscriptionsExpired"))byId("subscriptionsExpired").textContent=String(expired);
+  if(byId("subscriptionsGrace"))byId("subscriptionsGrace").textContent=String(grace);
+  if(byId("subscriptionsAttentionBadge")){byId("subscriptionsAttentionBadge").textContent=`${expired} يحتاج تجديد`;byId("subscriptionsAttentionBadge").className=`status-chip ${expired?"pending":"approved"}`;}
+  if(byId("navSubscriptionsCount"))byId("navSubscriptionsCount").textContent=String(expired);
+  if(byId("subscriptionFilteredCount"))byId("subscriptionFilteredCount").textContent=`${filtered.length} حساب`;
+  const host=byId("subscriptionsList");if(!host)return;
+  host.innerHTML=filtered.length?filtered.map(user=>{
+    const meta=adminSubscriptionMeta(user),uid=user.firestoreId||"";
+    const driver=state.drivers.find(item=>item.firestoreId===uid)||{};
+    const roleLabel=accountRoleLabel(user.role||"customer");
+    const rate=String(user.role||"")==="driver"?`${Number(driver.ratePerKm||800).toLocaleString("ar-IQ")} د.ع/كم`:"—";
+    return `<article class="subscription-admin-row ${meta.active?"":"is-expired"}"><div class="identity"><strong>${escapeHtml(user.name||user.businessName||user.email||"حساب آمرني")}</strong><small>${escapeHtml(user.email||user.phone||uid)}</small><span class="subscription-state ${meta.css}">${escapeHtml(meta.label)}</span></div><div class="subscription-admin-cell"><small>الفئة</small><b>${escapeHtml(roleLabel)}</b></div><div class="subscription-admin-cell"><small>تاريخ الاشتراك</small><b>${escapeHtml(adminSubscriptionDate(meta.startedAt))}</b></div><div class="subscription-admin-cell"><small>انتهاء الفترة</small><b>${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</b></div><div class="subscription-admin-cell"><small>${user.role==="driver"?"تسعيرة الكابتن":"التجديد"}</small><b>${escapeHtml(user.role==="driver"?rate:(user.subscriptionAutoRenewing===true?"تلقائي":"يدوي/ملغي"))}</b></div></article>`;
+  }).join(""):`<div class="empty"><span>🔎</span>لا توجد حسابات مطابقة للتصفية المحددة.</div>`;
+}
+byId("subscriptionSearchInput")?.addEventListener("input",renderSubscriptions);
+byId("subscriptionRoleFilter")?.addEventListener("change",renderSubscriptions);
+
 function renderMetrics() {
   const notifications = adminNotificationCounts();
   byId("usersCount").textContent = state.users.filter(user => !user.role || user.role === "customer").length;
   byId("driversCount").textContent = state.drivers.length;
   byId("serviceProvidersCount").textContent = state.users.filter(user => user.role === "serviceProvider").length;
   byId("blockedCount").textContent = state.drivers.filter(driver => driver.blocked === true).length;
-  byId("pendingCount").textContent = notifications.captainApplications + notifications.serviceApplications + notifications.topups + notifications.pendingServiceRequests + notifications.deviceChanges;
+  byId("pendingCount").textContent = notifications.captainApplications + notifications.serviceApplications + notifications.pendingServiceRequests + notifications.deviceChanges;
   byId("ordersCount").textContent = state.orders.length + state.serviceRequests.length;
   byId("liveTripsCount").textContent = state.orders.filter(o => !o.cancelled && Number(o.statusIndex||0) > 0 && Number(o.statusIndex||0) < 4).length;
   byId("cancelledTripsCount").textContent = state.orders.filter(o => o.cancelled).length;
@@ -822,7 +876,6 @@ function driverCard(driver) {
   const cancelledOrders = driverOrders.filter(o => o.cancelled === true);
   const captainEarnings = completedOrders.reduce((sum,o) => sum + Number(o.driverEarnings || 0), 0);
   const captainUser = state.users.find(user => user.firestoreId === driver.firestoreId) || {};
-  const captainWallet = financeWalletOf(captainUser);
   const blocked = driver.blocked === true;
   const status = blocked ? "محظور" : driver.online ? "متصل" : "غير متصل";
   const statusClass = blocked ? "rejected" : driver.online ? "approved" : "pending";
@@ -845,7 +898,7 @@ function driverCard(driver) {
         <span><small>رقم اللوحة</small><b>${escapeHtml(driver.plate || "-")}</b></span>
         ${!isBikeVehicle(driver) ? `<span><small>السيارة / الموديل</small><b>${escapeHtml(driver.vehicleMake || "-")} ${escapeHtml(driver.vehicleModel || "")}</b></span><span><small>حالة السيارة</small><b>${escapeHtml(driver.vehicleCondition || "غير محددة")}</b></span>` : `<span><small>نطاق العمل</small><b>توصيل أغراض وطعام</b></span>`}
       </div>
-      <div class="captain-balance"><small>الرصيد الفعلي المتاح في محفظة الكابتن</small><strong>${money(captainWallet.available)}</strong><div class="actual-balance-detail"><span>مشحون: <b>${money(captainWallet.paid)}</b></span><span>مجاني صالح: <b>${money(captainWallet.bonus)}</b></span><span>أرباح الرحلات المكتملة: <b>${money(captainEarnings)}</b></span></div></div>
+      <div class="captain-balance"><small>اشتراك الكابتن وتسعيرته</small><strong>${Number(driver.ratePerKm||800).toLocaleString("ar-IQ")} د.ع / كم</strong><div class="actual-balance-detail">${adminSubscriptionInline(captainUser)}<span>أرباح الرحلات المكتملة: <b>${money(captainEarnings)}</b></span></div></div>
       <div class="order-meta driver-trip-stats">
         <span><strong>${trips.completed}</strong> مكتملة</span>
         <span><strong>${trips.cancelled}</strong> ملغاة</span>
@@ -975,7 +1028,6 @@ function serviceApplicationCard(application) {
   const providerUid = String(profile?.firestoreId || profile?.ownerId || restaurant?.ownerId || applicationUid);
   const providerRating = providerRatingSummary(providerUid);
   const providerUser = state.users.find(user => user.firestoreId === providerUid) || {};
-  const providerWallet = financeWalletOf(providerUser);
   const blocked = profile?.blocked === true || restaurant?.blocked === true;
   const warningCount = Number(profile?.warningCount || 0);
   const visibleStatus = blocked ? "محظور" : labels[status] || status;
@@ -991,7 +1043,7 @@ function serviceApplicationCard(application) {
     <div class="order-meta"><span>البريد: ${escapeHtml(application.email || "—")}</span><span>العنوان: ${escapeHtml(address)}</span><span>GPS: ${escapeHtml(gps)}</span></div>
     ${application.description ? `<p class="admin-note">${escapeHtml(application.description)}</p>` : ""}
     <div class="order-meta"><span>العناصر المضافة: ${Array.isArray(items) ? items.length : 0}</span><span>★ ${providerRating.count ? providerRating.average.toFixed(1) : "جديد"} • ${providerRating.count} تقييم</span><span>⚠ ${warningCount} تنبيه</span>${application.legacy ? `<span>طلب قديم — مدعوم تلقائيًا</span>` : ""}</div>
-    <div class="captain-balance"><small>الرصيد الفعلي المتاح للخدمة</small><strong>${money(providerWallet.available)}</strong><div class="actual-balance-detail"><span>مشحون: <b>${money(providerWallet.paid)}</b></span><span>مجاني صالح: <b>${money(providerWallet.bonus)}</b></span></div></div>
+    <div class="captain-balance"><small>اشتراك مزود الخدمة</small><strong>${escapeHtml(adminSubscriptionMeta(providerUser).label)}</strong><div class="actual-balance-detail">${adminSubscriptionInline(providerUser)}</div></div>
     ${application.reviewNote ? `<p class="admin-note danger-note">ملاحظة المراجعة: ${escapeHtml(application.reviewNote)}</p>` : ""}
     ${profile?.warningMessage ? `<p class="admin-note">آخر تنبيه: ${escapeHtml(profile.warningMessage)}</p>` : ""}
     ${blocked && profile?.blockReason ? `<p class="admin-note danger-note">سبب الحظر: ${escapeHtml(profile.blockReason)}</p>` : ""}
@@ -1227,13 +1279,13 @@ function setAllGovernorates(enabled){
   document.querySelectorAll('#governoratesGrid input[data-governorate]').forEach(input=>{input.checked=enabled;input.dispatchEvent(new Event("change"));});
 }
 byId("enableAllGovernorates")?.addEventListener("click",()=>setAllGovernorates(true));
-byId("disableAllGovernorates")?.addEventListener("click",()=>{
-  if(confirm("سيؤدي إيقاف الكل إلى تعطيل التسجيل والنشر وقبول الطلبات في جميع المحافظات. هل تريد المتابعة؟"))setAllGovernorates(false);
+byId("disableAllGovernorates")?.addEventListener("click",async()=>{
+  if(await window.AmrniDialog.confirm("سيؤدي إيقاف الكل إلى تعطيل التسجيل والنشر وقبول الطلبات في جميع المحافظات.", { title:"إيقاف الخدمة في العراق", icon:"!", tone:"danger", confirmText:"إيقاف جميع المحافظات" }))setAllGovernorates(false);
 });
 byId("governoratesSettingsForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user||!governoratesApi)return;
   const enabledGovernorates=selectedGovernorateNames();
-  if(!enabledGovernorates.length&&!confirm("لم تُفعّل أي محافظة. ستتوقف الخدمة ميدانيًا في العراق بالكامل. حفظ هذا القرار؟"))return;
+  if(!enabledGovernorates.length&&!await window.AmrniDialog.confirm("لم تُفعّل أي محافظة؛ ستتوقف الخدمة ميدانيًا في العراق بالكامل.", { title:"حفظ الإيقاف الكامل", icon:"!", tone:"danger", confirmText:"حفظ القرار" }))return;
   const button=byId("saveGovernorates");busy(button,true,"جارٍ التطبيق…");
   try{
     await setDoc(doc(db,"appSettings","pricing"),{enabledGovernorates,governoratesUpdatedAt:serverTimestamp(),governoratesUpdatedBy:state.user.uid},{merge:true});
@@ -1521,6 +1573,7 @@ function openDashboard() {
   const usersUnsubscribe = onSnapshot(collection(db, "users"), snapshot => {
     state.users = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
     renderMetrics();
+    renderSubscriptions();
     renderDrivers();
     renderServiceApplications();
     renderCancellations();
@@ -1734,6 +1787,7 @@ function renderAccountDirectory() {
       <div class="account-directory-cell"><small>الهاتف</small><b>${escapeHtml(account.phone || "—")}</b></div>
       <div class="account-directory-cell"><small>الصنف</small><b>${escapeHtml(categoryText)}</b></div>
       <div class="account-directory-cell"><small>آخر نشاط</small><b>${escapeHtml(accountActivityText(account))}</b><small>${escapeHtml(activityDate)}</small></div>
+      <div class="account-directory-cell"><small>الاشتراك</small>${(()=>{const subUser=state.users.find(u=>u.firestoreId===account.id)||{};const meta=adminSubscriptionMeta(subUser);return `<b>${escapeHtml(meta.label)}</b><small>ينتهي: ${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</small>`;})()}</div>
       <button class="danger" type="button" data-action="delete-account" data-id="${escapeHtml(account.id)}" data-name="${escapeHtml(name)}" data-email="${escapeHtml(account.email || "")}" data-role="${escapeHtml(account.role)}" data-category="${escapeHtml(categoryText)}">حذف نهائي</button>
     </article>`;
   }).join("") : `<div class="empty"><span>🔎</span>${state.accountDirectoryLoading ? "جاري تحميل الحسابات…" : "لا توجد حسابات مطابقة للتصفية المحددة."}</div>`;
@@ -1832,7 +1886,7 @@ document.addEventListener("click", async event => {
         category: button.dataset.category || ""
       });
     } else if (button.dataset.action === "zero-wallet-balances") {
-      const confirmation = prompt('هذه العملية ستجعل الرصيد المشحون والمجاني لكل العملاء والكباتن والخدمات صفرًا. اكتب "تصفير" للمتابعة:')?.trim();
+      const confirmation = (await window.AmrniDialog.prompt('ستصبح الأرصدة المشحونة والمجانية لكل العملاء والكباتن والخدمات صفرًا. اكتب «تصفير» لتأكيد العملية.', "", { title:"تصفير جميع المحافظ", kicker:"إجراء مالي حساس", icon:"!", tone:"danger", label:"عبارة التأكيد", placeholder:"تصفير", required:true, expectedValue:"تصفير", multiline:false, maxLength:20, confirmText:"تصفير الأرصدة", validationMessage:'اكتب كلمة «تصفير» كما هي للمتابعة.' }))?.trim();
       if (confirmation !== "تصفير") return toast("تم إلغاء تصفير الأرصدة");
       const targets = financeAccounts().filter(account => account.wallet.paid > 0 || account.wallet.storedBonus > 0 || account.bonusExpiresAt);
       await commitFinanceBatches(targets, (batch, account) => batch.update(doc(db, "users", account.firestoreId), {
@@ -1855,7 +1909,7 @@ document.addEventListener("click", async event => {
       renderServiceApplications();
       toast(`تم تصفير أرصدة ${targets.length} حساب بنجاح`);
     } else if (button.dataset.action === "reset-finance-report") {
-      const confirmation = prompt('سيبدأ التقرير المالي من هذه اللحظة مع إبقاء الطلبات القديمة محفوظة. اكتب "تصفير التقرير" للمتابعة:')?.trim();
+      const confirmation = (await window.AmrniDialog.prompt('سيبدأ التقرير المالي من هذه اللحظة مع إبقاء الطلبات القديمة محفوظة. اكتب «تصفير التقرير» للمتابعة.', "", { title:"بدء فترة مالية جديدة", kicker:"إجراء مالي حساس", icon:"↻", tone:"warning", label:"عبارة التأكيد", placeholder:"تصفير التقرير", required:true, expectedValue:"تصفير التقرير", multiline:false, maxLength:30, confirmText:"بدء التقرير الجديد", validationMessage:'اكتب «تصفير التقرير» كما هي للمتابعة.' }))?.trim();
       if (confirmation !== "تصفير التقرير") return toast("تم إلغاء تصفير التقرير");
       const resetAt = serverTimestamp();
       const localResetAt = { seconds: Math.floor(Date.now() / 1000), nanoseconds: (Date.now() % 1000) * 1000000 };
@@ -1869,7 +1923,7 @@ document.addEventListener("click", async event => {
       renderFinancialReport();
       toast("تم تصفير التقرير المالي وبدأت فترة جديدة");
     } else if (button.dataset.action === "delete-financial-records") {
-      const confirmation = prompt('سيتم حذف طلبات الشحن وسجل حركات المحفظة وأقفال الشحن نهائيًا، وبدء التقرير من جديد، من دون حذف الطلبات التشغيلية. اكتب "حذف السجلات" للمتابعة:')?.trim();
+      const confirmation = (await window.AmrniDialog.prompt('ستُحذف طلبات الشحن وحركات المحفظة وأقفال الشحن نهائيًا، وسيبدأ التقرير من جديد دون حذف الطلبات التشغيلية. اكتب «حذف السجلات» للمتابعة.', "", { title:"حذف السجلات المالية", kicker:"حذف نهائي", icon:"🗑", tone:"danger", label:"عبارة التأكيد", placeholder:"حذف السجلات", required:true, expectedValue:"حذف السجلات", multiline:false, maxLength:30, confirmText:"حذف السجلات نهائيًا", validationMessage:'اكتب «حذف السجلات» كما هي للمتابعة.' }))?.trim();
       if (confirmation !== "حذف السجلات") return toast("تم إلغاء حذف السجلات المالية");
       const records = [
         ...state.topupRequests.map(item => ({ collection: "topupRequests", id: item.firestoreId })),
@@ -1929,7 +1983,7 @@ document.addEventListener("click", async event => {
       });
       toast("تم استبدال الجهاز. يمكن للمستخدم تسجيل الدخول من الهاتف الجديد الآن.");
     } else if (button.dataset.action === "reject-device-change") {
-      const note=prompt("سبب رفض تغيير الجهاز:","تعذر التحقق من طلب استبدال الهاتف")?.trim();
+      const note=(await window.AmrniDialog.prompt("اكتب سبب رفض طلب استبدال الهاتف ليظهر لصاحب الحساب.","تعذر التحقق من طلب استبدال الهاتف",{title:"رفض تغيير الجهاز",icon:"📱",tone:"warning",label:"سبب الرفض",required:true,minLength:3,maxLength:200,confirmText:"رفض الطلب"}))?.trim();
       if(!note)return;
       await updateDoc(doc(db,"deviceChangeRequests",id),{status:"rejected",reviewNote:note.slice(0,200),reviewedBy:state.user.uid,reviewedAt:serverTimestamp(),updatedAt:serverTimestamp()});
       toast("تم رفض طلب تغيير الجهاز");
@@ -1937,7 +1991,7 @@ document.addEventListener("click", async event => {
       await karwaSensitiveAction("review_topup",{requestId:id,decision:"approved",note:""});
       toast("تم اعتماد الشحن وإضافة نفس المبلغ إلى الرصيد المشحون");
     } else if (button.dataset.action === "reject-topup") {
-      const note=prompt("سبب الرفض:","تعذر مطابقة التحويل")?.trim(); if(!note)return;
+      const note=(await window.AmrniDialog.prompt("اكتب سبب رفض طلب شحن الرصيد ليظهر للمستخدم.","تعذر مطابقة التحويل",{title:"رفض طلب الشحن",icon:"!",tone:"warning",label:"سبب الرفض",required:true,minLength:3,maxLength:200,confirmText:"رفض طلب الشحن"}))?.trim(); if(!note)return;
       await karwaSensitiveAction("review_topup",{requestId:id,decision:"rejected",note:note.slice(0,200)});
       toast("تم رفض / إلغاء طلب الشحن ويمكن للمستخدم إرسال طلب جديد");
     } else if (button.dataset.action === "approve-service") {
@@ -2016,7 +2070,7 @@ document.addEventListener("click", async event => {
       await batch.commit();
       toast(existingUser ? "تم قبول مزود الخدمة وفتح لوحته الخاصة" : "تم قبول مزود الخدمة وإصلاح ملف المستخدم القديم تلقائيًا");
     } else if (button.dataset.action === "reject-service") {
-      const note = prompt("سبب الرفض أو البيانات المطلوب تعديلها:", "يرجى استكمال بيانات النشاط")?.trim();
+      const note = (await window.AmrniDialog.prompt("وضّح سبب الرفض أو البيانات المطلوب من صاحب الخدمة تعديلها.", "يرجى استكمال بيانات النشاط", { title:"مراجعة طلب الخدمة",icon:"✎",tone:"warning",label:"ملاحظة الإدارة",required:true,minLength:3,maxLength:300,confirmText:"رفض الطلب وإرسال الملاحظة" }))?.trim();
       if (!note) return;
       const legacy = button.dataset.source === "legacy";
       const application = legacy
@@ -2045,7 +2099,7 @@ document.addEventListener("click", async event => {
     } else if (button.dataset.action === "warn-service-provider") {
       const profile = state.serviceProfiles.find(item => item.firestoreId === id || item.ownerId === id);
       if (!profile) throw new Error("SERVICE_PROFILE_NOT_FOUND");
-      const note = prompt(`اكتب التنبيه الذي سيظهر لصاحب ${serviceCategoryLabels[profile.category] || "الخدمة"}:`, "يرجى الالتزام بسياسة الخدمة")?.trim();
+      const note = (await window.AmrniDialog.prompt(`اكتب التنبيه الذي سيظهر لصاحب ${serviceCategoryLabels[profile.category] || "الخدمة"}.`, "يرجى الالتزام بسياسة الخدمة", { title:"إرسال تنبيه إداري",icon:"🔔",tone:"warning",label:"نص التنبيه",required:true,minLength:3,maxLength:300,confirmText:"إرسال التنبيه" }))?.trim();
       if (!note) return;
       await setDoc(doc(db, "serviceProfiles", id), {
         warningCount: increment(1),
@@ -2058,7 +2112,7 @@ document.addEventListener("click", async event => {
     } else if (button.dataset.action === "block-service-provider") {
       const profile = state.serviceProfiles.find(item => item.firestoreId === id || item.ownerId === id);
       if (!profile) throw new Error("SERVICE_PROFILE_NOT_FOUND");
-      const reason = prompt(`اكتب سبب حظر صاحب ${serviceCategoryLabels[profile.category] || "الخدمة"}:`, "مخالفة سياسة الخدمة")?.trim();
+      const reason = (await window.AmrniDialog.prompt(`اكتب سبب حظر صاحب ${serviceCategoryLabels[profile.category] || "الخدمة"}. سيظهر السبب لصاحب الحساب.`, "مخالفة سياسة الخدمة", { title:"حظر صاحب الخدمة",icon:"⛔",tone:"danger",label:"سبب الحظر",required:true,minLength:3,maxLength:300,confirmText:"حظر الحساب" }))?.trim();
       if (!reason) return;
       const batch = writeBatch(db);
       batch.set(doc(db, "serviceProfiles", id), {
@@ -2080,7 +2134,7 @@ document.addEventListener("click", async event => {
       await batch.commit();
       toast("تم حظر صاحب الخدمة وإخفاء نشاطه وإيقاف استقبال الطلبات");
     } else if (button.dataset.action === "unblock-service-provider") {
-      if (!confirm("هل تريد رفع الحظر؟ سيبقى النشاط غير منشور حتى يفعّله صاحبه من جديد.")) return;
+      if (!await window.AmrniDialog.confirm("سيُرفع الحظر، لكن سيبقى النشاط غير منشور حتى يفعّله صاحبه من جديد.", { title:"رفع حظر صاحب الخدمة",icon:"✓",confirmText:"رفع الحظر" })) return;
       const batch = writeBatch(db);
       batch.set(doc(db, "serviceProfiles", id), {
         blocked: false,
@@ -2141,7 +2195,7 @@ document.addEventListener("click", async event => {
       await batch.commit();
       toast(existingUser ? "تم قبول الكابتن وتفعيل حسابه" : "تم قبول الكابتن وإصلاح ملف المستخدم القديم تلقائيًا");
     } else if (button.dataset.action === "reject") {
-      const note = prompt("سبب الرفض أو المطلوب تعديله:", "يرجى مراجعة بيانات المركبة")?.trim();
+      const note = (await window.AmrniDialog.prompt("وضّح سبب الرفض أو البيانات المطلوب من الكابتن تعديلها.", "يرجى مراجعة بيانات المركبة", { title:"مراجعة طلب الكابتن",icon:"✎",tone:"warning",label:"ملاحظة الإدارة",required:true,minLength:3,maxLength:300,confirmText:"رفض الطلب وإرسال الملاحظة" }))?.trim();
       if (!note) return;
       const rejectBatch = writeBatch(db);
       rejectBatch.update(doc(db, "driverApplications", id), {
@@ -2154,7 +2208,7 @@ document.addEventListener("click", async event => {
       await rejectBatch.commit();
       toast("تم رفض الطلب مع إرسال الملاحظة");
     } else if (button.dataset.action === "warn-driver") {
-      const note = prompt("اكتب التنبيه الذي سيظهر للكابتن:", "يرجى الالتزام بسياسة الخدمة")?.trim();
+      const note = (await window.AmrniDialog.prompt("اكتب التنبيه الإداري الذي سيظهر للكابتن.", "يرجى الالتزام بسياسة الخدمة", { title:"إرسال تنبيه للكابتن",icon:"🔔",tone:"warning",label:"نص التنبيه",required:true,minLength:3,maxLength:300,confirmText:"إرسال التنبيه" }))?.trim();
       if (!note) return;
       await updateDoc(doc(db, "drivers", id), {
         warningCount: increment(1),
@@ -2164,7 +2218,7 @@ document.addEventListener("click", async event => {
       });
       toast("تم إرسال التنبيه للكابتن");
     } else if (button.dataset.action === "block-driver") {
-      const reason = prompt("اكتب سبب حظر الكابتن:", "مخالفة سياسة الخدمة")?.trim();
+      const reason = (await window.AmrniDialog.prompt("اكتب سبب حظر الكابتن. سيظهر السبب لصاحب الحساب ويتوقف عن استقبال الطلبات.", "مخالفة سياسة الخدمة", { title:"حظر الكابتن",icon:"⛔",tone:"danger",label:"سبب الحظر",required:true,minLength:3,maxLength:300,confirmText:"حظر الكابتن" }))?.trim();
       if (!reason) return;
       await updateDoc(doc(db, "drivers", id), {
         blocked: true,
@@ -2175,7 +2229,7 @@ document.addEventListener("click", async event => {
       });
       toast("تم حظر الكابتن وإيقاف استقبال الطلبات");
     } else if (button.dataset.action === "unblock-driver") {
-      if (!confirm("هل تريد إعادة تفعيل هذا الكابتن؟")) return;
+      if (!await window.AmrniDialog.confirm("سيُرفع الحظر عن الكابتن، وسيحتاج إلى تشغيل حالة الاتصال لاستقبال الطلبات مجددًا.", { title:"إعادة تفعيل الكابتن",icon:"✓",confirmText:"رفع الحظر" })) return;
       await updateDoc(doc(db, "drivers", id), {
         blocked: false,
         online: false,
@@ -2185,8 +2239,8 @@ document.addEventListener("click", async event => {
       });
       toast("تمت إعادة تفعيل الكابتن");
     } else if (button.dataset.action === "cancel-order") {
-      if (!confirm("هل تريد إلغاء هذا الطلب إداريًا؟")) return;
-      const reason = prompt("اكتب سبب الإلغاء الإداري. السبب مطلوب وسيظهر في سجل الإلغاءات:", "")?.trim();
+      if (!await window.AmrniDialog.confirm("هل تريد إلغاء هذا الطلب إداريًا؟ سيُطلب تسجيل السبب في الخطوة التالية.", { title:"إلغاء الطلب إداريًا",icon:"!",tone:"danger",confirmText:"متابعة الإلغاء" })) return;
+      const reason = (await window.AmrniDialog.prompt("اكتب سبب الإلغاء الإداري. سيظهر السبب في سجل الإلغاءات.", "", { title:"سبب الإلغاء الإداري",icon:"✎",tone:"danger",label:"سبب الإلغاء",placeholder:"اكتب سببًا واضحًا…",required:true,minLength:3,maxLength:300,confirmText:"إلغاء الطلب" }))?.trim();
       if (!reason || reason.length < 3) { toast("يجب كتابة سبب واضح للإلغاء."); return; }
       const adminProfile = state.users.find(item => item.firestoreId === state.user?.uid) || {};
       await updateDoc(doc(db, "orders", id), {

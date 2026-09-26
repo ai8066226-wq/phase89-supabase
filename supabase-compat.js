@@ -34,7 +34,8 @@ function shouldUseNativeSupabase(url) {
     return parsed.pathname.startsWith("/auth/v1/") || [
       "/functions/v1/public-signup",
       "/functions/v1/delete-self",
-      "/functions/v1/admin-account-management"
+      "/functions/v1/admin-account-management",
+      "/functions/v1/verify-play-subscription"
     ].includes(parsed.pathname);
   } catch (_) { return false; }
 }
@@ -267,8 +268,12 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
 }
 export async function createUserWithEmailAndPassword(_auth, email, password) {
   let phone = signupPhoneFromPage();
-  if (!phone && typeof globalThis.prompt === "function") {
-    phone = normalizedSignupPhone(globalThis.prompt("أدخل رقم الهاتف لإنشاء حساب آمرني:", "") || "");
+  if (!phone && globalThis.AmrniDialog?.prompt) {
+    phone = normalizedSignupPhone(await globalThis.AmrniDialog.prompt("أدخل رقم الهاتف المطلوب ربطه بحساب آمرني.", "", {
+      title:"رقم الهاتف", icon:"☎", label:"رقم الهاتف", placeholder:"07XXXXXXXXX",
+      required:true, multiline:false, inputType:"tel", inputMode:"tel", maxLength:15,
+      confirmText:"متابعة إنشاء الحساب"
+    }) || "");
   }
   if (!phone) {
     const e = new Error("INVALID_PHONE");
@@ -703,6 +708,41 @@ async function karwaRpc(name, args = {}) {
   if (error) throw firebaseLikeError(error);
   return hydrateValue(data);
 }
+
+export async function karwaVerifyGooglePlaySubscription(purchase = {}) {
+  const { data: { session } = {} } = await client.auth.getSession();
+  if (!session?.access_token) {
+    const error = new Error("AUTH_REQUIRED");
+    error.code = "unauthenticated";
+    throw error;
+  }
+  const response = await karwaSupabaseFetch(`${SUPABASE_URL}/functions/v1/verify-play-subscription`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": SUPABASE_KEY
+    },
+    body: JSON.stringify({
+      productId: String(purchase?.productId || "amrni_monthly_access"),
+      purchaseToken: String(purchase?.purchaseToken || ""),
+      orderId: String(purchase?.orderId || ""),
+      purchaseState: String(purchase?.state || purchase?.purchaseState || "PURCHASED"),
+      acknowledged: purchase?.acknowledged === true,
+      autoRenewing: purchase?.autoRenewing !== false
+    })
+  });
+  let body = {};
+  try { body = await response.json(); } catch (_) {}
+  if (!response.ok) {
+    const error = new Error(String(body?.error || body?.message || `PLAY_VERIFY_${response.status}`));
+    error.code = response.status === 401 ? "unauthenticated" : "failed-precondition";
+    error.details = body;
+    throw error;
+  }
+  return body || {};
+}
+
 export async function karwaSensitiveAction(action, payload = {}) {
   return karwaRpc("karwa_sensitive_action", { p_action: String(action || ""), p_payload: resolveValue(payload, undefined) || {} });
 }

@@ -1563,6 +1563,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
+  <script src="./app-dialogs.js?v=117" defer></script>
 
 <style id="phase20-map-first">
 /* خريطة العميل بملء المساحة المرئية مع درج خدمات جانبي */
@@ -2517,7 +2518,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           <span class="nav-icon">▤</span>طلباتي
         </button>
         <button class="nav-button" data-view="wallet">
-          <span class="nav-icon">▣</span>المحفظة
+          <span class="nav-icon">▣</span>الاشتراك
         </button>
         <button class="nav-button" data-view="profile">
           <span class="nav-icon">●</span>حسابي
@@ -2816,7 +2817,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               </section>
               <dl class="customer-info-grid">
                 <div><dt>موقعك</dt><dd id="customerSettingsLocation">بغداد، العراق</dd></div>
-                <div><dt>المحفظة</dt><dd id="customerSettingsBalance">0 د.ع</dd></div>
+                <div><dt>الاشتراك</dt><dd id="customerSettingsBalance">الاشتراك مطلوب</dd></div>
                 <div><dt>الطلبات</dt><dd id="customerSettingsOrders">0</dd></div>
                 <div><dt>قيد التنفيذ</dt><dd id="customerSettingsActiveOrders">0</dd></div>
               </dl>
@@ -2860,7 +2861,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <div class="customer-settings-actions">
                 <button type="button" class="customer-settings-action primary" id="customerSettingsServices">الخدمات والحجز</button>
                 <button type="button" class="customer-settings-action" data-customer-settings-view="orders">طلباتي</button>
-                <button type="button" class="customer-settings-action" data-customer-settings-view="wallet">المحفظة</button>
+                <button type="button" class="customer-settings-action" data-customer-settings-view="wallet">الاشتراك</button>
                 <button type="button" class="customer-settings-action" id="customerSettingsAddresses">العناوين المحفوظة</button>
                 <button type="button" class="customer-settings-action" id="customerSettingsSupport">المساعدة والدعم</button>
                 <button type="button" class="customer-settings-action" data-customer-settings-view="profile">الملف الشخصي</button>
@@ -2888,55 +2889,28 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 
         <section class="view" id="wallet">
           <div class="page-heading">
-            <h1>الرصيد والشحن</h1>
-            <p>اشحن رصيدك بتحويل محلي إلى حساب Mastercard الخاص بالإدارة، ثم أرسل مرجع العملية للمراجعة.</p>
+            <h1>الاشتراك الشهري</h1>
+            <p>تشغيل آمرني يعتمد على اشتراك شهري موحّد وآمن عبر Google Play فقط. لا يوجد شحن يدوي أو كروت رصيد.</p>
           </div>
 
           <div class="wallet-card">
-            <p>الرصيد المتاح</p>
-            <div class="balance"><span id="walletBalance">0</span> د.ع</div>
-            <small class="wallet-note" id="walletBonusStatus">الرصيد المتاح من الشحن. عند اعتماد 10,000 د.ع يضاف 10,000 د.ع بالكامل.</small><small class="wallet-note">رسم آمرني على كل طلب: <b id="customerOrderFeeLabel">250 د.ع</b> — يجب توفر الرصيد قبل إرسال الطلب.</small>
+            <p>حالة اشتراك آمرني</p>
+            <div class="balance" id="subscriptionStatus" style="font-size:clamp(28px,5vw,42px)">الاشتراك مطلوب</div>
+            <small class="wallet-note">السعر في Google Play: <b id="subscriptionPrice">يُحدد في Google Play</b></small>
+            <small class="wallet-note" id="subscriptionNotice">يلزم اشتراك صالح لإنشاء الطلبات واستخدام خدمات آمرني.</small>
           </div>
 
           <div class="wallet-grid wallet-topup-grid">
-            <div class="card topup-card" id="customerTransferTopupMethod">
-              <h2>شحن محلي عبر Mastercard</h2>
-              <div class="topup-destination">
-                <span>💳</span>
-                <div><small id="topupTransferLabel">Mastercard محلي</small><strong id="topupTransferId">معرف التحويل يظهر هنا</strong><small>اسم المستلم: <b id="topupCardHolder">إدارة آمرني</b></small></div>
-              </div>
-              <p class="muted">حوّل المبلغ من تطبيق البنك/المحفظة التي تدعم التحويل إلى Mastercard، ثم أدخل نفس المبلغ ومرجع العملية. لا تدخل PIN أو CVV أو كلمة مرور البطاقة.</p>
-              <div class="karwa-whatsapp-panel"><strong>الشحن على واتساب الخاص</strong><small>يمكنك التواصل مباشرة مع إدارة آمرني بخصوص الشحن والتحويل.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link private" href="https://wa.me/qr/XIMROQ4GQIPVB1">💬 فتح واتساب الخاص للشحن</a></div></div>
-              <form id="topupForm" class="topup-form">
-                <div class="field"><label for="topupAmount">المبلغ المحوّل (د.ع)</label><input id="topupAmount" type="number" inputmode="numeric" min="5000" max="1000000" step="5000" placeholder="5000، 10000، 15000…" required></div>
-                <div class="field"><label for="topupReference">رقم/مرجع التحويل</label><input id="topupReference" maxlength="80" placeholder="مثال: رقم العملية أو آخر أرقام المرجع" required></div>
-                <button class="primary-button" id="submitTopup" type="submit">إرسال طلب الشحن</button>
-              </form>
+            <div class="card topup-card">
+              <h2>تفاصيل الاشتراك</h2>
+              <div class="topup-destination"><span>▶</span><div><small>بداية الاشتراك</small><strong id="subscriptionStartedAt">—</strong><small>تاريخ انتهاء الفترة الحالية: <b id="subscriptionExpiresAt">—</b></small></div></div>
+              <p class="muted">يتم الدفع والتجديد وإدارة وسيلة الدفع من Google Play. عند انتهاء الاشتراك تتوقف العمليات الجديدة حتى يتم التجديد، مع عدم قطع رحلة جارية بالفعل.</p>
+              <div class="referral-actions"><button class="primary-button" id="subscriptionButton" type="button">الاشتراك الشهري عبر Google Play</button><button class="secondary-button" id="subscriptionRestore" type="button">استعادة / تحديث الاشتراك</button></div>
             </div>
-
-            <div class="card topup-card" id="customerCardTopupMethod">
-              <h2>شحن بكرت رقمي</h2>
-              <div class="topup-destination"><span>🔢</span><div><small>كرت شحن آمرني</small><strong>16 رقمًا • استخدام واحد</strong><small>أدخل الرقم الذي حصلت عليه من الإدارة.</small></div></div>
-              <form id="topupCardRedeemForm" class="topup-form">
-                <div class="field"><label for="topupCardCode">رقم الكرت</label><input id="topupCardCode" inputmode="numeric" autocomplete="one-time-code" maxlength="23" placeholder="0000 0000 0000 0000" required></div>
-                <button class="primary-button" id="redeemTopupCard" type="submit">تعبئة الرصيد بالكرت</button>
-              </form>
-            </div>
-
-            <div class="card topup-card whatsapp-community-card">
-              <h2>مجتمع آمرني على واتساب</h2>
-              <div class="karwa-whatsapp-panel"><strong>مجموعة العملاء والكباتن والخدمات</strong><small>انضم إلى مجموعة آمرني الرسمية للتواصل ومتابعة المستجدات.</small><div class="karwa-whatsapp-actions single"><a class="karwa-whatsapp-link" href="https://chat.whatsapp.com/Gn4jCH0lHJmJwsrGx7vs62?s=cl&amp;p=a&amp;mlu=4&amp;ilr=4">👥 الانضمام إلى مجموعة واتساب آمرني</a></div></div>
-            </div>
-
-            <div class="topup-method-off" id="customerTopupMethodsDisabled" hidden>الشحن متوقف مؤقتًا من الإدارة. لا توجد طريقة شحن مفعلة حاليًا.</div>
-
             <div class="card referral-card">
-              <h2>دعوة الأصدقاء وكود الخصم</h2>
-              <p class="muted">شارك كودك مع صديق. يستطيع استخدامه ككود خصم لأول مرة بحسب النسبة التي تحددها الإدارة.</p>
-              <div class="referral-code-box"><small>كود دعوتك</small><strong id="referralCodeValue">—</strong><span id="referralDiscountValue">خصم تحدده الإدارة</span></div>
-              <div class="referral-actions"><button class="primary-button" id="shareReferral" type="button">مشاركة الدعوة</button><button class="secondary-button" id="copyReferral" type="button">نسخ الكود</button></div>
-              <h3>طلبات الشحن</h3>
-              <div id="topupRequestsList" class="topup-history"><p class="muted">لا توجد طلبات شحن بعد.</p></div>
+              <h2>اشتراك واحد بدل المحفظة</h2>
+              <p class="muted">لا توجد رسوم ثابتة تُخصم من رصيد داخلي عند إنشاء الطلب. اشتراك Google Play هو ترخيص استخدام المنصة، بينما أجرة الرحلة أو الخدمة تبقى مستقلة حسب الطلب.</p>
+              <div class="referral-code-box"><small>التكسي</small><strong>حسب الكابتن</strong><span>يحدد كل كابتن سعر الكيلومتر الخاص به، وتُحسب الأجرة النهائية عند قبوله الرحلة.</span></div>
             </div>
           </div>
         </section>
@@ -3027,7 +3001,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
       <span>▤</span>طلباتي
     </button>
     <button data-view="wallet">
-      <span>▣</span>المحفظة
+      <span>▣</span>الاشتراك
     </button>
     <button data-view="profile">
       <span>●</span>حسابي
@@ -3109,7 +3083,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="modal-backdrop" id="supportModal" role="dialog" aria-modal="true">
     <div class="modal">
       <h2>كيف نساعدك؟</h2>
-      <p>أرسل تذكرة دعم مرتبطة بحسابك، ويمكن للإدارة متابعتها.</p><div class="field"><label>موضوع المشكلة</label><select id="supportCategory"><option>مشكلة في رحلة</option><option>الدفع والمحفظة</option><option>الكابتن</option><option>اقتراح أو ملاحظة</option></select></div><div class="field"><label>التفاصيل</label><textarea id="supportMessage" maxlength="500" placeholder="اكتب تفاصيل المشكلة"></textarea></div>
+      <p>أرسل تذكرة دعم مرتبطة بحسابك، ويمكن للإدارة متابعتها.</p><div class="field"><label>موضوع المشكلة</label><select id="supportCategory"><option>مشكلة في رحلة</option><option>الدفع والاشتراك</option><option>الكابتن</option><option>اقتراح أو ملاحظة</option></select></div><div class="field"><label>التفاصيل</label><textarea id="supportMessage" maxlength="500" placeholder="اكتب تفاصيل المشكلة"></textarea></div>
 
       <div class="payment-card">
         <span>💬</span>
@@ -3178,11 +3152,11 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=115"></script>
+  <script src="./native-notifications.js?v=117"></script>
   <script src="./service-themes.js?v=81"></script>
-  <script src="./iraq-governorates.js?v=115"></script>
-  <script type="module" src="./app.js?v=115"></script>
-  <script src="./pwa.js?v=115"></script>
+  <script src="./iraq-governorates.js?v=117"></script>
+  <script type="module" src="./app.js?v=117"></script>
+  <script src="./pwa.js?v=117"></script>
 
 <script id="phase20-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{

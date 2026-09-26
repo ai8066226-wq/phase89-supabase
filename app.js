@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=115";
+import { initializeApp } from "./supabase-compat.js?v=117";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=115";
+} from "./supabase-compat.js?v=117";
 import {
   addDoc,
   collection,
@@ -31,8 +31,9 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=115";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=115";
+} from "./supabase-compat.js?v=117";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -54,7 +55,7 @@ function firestoreErrorKey(error) {
   const message = String(error?.message || "").toUpperCase();
   const details = typeof error?.details === "string" ? error.details.toUpperCase() : String(error?.details?.message || error?.details?.code || "").toUpperCase();
   const haystack = `${message} ${details}`;
-  const known = ["OUTSIDE_SERVICE_AREA","AUTH_REQUIRED","CUSTOMER_ONLY","INVALID_ROUTE","CANNOT_CANCEL","NOT_OWNER","ORDER_NOT_FOUND","BAD_TOKEN"];
+  const known = ["OUTSIDE_SERVICE_AREA","AUTH_REQUIRED","CUSTOMER_ONLY","INVALID_ROUTE","CANNOT_CANCEL","NOT_OWNER","ORDER_NOT_FOUND","BAD_TOKEN","SUBSCRIPTION_REQUIRED","GOOGLE_PLAY_SUBSCRIPTION_ONLY"];
   const named = known.find(key => haystack.includes(key));
   return { code, named, raw: haystack };
 }
@@ -62,6 +63,8 @@ function firestoreErrorKey(error) {
 function customerSupabaseMessage(error, action = "تنفيذ العملية") {
   const e = firestoreErrorKey(error);
   if (e.named === "OUTSIDE_SERVICE_AREA") return "نقطة الانطلاق أو الوجهة خارج نطاق خدمة آمرني الحالي.";
+  if (e.named === "SUBSCRIPTION_REQUIRED") return "انتهى اشتراك آمرني أو لم يتم تفعيله. جدده عبر Google Play ثم أعد المحاولة.";
+  if (e.named === "GOOGLE_PLAY_SUBSCRIPTION_ONLY") return "الشحن اليدوي متوقف. الاشتراك متاح عبر Google Play فقط.";
   if (e.named === "AUTH_REQUIRED" || e.code === "unauthenticated") return "انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد المحاولة.";
   if (e.named === "CUSTOMER_ONLY" || e.code === "permission-denied") return "هذا الحساب غير مخوّل لإنشاء طلب راكب. تحقق من نوع الحساب وصلاحياته.";
   if (e.named === "INVALID_ROUTE" || e.code === "invalid-argument") return "تعذر اعتماد المسار. أعد تحديد الانطلاق والوجهة وانتظر حساب المسافة والوقت.";
@@ -113,6 +116,7 @@ let customerRegistrationInProgress = false;
 
 const state = {
   user: null,
+  userData: null,
   role: "customer",
   authMode: "login",
   vehicle: "اقتصادي",
@@ -204,6 +208,22 @@ const state = {
 };
 const marketplaceGovernorates=window.KarwaGovernorates;
 function marketplaceGovernorateEnabled(item={}){return Boolean(marketplaceGovernorates?.isEnabled(state.appSettings||{},item.governorate||item.city));}
+function syncCustomerSubscriptionUi(){
+  return mountSubscriptionUi({
+    getUser:()=>state.user,
+    getUserData:()=>state.userData||{},
+    setUserData:data=>{state.userData=data||{};const info=subscriptionInfo(state.userData);if(byId("customerSettingsBalance"))byId("customerSettingsBalance").textContent=info.active?"نشط":"مطلوب";},
+    toast:showToast,
+    onRender:info=>{if(byId("customerSettingsBalance"))byId("customerSettingsBalance").textContent=info.active?"نشط":"مطلوب";}
+  });
+}
+function requireCustomerSubscription(){
+  if(hasActiveSubscription(state.userData||{}))return true;
+  syncCustomerSubscriptionUi();
+  showToast("يلزم اشتراك شهري صالح عبر Google Play لاستخدام هذه الخدمة");
+  switchView("wallet");
+  return false;
+}
 
 const formatMoney = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
 const DEFAULT_PLATFORM_FEES = {
@@ -241,7 +261,7 @@ function activeBonusAmount(data={}){const amount=Math.max(0,Number(data.bonusBal
 function walletAvailable(data={balance:state.balance,bonusBalance:state.bonusBalance,bonusExpiresAt:state.bonusExpiresAt}){return Math.max(0,Number(data.balance||0))+activeBonusAmount(data);}
 function walletDebitPatch(data,amount){const fee=Math.max(0,Math.round(Number(amount||0)));const paid=Math.max(0,Number(data.balance||0));const bonus=activeBonusAmount(data);if(paid+bonus<fee)return null;const useBonus=Math.min(bonus,fee);const paidDebit=fee-useBonus;return {balance:paid-paidDebit,bonusBalance:Math.max(0,Number(data.bonusBalance||0)-useBonus),updatedAt:serverTimestamp()};}
 function applyWalletPatchToState(patch){if(!patch)return;state.balance=Number(patch.balance??state.balance);state.bonusBalance=Number(patch.bonusBalance??state.bonusBalance);renderBalance();}
-function signupBonusFields(settings=state.appSettings||{}){const enabled=settings.signupBonusEnabled!==false;const amount=enabled?Math.max(0,Math.round(Number(settings.signupBonusAmount??1000))):0;const hours=Math.max(1,Math.min(168,Math.round(Number(settings.signupBonusHours??24))));return {bonusBalance:amount,bonusExpiresAt:amount?new Date(Date.now()+hours*3600000-60000):null,welcomeBonusGranted:amount>0,welcomeBonusEvaluated:true};}
+function signupBonusFields(){return {bonusBalance:0,bonusExpiresAt:null,welcomeBonusGranted:false,welcomeBonusEvaluated:true};}
 function haversineKm(a,b){const R=6371,toRad=v=>v*Math.PI/180;const dLat=toRad(b.latitude-a.latitude),dLon=toRad(b.longitude-a.longitude);const x=Math.sin(dLat/2)**2+Math.cos(toRad(a.latitude))*Math.cos(toRad(b.latitude))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
 function trafficProfile(km, mins) {
   if(!km || !mins) return {multiplier:1,label:"طبيعي",ratio:1};
@@ -270,31 +290,22 @@ function updateVehicleFareCards(){
   const traffic=trafficProfile(state.routeDistanceKm,state.routeDurationMin);
   state.trafficMultiplier=traffic.multiplier; state.trafficLabel=traffic.label;
   document.querySelectorAll(".vehicle-button").forEach(button=>{
-    const fare=state.routeDistanceKm?fareForVehicle(button.dataset.vehicle):Number(button.dataset.price||0);
     const small=button.querySelector("small");
     if(small){
-      const eta=state.routeDurationMin?Math.max(1,Math.round(state.routeDurationMin*Number(vehiclePricingFor(button.dataset.vehicle).speedFactor||1))):0;
-      small.innerHTML=state.routeDistanceKm?`<b>${formatMoney(fare)}</b><span>${eta} د • ${traffic.label}</span>`:`<b>من ${formatMoney(fare)}</b><span>حدد المسار للسعر الدقيق</span>`;
+      const eta=state.routeDurationMin?Math.max(1,Math.round(state.routeDurationMin)):0;
+      small.innerHTML=state.routeDistanceKm?`<b>حسب الكابتن</b><span>${eta} د • ${traffic.label}</span>`:`<b>سعر الكيلومتر يحدده الكابتن</b><span>حدد المسار أولًا</span>`;
     }
   });
   const trafficEl=byId("rideTrafficInfo");
   if(trafficEl){
     const arrival=state.routeDurationMin?new Date(Date.now()+state.routeDurationMin*60000).toLocaleTimeString("ar-IQ",{hour:"2-digit",minute:"2-digit"}):"—";
-    trafficEl.textContent=state.routeDistanceKm?`الازدحام: ${traffic.label} • الوصول المتوقع ${arrival}`:"يظهر تقدير الازدحام ووقت الوصول بعد تحديد المسار";
+    trafficEl.textContent=state.routeDistanceKm?`المسافة ${state.routeDistanceKm.toFixed(1)} كم • الأجرة النهائية = المسافة × سعر الكابتن • الوصول المتوقع ${arrival}`:"حدد المسار، ثم يحدد الكابتن المقبول الأجرة حسب سعره لكل كيلومتر";
   }
 }
 function calculateRidePrice(){
-  if(!state.routeDistanceKm){
-    state.fareSubtotal=0;state.ridePrice=0;
-    if(byId("ridePrice"))byId("ridePrice").textContent="حدد المسار";
-    updateVehicleFareCards();return;
-  }
-  const subtotal=fareForVehicle(state.vehicle);
-  state.fareSubtotal=subtotal;
-  const discount=couponDiscountFor(subtotal);
-  state.ridePrice=Math.max(0,subtotal-discount);
-  byId("ridePrice").textContent=formatMoney(state.ridePrice);
-  if(byId("couponStatus")&&state.appliedCoupon)byId("couponStatus").textContent=`تم تطبيق ${state.appliedCoupon.code} • خصم ${formatMoney(discount)}`;
+  state.fareSubtotal=0; state.ridePrice=0; state.appliedCoupon=null;
+  if(byId("ridePrice"))byId("ridePrice").textContent=state.routeDistanceKm?"حسب الكابتن":"حدد المسار";
+  if(byId("couponStatus"))byId("couponStatus").textContent="أجرة التكسي تُحسب حسب سعر الكيلومتر الخاص بالكابتن";
   updateVehicleFareCards();
 }
 function pointLabel(prefix,p){return p?.label || `${prefix} (${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)})`;}
@@ -357,8 +368,20 @@ function showToast(message) {
   window.karwaToastTimer = setTimeout(() => element.classList.remove("show"), 2800);
 }
 
-function requestCancellationReason(subject = "الطلب") {
-  const value = prompt(`اكتب سبب إلغاء ${subject}. السبب مطلوب وسيظهر للإدارة:`, "") ;
+async function requestCancellationReason(subject = "الطلب") {
+  const value = await window.AmrniDialog.prompt(`اكتب سبب إلغاء ${subject}. سيُحفظ السبب في سجل الطلب ويظهر للإدارة.`, "", {
+    title: `إلغاء ${subject}`,
+    kicker: "تسجيل سبب الإلغاء",
+    icon: "!",
+    tone: "danger",
+    label: "سبب الإلغاء",
+    placeholder: "اكتب سببًا واضحًا…",
+    required: true,
+    minLength: 3,
+    maxLength: 300,
+    confirmText: "تأكيد الإلغاء",
+    validationMessage: "يجب كتابة سبب واضح للإلغاء (3 أحرف على الأقل)."
+  });
   if (value === null) return null;
   const reason = String(value || "").trim();
   if (reason.length < 3) {
@@ -454,7 +477,7 @@ function renderCustomerSettingsInfo() {
   if (byId("customerSettingsEmail")) byId("customerSettingsEmail").textContent = state.user?.email || "سجّل الدخول لمزامنة الحساب";
   if (byId("customerSettingsAccountStatus")) byId("customerSettingsAccountStatus").textContent = state.user ? "✓ حساب متصل" : "وضع الزائر";
   if (byId("customerSettingsLocation")) byId("customerSettingsLocation").textContent = byId("cityLabel")?.textContent || "العراق";
-  if (byId("customerSettingsBalance")) byId("customerSettingsBalance").textContent = formatMoney(state.balance || 0);
+  if (byId("customerSettingsBalance")) byId("customerSettingsBalance").textContent = subscriptionInfo(state.userData||{}).active ? "نشط" : "مطلوب";
   if (byId("customerSettingsOrders")) byId("customerSettingsOrders").textContent = String(state.orders.length);
   if (byId("customerSettingsActiveOrders")) byId("customerSettingsActiveOrders").textContent = String(activeOrders);
   if (byId("customerSettingsLogout")) byId("customerSettingsLogout").hidden = !state.user;
@@ -882,6 +905,7 @@ async function loadUserProfile(user) {
   let profileNeedsMigration = false;
   if (snapshot.exists()) {
     const data = snapshot.data();
+    state.userData = data;
     const storedName = typeof data.name === "string" ? data.name.trim() : "";
     const storedBalance = Number(data.balance ?? 0);
     state.role = typeof data.role === "string" && data.role ? data.role : "customer";
@@ -926,11 +950,13 @@ async function loadUserProfile(user) {
     state.bonusBalance=Number(welcomeBonus.bonusBalance||0);
     state.bonusExpiresAt=welcomeBonus.bonusExpiresAt;
     state.notifications = true;
+    state.userData = {name:state.name,email:user.email||"",role:"customer",balance:0,notifications:true,subscriptionStatus:"required",subscriptionEntitled:false};
     await setDoc(userRef, {
       name: state.name,
       email: user.email || "",
       role: "customer",
       balance: state.balance,
+      subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
       ...welcomeBonus,
       notifications: true,
       createdAt: serverTimestamp(),
@@ -941,7 +967,7 @@ async function loadUserProfile(user) {
   renderProfile();
   renderNotificationSwitch();
   renderBalance();
-  renderTopupDestination();
+  syncCustomerSubscriptionUi();
   return { profileNeedsMigration };
 }
 
@@ -1082,7 +1108,7 @@ byId("authForm").addEventListener("submit", async event => {
         const welcomeBonus=signupBonusFields();
         const registrationBatch=writeBatch(db);
         registrationBatch.set(doc(db, "users", credential.user.uid), {
-          name,email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,
+          name,email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
           ...(inviteCode&&invitedByUserId?{invitedByCode:inviteCode,invitedByUserId}:{}),createdAt:serverTimestamp(),updatedAt:serverTimestamp()
         });
         addDeviceRegistrationWrites(registrationBatch,db,credential.user.uid,"customer",deviceInfo);
@@ -1129,7 +1155,8 @@ byId("authForm").addEventListener("submit", async event => {
 });
 
 byId("logoutButton").addEventListener("click", async () => {
-  if (!state.user || !confirm("هل تريد تسجيل الخروج؟")) return;
+  if (!state.user) return;
+  if (!await window.AmrniDialog.confirm("سيتم إنهاء جلسة حسابك على هذا الجهاز ويمكنك تسجيل الدخول مجددًا في أي وقت.", { title:"تسجيل الخروج", icon:"↪", tone:"warning", confirmText:"نعم، تسجيل الخروج" })) return;
   try {
     await signOut(auth);
     switchView("home");
@@ -1289,6 +1316,7 @@ function requireUser() {
 
 async function createOrder(type, title, route, price, options = {}) {
   if (!requireUser()) return false;
+  if (!requireCustomerSubscription()) return false;
   const createdAtISO = new Date().toISOString();
   const orderRef = doc(collection(db, "orders"));
   const order = {
@@ -1297,41 +1325,24 @@ async function createOrder(type, title, route, price, options = {}) {
     title, route, price: Number(price), payment: options.payment || "نقدًا",
     pickupLocation: options.pickupLocation || (state.customerLocation ? { ...state.customerLocation } : null), destinationLocation: options.destinationLocation || null,
     distanceKm: Number(options.distanceKm || 0), durationMin: Number(options.durationMin || 0), routeSource: options.routeSource || "",
-    fareSubtotal: Number(options.fareSubtotal || price), discountAmount: Number(options.discountAmount || 0), couponCode: options.couponCode || "",
-    commissionRate: 0, commissionAmount: 0, driverEarnings: Number(price), tripOtp: String(Math.floor(1000 + Math.random() * 9000)),
+    fareSubtotal: type === "ride" ? 0 : Number(options.fareSubtotal || price), discountAmount: type === "ride" ? 0 : Number(options.discountAmount || 0), couponCode: type === "ride" ? "" : (options.couponCode || ""),
+    pricingMode: type === "ride" ? "driver_per_km" : (options.pricingMode || "fixed"),
+    commissionRate: 0, commissionAmount: 0, driverEarnings: type === "ride" ? 0 : Number(price), tripOtp: String(Math.floor(1000 + Math.random() * 9000)),
     paymentStatus: options.payment === "المحفظة" ? "paid" : "pending", cancellationReason: "", createdAt: serverTimestamp(), createdAtISO,
     ...(options.foodDetails ? { foodDetails: options.foodDetails } : {}), ...(options.parcelDetails ? { parcelDetails: options.parcelDetails } : {})
   };
   const result=await karwaSensitiveAction("create_order",{orderId:orderRef.id,order,referralRedemption:options.referralRedemption?{code:options.referralRedemption.code,inviterId:options.referralRedemption.inviterId,discountAmount:Number(options.referralRedemption.discountAmount||0)}:null});
   if(Number.isFinite(Number(result?.balance)))state.balance=Number(result.balance);
   if(Number.isFinite(Number(result?.bonusBalance)))state.bonusBalance=Number(result.bonusBalance);
-  const serverOrder={...order,customerPlatformFee:Number(result?.fee||customerOperationFee(type)),customerFeeCharged:true,captainPlatformFee:0,captainFeeCharged:false,driverId:null,driverName:"",driverPhone:"",assignmentStatus:"available",acceptedAt:null,arrivedAt:null,startedAt:null,completedAt:null,statusIndex:0,cancelled:false};
+  const serverOrder={...order,customerPlatformFee:0,customerFeeCharged:false,captainPlatformFee:0,captainFeeCharged:false,driverId:null,driverName:"",driverPhone:"",assignmentStatus:"available",acceptedAt:null,arrivedAt:null,startedAt:null,completedAt:null,statusIndex:0,cancelled:false};
   state.activeOrder={...serverOrder,firestoreId:result?.orderId||orderRef.id,createdAt:null}; state.orders.unshift(state.activeOrder);
   renderBalance(); renderTracking(); renderOrders(); syncTrackingSubscription(); switchView("home"); showToast("تم إنشاء الطلب وحفظه بنجاح"); return true;
 }
 
 byId("applyCoupon")?.addEventListener("click", async () => {
-  if (!requireUser() || !state.routeDistanceKm) return showToast("حدد المسار أولًا");
-  const code = byId("couponCode").value.trim().toUpperCase();
-  if(!code){state.appliedCoupon=null;calculateRidePrice();byId("couponStatus").textContent="أدخل رمز الخصم أو الدعوة";return;}
-  byId("couponStatus").textContent="جارٍ التحقق من الرمز…";
-  try{
-    const couponSnap=await getDoc(doc(db,"coupons",code));
-    if(couponSnap.exists()){
-      const c=couponSnap.data();
-      const expired=c.expiresAt?.toMillis?.() && c.expiresAt.toMillis()<Date.now();
-      if(c.active!==true||expired)throw new Error("INVALID");
-      state.appliedCoupon={code,type:c.type==="fixed"?"fixed":"percent",value:Number(c.value||0),maxDiscount:Number(c.maxDiscount||0),minFare:Number(c.minFare||0),kind:"coupon"};
-      calculateRidePrice();return;
-    }
-    const referralSnap=await getDoc(doc(db,"referralCodes",code));
-    if(!referralSnap.exists()||referralSnap.data().active===false||referralSnap.data().ownerId===state.user.uid)throw new Error("INVALID");
-    const used=await getDoc(doc(db,"referralRedemptions",state.user.uid));
-    if(used.exists())throw new Error("USED");
-    const pct=Math.max(0,Math.min(100,Number(state.appSettings.referralDiscountPercent||10)));
-    state.appliedCoupon={code,type:"percent",value:pct,maxDiscount:Number(state.appSettings.referralMaxDiscount||3000),minFare:0,kind:"referral",ownerId:referralSnap.data().ownerId};
-    calculateRidePrice();
-  }catch(error){state.appliedCoupon=null;calculateRidePrice();byId("couponStatus").textContent=error.message==="USED"?"استخدمت كود دعوة سابقًا":"الرمز غير صالح أو منتهي";}
+  state.appliedCoupon=null;
+  calculateRidePrice();
+  showToast("أجرة التكسي يحددها الكابتن حسب سعر الكيلومتر، لذلك لا يطبق كود خصم على أجرة الكابتن.");
 });
 
 byId("bookRide").addEventListener("click", async event => {
@@ -1345,12 +1356,11 @@ byId("bookRide").addEventListener("click", async event => {
   const button = event.currentTarget;
   setButtonBusy(button, true, "جاري الحجز…");
   try {
-    await createOrder("ride", `مشوار ${state.vehicle}`, `${from} ← ${to}`, state.ridePrice, {
+    await createOrder("ride", `مشوار ${state.vehicle}`, `${from} ← ${to}`, 0, {
       payment: "نقدًا",
       pickupLocation: state.pickupLocation, destinationLocation: state.destinationLocation,
       distanceKm: state.routeDistanceKm, durationMin: state.routeDurationMin, routeSource: state.routeSource,
-      fareSubtotal: state.fareSubtotal, discountAmount: Math.max(0,state.fareSubtotal-state.ridePrice), couponCode: state.appliedCoupon?.code || "",
-      referralRedemption: state.appliedCoupon?.kind==="referral" ? {code:state.appliedCoupon.code,inviterId:state.appliedCoupon.ownerId,discountAmount:Math.max(0,state.fareSubtotal-state.ridePrice)} : null,
+      pricingMode: "driver_per_km", fareSubtotal: 0, discountAmount: 0, couponCode: "",
       scheduledAt: byId("scheduleRideAt")?.value || null
     });
     state.appliedCoupon=null; if(byId("couponCode"))byId("couponCode").value="";
@@ -1540,12 +1550,12 @@ byId("mealQuantityMinus")?.addEventListener("click",()=>changeMealQuantity(-1));
 byId("mealQuantityPlus")?.addEventListener("click",()=>changeMealQuantity(1));
 byId("closeMealDetail")?.addEventListener("click",()=>byId("mealDetailBackdrop").hidden=true);
 byId("mealDetailBackdrop")?.addEventListener("click",event=>{if(event.target===event.currentTarget) event.currentTarget.hidden=true;});
-byId("addDetailedMeal")?.addEventListener("click",()=>{
+byId("addDetailedMeal")?.addEventListener("click",async()=>{
   const meal=state.selectedMeal; if(!meal)return; const normalized=normalizedClientItem(meal);
   const quantity=Number(byId("mealQuantity")?.value||0); const spec=itemUnitSpec(normalized.unit);
   if(!quantityIsValid(quantity, normalized.unit)) return showToast(`حدد ${spec.quantityLabel} بشكل صحيح`);
   if (state.cart.length && state.cart[0].restaurantId !== meal.restaurantId) {
-    if (!confirm("السلة تحتوي أصنافًا من مطعم آخر. هل تريد تفريغها والطلب من هذا المطعم؟")) return;
+    if (!await window.AmrniDialog.confirm("السلة تحتوي أصنافًا من مطعم آخر. سيتم تفريغها قبل إضافة هذا الطلب.", { title:"تغيير المطعم", icon:"🛒", tone:"warning", confirmText:"تفريغ السلة والمتابعة" })) return;
     state.cart = [];
   }
   const subtotal=Math.round(normalized.price*quantity);
@@ -2188,6 +2198,7 @@ byId("otherServiceCart")?.addEventListener("click", event => {
 });
 
 async function createServiceRequestWithCustomerFee(payload){
+  if(!requireCustomerSubscription())throw new Error("SUBSCRIPTION_REQUIRED");
   const requestRef=doc(collection(db,"serviceRequests"));
   const result=await karwaSensitiveAction("create_service_request",{requestId:requestRef.id,request:payload});
   if(Number.isFinite(Number(result?.balance)))state.balance=Number(result.balance);
@@ -2250,8 +2261,8 @@ byId("myServiceRequests")?.addEventListener("click", async event => {
   const pickupButton = event.target.closest("[data-service-pickup-confirm]");
 
   if (cancelButton) {
-    if (!confirm("هل تريد إلغاء طلب الخدمة؟")) return;
-    const reason = requestCancellationReason("طلب الخدمة");
+    if (!await window.AmrniDialog.confirm("هل تريد إلغاء طلب الخدمة الحالي؟", { title:"إلغاء طلب الخدمة", icon:"!", tone:"danger", confirmText:"متابعة الإلغاء" })) return;
+    const reason = await requestCancellationReason("طلب الخدمة");
     if (!reason) return;
     setButtonBusy(cancelButton, true, "جاري الإلغاء…");
     try {
@@ -2462,8 +2473,8 @@ function renderTracking() {
 byId("cancelOrder").addEventListener("click", async event => {
   if (!state.activeOrder?.firestoreId) return;
   if (state.activeOrder.type === "ride" && Number(state.activeOrder.statusIndex || 0) >= 3) { showToast("لا يمكن إلغاء الرحلة بعد قراءة الكابتن لرمز بدء الرحلة."); return; }
-  if (!confirm("هل تريد إلغاء الطلب؟")) return;
-  const reason = requestCancellationReason("الطلب");
+  if (!await window.AmrniDialog.confirm("هل تريد إلغاء الطلب الحالي؟ سيُطلب منك تسجيل السبب في الخطوة التالية.", { title:"إلغاء الطلب", icon:"!", tone:"danger", confirmText:"متابعة الإلغاء" })) return;
+  const reason = await requestCancellationReason("الطلب");
   if (!reason) return;
   const button = event.currentTarget;
   setButtonBusy(button, true, "جاري الإلغاء…");
@@ -2531,7 +2542,7 @@ function renderOrders() {
     const price = document.createElement("div");
     price.className = "order-price";
     const amount = document.createElement("strong");
-    amount.textContent = formatMoney(order.price);
+    amount.textContent = order.type === "ride" && !(Number(order.price)>0) ? "بانتظار تسعيرة الكابتن" : formatMoney(order.price);
     const status = document.createElement("small");
     status.className = "order-status";
     const statusIndex = Number(order.statusIndex || 0);
@@ -2754,11 +2765,12 @@ byId("ratingForm").addEventListener("submit", async event => {
 
 function renderBalance() {
   const available=walletAvailable();
-  byId("walletBalance").textContent = Number(available).toLocaleString("ar-IQ");
+  if(byId("walletBalance"))byId("walletBalance").textContent = Number(available).toLocaleString("ar-IQ");
   const bonus=activeBonusAmount({bonusBalance:state.bonusBalance,bonusExpiresAt:state.bonusExpiresAt});
   const bonusStatus=byId("walletBonusStatus");
   if(bonusStatus){const expiry=timestampMillis(state.bonusExpiresAt);bonusStatus.textContent=bonus>0?`يتضمن ${formatMoney(bonus)} رصيدًا مجانيًا صالحًا حتى ${new Date(expiry).toLocaleString("ar-IQ")}`:(Number(state.bonusBalance||0)>0?"انتهت صلاحية الرصيد المجاني — الرصيد المشحون محفوظ":"الرصيد المتاح من الشحن");}
   renderCustomerSettingsInfo();
+  syncCustomerSubscriptionUi();
 }
 
 byId("topupForm")?.addEventListener("submit",async event=>{
@@ -2814,7 +2826,7 @@ function renderProfile() {
 
 byId("editName").addEventListener("click", async () => {
   if (!requireUser()) return;
-  const name = prompt("اكتب اسمك", state.name)?.trim();
+  const name = (await window.AmrniDialog.prompt("أدخل الاسم الذي تريد ظهوره في حسابك وطلباتك.", state.name, { title:"تعديل الاسم", icon:"👤", label:"الاسم الكامل", placeholder:"اكتب اسمك", required:true, minLength:2, maxLength:80, multiline:false, confirmText:"حفظ الاسم" }))?.trim();
   if (!name) return;
   try {
     await updateProfile(auth.currentUser, { displayName: name });
@@ -3147,7 +3159,6 @@ async function startVerifiedCustomerSession(user) {
   }
   subscribeToOrders(user);
   subscribeToRatings(user);
-  subscribeToTopups(user);
   subscribeRestaurants();
   subscribeServiceProfiles();
   subscribeServiceRequests(user);
@@ -3210,6 +3221,7 @@ onAuthStateChanged(auth, async user => {
     }
     if(state.unsubscribeTopups){state.unsubscribeTopups();state.unsubscribeTopups=null;}
     state.name = "ضيف";
+    state.userData = null;
     state.role = "customer";
     state.balance = 0;
     state.referralCode = "";
@@ -3312,7 +3324,8 @@ byId("shareTrip")?.addEventListener("click",async()=>{
   }catch(e){console.error(e);showToast("تعذر إنشاء مشاركة آمنة");}
 });
 byId("sosTrip")?.addEventListener("click",async()=>{
-  if(!state.activeOrder?.firestoreId||!state.user||!confirm("إرسال تنبيه سلامة عاجل للإدارة لهذه الرحلة؟"))return;
+  if(!state.activeOrder?.firestoreId||!state.user)return;
+  if(!await window.AmrniDialog.confirm("سيصل تنبيه سلامة عاجل إلى الإدارة مرتبطًا بهذه الرحلة وموقعك الحالي إن كان متاحًا.", { title:"تنبيه سلامة عاجل", icon:"SOS", tone:"danger", confirmText:"إرسال التنبيه الآن" }))return;
   const send=async pos=>{
     try{
       await addDoc(collection(db,"safetyEvents"),{orderId:state.activeOrder.firestoreId,reportedBy:state.user.uid,reporterRole:"customer",kind:"sos",latitude:pos?.coords?.latitude??null,longitude:pos?.coords?.longitude??null,note:"SOS من الراكب",createdAt:serverTimestamp()});
