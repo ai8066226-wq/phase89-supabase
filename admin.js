@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=118";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=118";
 import {
   collection,
   doc,
@@ -24,7 +24,7 @@ import {
   karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=118";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -1251,6 +1251,7 @@ function renderPricingSettings(){
   const transferToggle=byId("topupTransferEnabled"),cardToggle=byId("topupCardEnabled");
   if(transferToggle&&document.activeElement!==transferToggle)transferToggle.checked=c.topupTransferEnabled!==false;
   if(cardToggle&&document.activeElement!==cardToggle)cardToggle.checked=c.topupCardEnabled!==false;
+  const googleClient=byId("googleWebClientId"); if(googleClient&&document.activeElement!==googleClient)googleClient.value=String(c.googleWebClientId||"");
   renderTopupMethodAdminControls();
 }
 function selectedGovernorateNames(){
@@ -1363,6 +1364,19 @@ function renderTopupRequests(){
   const accountLabels={customer:"عميل",captain:"كابتن",service:"خدمات أخرى",driver:"كابتن",other:"خدمات أخرى"};
   box.innerHTML=rows.map(x=>{const status=x.status||"pending";const date=x.createdAt?.seconds?new Date(x.createdAt.seconds*1000).toLocaleString("ar-IQ"):"—";const accountType=accountLabels[x.accountType]||accountLabels[x.accountRole]||"عميل";return `<article class="topup-admin-row ${escapeHtml(status)}"><div class="topup-admin-head"><div><strong>${escapeHtml(x.customerName||"مشترك")}</strong><small> • ${escapeHtml(x.email||"")} • <b>${escapeHtml(accountType)}</b></small></div><span class="status-chip ${status==='approved'?'approved':status==='rejected'?'cancelled':'pending'}">${labels[status]||escapeHtml(status)}</span></div><div class="order-meta"><span>نوع التسجيل: <b>${escapeHtml(accountType)}</b></span><span>المبلغ: <b>${money(x.amount)}</b></span><span>المرجع: <b>${escapeHtml(x.transferReference||"—")}</b></span><span>${date}</span></div>${status==='pending'?`<div class="topup-admin-actions"><button class="primary" data-action="approve-topup" data-id="${x.firestoreId}">اعتماد وإضافة الرصيد</button><button class="danger" data-action="reject-topup" data-id="${x.firestoreId}">رفض</button></div>`:`${x.reviewNote?`<p class="admin-note">${escapeHtml(x.reviewNote)}</p>`:""}`}</article>`;}).join("");
 }
+
+byId("googleAuthSettingsForm")?.addEventListener("submit",async event=>{
+  event.preventDefault(); if(!state.user)return;
+  const button=byId("saveGoogleAuthSettings"); busy(button,true,"جارٍ الحفظ…");
+  try{
+    const googleWebClientId=String(byId("googleWebClientId")?.value||"").trim();
+    if(!googleWebClientId.endsWith(".apps.googleusercontent.com"))throw new Error("INVALID_GOOGLE_CLIENT_ID");
+    await setDoc(doc(db,"appSettings","pricing"),{googleWebClientId,googleAuthUpdatedAt:serverTimestamp(),googleAuthUpdatedBy:state.user.uid},{merge:true});
+    state.pricingSettings={...(state.pricingSettings||{}),googleWebClientId};
+    toast("تم حفظ Google Web Client ID. إنشاء الحسابات الجديدة سيستخدم حساب Google في الهاتف.");
+  }catch(error){console.error(error);toast(error?.message==="INVALID_GOOGLE_CLIENT_ID"?"أدخل Google Web Client ID صحيحًا ينتهي بـ apps.googleusercontent.com":"تعذر حفظ إعداد تسجيل Google");}
+  finally{busy(button,false);}
+});
 
 byId("pricingSettingsForm")?.addEventListener("submit",async event=>{
   event.preventDefault(); if(!state.user)return;

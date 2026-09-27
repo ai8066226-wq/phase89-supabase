@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=118";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -7,9 +7,10 @@ import {
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
+  setCurrentUserPhone,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=118";
 import {
   addDoc,
   collection,
@@ -31,9 +32,10 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=117";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
+} from "./supabase-compat.js?v=118";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=118";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=118";
+import { nativeGoogleRegistration, googleRegistrationMessage } from "./google-auth.js?v=118";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -113,6 +115,7 @@ function writeCustomerPreference(key, value) {
 }
 
 let customerRegistrationInProgress = false;
+let customerGoogleRegistration = null;
 
 const state = {
   user: null,
@@ -774,19 +777,24 @@ function closeAuthModal() {
 function setAuthMode(mode) {
   state.authMode = mode;
   const registering = mode === "register";
+  const googleRegister = registering && !!customerGoogleRegistration;
   byId("loginTab").classList.toggle("active", !registering);
   byId("registerTab").classList.toggle("active", registering);
   byId("nameField").hidden = !registering;
   byId("phoneField").hidden = !registering;
-  byId("passwordConfirmField").hidden = !registering;
+  byId("passwordConfirmField").hidden = !registering || googleRegister;
   byId("roleField").hidden = !registering;
   if(byId("inviteField"))byId("inviteField").hidden=!registering;
+  const passwordField=byId("authPassword")?.closest(".field");
+  if(passwordField)passwordField.hidden=googleRegister;
   byId("authName").required = registering;
   byId("authPhone").required = registering;
-  byId("authPasswordConfirm").required = registering;
+  byId("authPasswordConfirm").required = registering && !googleRegister;
+  byId("authPassword").required = !googleRegister;
+  byId("authEmail").readOnly = googleRegister;
   byId("authPassword").autocomplete = registering ? "new-password" : "current-password";
-  byId("authSubmit").textContent = registering ? "إنشاء الحساب وإرسال البيانات" : "تسجيل الدخول";
-  byId("authMessage").textContent = "";
+  byId("authSubmit").textContent = googleRegister ? "إكمال إنشاء الحساب" : registering ? "اختيار Google وإنشاء الحساب" : "تسجيل الدخول";
+  byId("authMessage").textContent = googleRegister ? "تم التحقق من حساب Google. أكمل رقم الهاتف والبيانات المطلوبة." : "";
 }
 
 function authErrorMessage(error) {
@@ -1023,32 +1031,91 @@ function subscribeToRatings(user) {
   });
 }
 
+async function loadGoogleRegistrationSettings() {
+  try {
+    const settingsSnapshot = await getDoc(doc(db, "appSettings", "pricing"));
+    state.appSettings = settingsSnapshot.exists() ? settingsSnapshot.data() : (state.appSettings || {});
+  } catch (error) { console.warn("تعذر تحميل إعداد Google", error); }
+  return state.appSettings || {};
+}
+
+async function finishExistingGoogleAccount(credential) {
+  const user = credential?.user;
+  if (!user) return false;
+  const roleSnap = await getDoc(doc(db, "users", user.uid));
+  if (!roleSnap.exists()) return false;
+  customerRegistrationInProgress = false;
+  customerGoogleRegistration = null;
+  const accountData = roleSnap.data() || {};
+  const role = accountData.role || "customer";
+  if (["driver","driverApplicant"].includes(role)) { window.location.replace("./driver.html"); return true; }
+  if (["serviceApplicant","serviceProvider"].includes(role)) { window.location.replace("./services.html"); return true; }
+  if (role !== "customer") { await signOut(auth); throw Object.assign(new Error("ROLE_MISMATCH"),{code:"auth/role-mismatch"}); }
+  const deviceCheck = await enforceDeviceSession(db,user,accountData);
+  if (!deviceCheck.ok) { await signOut(auth); throw Object.assign(new Error(deviceCheck.message),{code:"device/not-authorized"}); }
+  await startVerifiedCustomerSession(user);
+  closeAuthModal();
+  showToast("تم الدخول بحساب Google الموجود مسبقًا");
+  return true;
+}
+
+async function startCustomerGoogleRegistration(button) {
+  customerRegistrationInProgress = true;
+  customerGoogleRegistration = null;
+  if (button) setButtonBusy(button,true,"جاري فتح حسابات Google…");
+  byId("authMessage").textContent = "";
+  try {
+    const settings = await loadGoogleRegistrationSettings();
+    const credential = await nativeGoogleRegistration(auth, settings, "customer-register");
+    if (await finishExistingGoogleAccount(credential)) return;
+    customerGoogleRegistration = credential;
+    const google = credential.google || {};
+    byId("authEmail").value = credential.user?.email || google.email || "";
+    byId("authName").value = google.displayName || credential.user?.displayName || "";
+    byId("authRole").value = "customer";
+    byId("selectedRoleIcon").textContent = "👤";
+    byId("selectedRoleLabel").textContent = "عميل • إنشاء حساب عبر Google";
+    byId("roleEntryGrid").hidden = true;
+    byId("authFormPanel").hidden = false;
+    setAuthMode("register");
+    window.setTimeout(() => byId("authPhone")?.focus(), 80);
+  } catch (error) {
+    customerRegistrationInProgress = false;
+    customerGoogleRegistration = null;
+    console.error(error);
+    byId("roleEntryGrid").hidden = false;
+    byId("authFormPanel").hidden = true;
+    byId("authMessage").textContent = googleRegistrationMessage(error);
+    showToast(googleRegistrationMessage(error));
+  } finally { if (button) setButtonBusy(button,false); }
+}
+
 document.querySelectorAll(".role-auth-action").forEach(button => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
     const role = button.dataset.role || "customer";
     const mode = button.dataset.mode || "login";
-    if (role === "serviceApplicant") {
-      window.location.assign(`./services.html?mode=${mode}`);
-      return;
-    }
-    if (role === "driverApplicant") {
-      window.location.assign(`./driver.html?mode=${mode}`);
-      return;
-    }
+    if (role === "serviceApplicant") { window.location.assign(`./services.html?mode=${mode}`); return; }
+    if (role === "driverApplicant") { window.location.assign(`./driver.html?mode=${mode}`); return; }
+    if (role === "customer" && mode === "register") { await startCustomerGoogleRegistration(button); return; }
+    customerGoogleRegistration = null;
     byId("authRole").value = role;
-    const meta = role === "customer" ? ["👤","عميل"] : role === "driverApplicant" ? ["🚕","كابتن"] : ["🧰","خدمات أخرى"];
-    byId("selectedRoleIcon").textContent = meta[0];
-    byId("selectedRoleLabel").textContent = meta[1] + " • " + (mode === "register" ? "إنشاء حساب" : "تسجيل الدخول");
+    byId("selectedRoleIcon").textContent = "👤";
+    byId("selectedRoleLabel").textContent = "عميل • تسجيل الدخول";
     byId("roleEntryGrid").hidden = true;
     byId("authFormPanel").hidden = false;
     setAuthMode(mode);
-    window.setTimeout(() => byId(mode === "register" ? "authName" : "authEmail")?.focus(), 80);
+    window.setTimeout(() => byId("authEmail")?.focus(), 80);
   });
 });
 byId("authBackToRoles").addEventListener("click", () => {
+  const hadGooglePending=!!customerGoogleRegistration;
+  customerGoogleRegistration=null;
+  customerRegistrationInProgress=false;
+  if(hadGooglePending)signOut(auth).catch(()=>{});
   byId("authFormPanel").hidden = true;
   byId("roleEntryGrid").hidden = false;
   byId("authForm").reset();
+  byId("authEmail").readOnly=false;
   byId("authMessage").textContent = "";
 });
 
@@ -1071,7 +1138,7 @@ byId("authForm").addEventListener("submit", async event => {
     byId("authMessage").textContent = "اكتب اسمًا صحيحًا.";
     return;
   }
-  if (state.authMode === "register" && password !== passwordConfirm) {
+  if (state.authMode === "register" && !customerGoogleRegistration && password !== passwordConfirm) {
     byId("authMessage").textContent = "كلمتا المرور غير متطابقتين.";
     byId("authPasswordConfirm")?.focus();
     return;
@@ -1100,7 +1167,9 @@ byId("authForm").addEventListener("submit", async event => {
           state.appSettings = state.appSettings || {};
         }
         const deviceInfo = requireNativeRegistrationDevice();
-        credential = await createUserWithEmailAndPassword(auth, email, password);
+        if (!customerGoogleRegistration?.user) throw Object.assign(new Error("GOOGLE_ACCOUNT_REQUIRED"),{code:"google/account-required"});
+        credential = customerGoogleRegistration;
+        await setCurrentUserPhone(byId("authPhone").value, byId("authName")?.value || customerGoogleRegistration?.displayName || "", "customer");
         await updateProfile(credential.user, { displayName: name });
         const ownReferral=makeReferralCode(credential.user.uid);
         let invitedByUserId="";
@@ -1108,7 +1177,7 @@ byId("authForm").addEventListener("submit", async event => {
         const welcomeBonus=signupBonusFields();
         const registrationBatch=writeBatch(db);
         registrationBatch.set(doc(db, "users", credential.user.uid), {
-          name,email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
+          name,email:credential.user.email||email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
           ...(inviteCode&&invitedByUserId?{invitedByCode:inviteCode,invitedByUserId}:{}),createdAt:serverTimestamp(),updatedAt:serverTimestamp()
         });
         addDeviceRegistrationWrites(registrationBatch,db,credential.user.uid,"customer",deviceInfo);
@@ -1126,13 +1195,15 @@ byId("authForm").addEventListener("submit", async event => {
         state.referralCode = ownReferral;
         if(inviteCode&&invitedByUserId&&byId("couponCode")){byId("couponCode").value=inviteCode;if(byId("couponStatus"))byId("couponStatus").textContent="كود الدعوة محفوظ — حدّد المسار ثم اضغط تطبيق";}
         customerRegistrationInProgress = false;
+        customerGoogleRegistration = null;
         await startVerifiedCustomerSession(credential.user);
         closeAuthModal();
         showToast("تم إنشاء حساب العميل بنجاح");
       } catch (registrationError) {
         if (credential?.user && !profileSaved) {
-          try { await deleteUser(credential.user); } catch (rollbackError) { console.warn("تعذر حذف حساب التسجيل غير المكتمل", rollbackError); }
+          try { await signOut(auth); } catch (rollbackError) { console.warn("تعذر إنهاء جلسة تسجيل Google غير المكتملة", rollbackError); }
         }
+        customerGoogleRegistration = null;
         throw registrationError;
       }
     } else {
@@ -1147,10 +1218,12 @@ byId("authForm").addEventListener("submit", async event => {
       : (state.authMode === "register" && String(error?.code||"").includes("permission-denied")
         ? "هذا الهاتف مرتبط بالفعل بحساب آمرني آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة."
         : "");
-    byId("authMessage").textContent = deviceError || authErrorMessage(error);
+    byId("authMessage").textContent = deviceError || (String(error?.code||"").startsWith("google/") ? googleRegistrationMessage(error) : authErrorMessage(error));
   } finally {
     setButtonBusy(submit, false);
+    const message=byId("authMessage").textContent;
     setAuthMode(state.authMode);
+    if(message)byId("authMessage").textContent=message;
   }
 });
 

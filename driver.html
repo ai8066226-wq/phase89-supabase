@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
-  <script src="./app-dialogs.js?v=117" defer></script>
+  <script src="./app-dialogs.js?v=118" defer></script>
 <style>
 .maplibregl-canvas{direction:ltr!important}.leaflet-tooltip,.leaflet-popup-content{direction:rtl;text-align:right;unicode-bidi:plaintext}.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.report-grid button{border:1px solid #e1e7ef;background:#fff;border-radius:12px;padding:10px;font-weight:800;cursor:pointer}.report-grid button:hover{background:#eaf7f5;border-color:#8ccfc8}.report-note{width:100%;box-sizing:border-box;margin:0 0 8px;border:1px solid #dfe5ed;border-radius:11px;padding:10px;direction:rtl}.road-report-marker{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff;box-shadow:0 5px 18px rgba(0,0,0,.22);font-size:19px;border:2px solid #087b75}.landmark-marker{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#0b4f70;color:#fff;box-shadow:0 5px 18px rgba(0,0,0,.2);font-size:17px}.report-confirm{margin-top:8px;border:0;border-radius:9px;padding:7px 10px;font-weight:800;cursor:pointer}.driver-landmark-panel{margin-top:12px}.driver-landmark-panel summary{cursor:pointer;font-weight:900}.landmark-form{display:grid;gap:8px;margin-top:10px}
 .road-report-marker{position:relative}.confirm-badge{position:absolute;top:-7px;left:-7px;min-width:18px;height:18px;border-radius:10px;background:#0b4f70;color:#fff;font:700 11px/18px Arial;text-align:center;border:2px solid #fff}
@@ -379,7 +379,7 @@ body.driver-map-mode{background:#edf3f6}
         <div class="auth-error" id="authError" role="alert"></div>
         <button class="primary wide" id="loginButton" type="submit">تسجيل الدخول</button>
       </form>
-      <p>لا تملك حساب كابتن؟ <a href="./driver.html?mode=register">أنشئ حساب كابتن مباشرة من هنا</a>.</p>
+      <p>لا تملك حساب كابتن؟ <a href="./driver.html?mode=register">أنشئ حساب كابتن عبر Google من هنا</a>.</p>
     </div>
   </section>
 
@@ -414,13 +414,10 @@ body.driver-map-mode{background:#edf3f6}
         <form id="applicationForm">
           <div class="form-grid">
             <section class="full" id="driverAccountFields" hidden style="padding:14px;border:1px solid #dce5ec;border-radius:16px;background:#f8fafc">
-              <div class="card-heading" style="margin-bottom:10px"><h3>بيانات دخول حساب الكابتن</h3><span class="status-chip pending">حساب جديد</span></div>
-              <div class="form-grid">
-                <div class="field"><label for="driverRegisterEmail">البريد الإلكتروني</label><input id="driverRegisterEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
-                <div class="field"><label for="driverRegisterPassword">كلمة المرور</label><input id="driverRegisterPassword" type="password" autocomplete="new-password" minlength="6" placeholder="6 أحرف على الأقل"></div>
-                <div class="field full"><label for="driverRegisterPasswordConfirm">تأكيد كلمة المرور</label><input id="driverRegisterPasswordConfirm" type="password" autocomplete="new-password" minlength="6" placeholder="أعد كتابة كلمة المرور"></div>
-              </div>
-              <small class="muted">بعد إكمال التسجيل يُنشأ الحساب فورًا بحالة «بانتظار الموافقة». لا يمكن استقبال الطلبات قبل اعتماد الإدارة.</small>
+              <div class="card-heading" style="margin-bottom:10px"><h3>حساب Google للكابتن</h3><span class="status-chip pending">تسجيل آمن</span></div>
+              <div id="driverGoogleIdentity" style="display:grid;gap:4px;padding:12px;border-radius:12px;background:#fff;border:1px solid #dce5ec"><strong>اختيار حساب Google</strong><small class="muted">سيظهر حساب Google الموجود على الهاتف، ولا تحتاج إلى إنشاء كلمة مرور جديدة.</small></div>
+              <button class="secondary wide" id="driverChooseGoogle" type="button" style="margin-top:10px">اختيار / تغيير حساب Google</button>
+              <small class="muted" style="display:block;margin-top:8px">بعد التحقق من Google أكمل رقم الهاتف وبيانات المركبة. يبقى الحساب بانتظار موافقة الإدارة قبل استقبال الطلبات.</small>
             </section>
             <div class="field">
               <label for="driverName">الاسم الكامل</label>
@@ -738,9 +735,9 @@ body.driver-map-mode{background:#edf3f6}
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
-  <script src="./iraq-governorates.js?v=117"></script>
-  <script type="module" src="./driver.js?v=117"></script>
-  <script src="./pwa.js?v=117"></script>
+  <script src="./iraq-governorates.js?v=118"></script>
+  <script type="module" src="./driver.js?v=118"></script>
+  <script src="./pwa.js?v=118"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
   const view=document.getElementById("driverView");

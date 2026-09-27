@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=118";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -7,9 +7,10 @@ import {
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
+  setCurrentUserPhone,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=118";
 import {
   collection,
   doc,
@@ -28,10 +29,11 @@ import {
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=117";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=117";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
+} from "./supabase-compat.js?v=118";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=118";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=118";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=118";
+import { nativeGoogleRegistration, googleRegistrationMessage } from "./google-auth.js?v=118";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -83,6 +85,9 @@ const SERVICE_IMAGE_INPUT_TYPES = new Set(["image/jpeg", "image/jpg", "image/png
 let registrationLocation = null;
 let editApplicationLocation = null;
 let authMode = new URLSearchParams(location.search).get("mode") === "register" ? "register" : "login";
+let serviceGoogleRegistrationStarting = false;
+let serviceGoogleRegistrationPending = false;
+let serviceGoogleRegistration = null;
 let activeRole = "";
 let roleUnsubscribe = null;
 let contentUnsubscribe = null;
@@ -661,25 +666,68 @@ function authErrorMessage(error) {
 function setAuthMode(mode) {
   authMode = mode;
   const registering = mode === "register";
+  const googleReady = registering && serviceGoogleRegistrationPending;
   byId("loginMode").classList.toggle("active", !registering);
   byId("registerMode").classList.toggle("active", registering);
   byId("loginMode").setAttribute("aria-selected", String(!registering));
   byId("registerMode").setAttribute("aria-selected", String(registering));
-  byId("authHeading").textContent = registering ? "أنشئ حساب خدمتك" : "مرحبًا بعودتك";
+  byId("authHeading").textContent = registering ? "أنشئ حساب خدمتك عبر Google" : "مرحبًا بعودتك";
   byId("authLead").textContent = registering
-    ? "عند إكمال التسجيل سيصل طلب اعتمادك إلى الإدارة تلقائيًا."
+    ? (googleReady ? "تم التحقق من حساب Google. أكمل بيانات النشاط ثم أرسل طلب الاعتماد." : "اختر حساب Google الموجود على الهاتف أولًا، ثم أكمل بيانات النشاط.")
     : "سجّل الدخول لمتابعة طلبك أو إدارة خدمتك.";
-  byId("authSubmit").textContent = registering ? "إنشاء الحساب وإرسال طلب الموافقة" : "تسجيل الدخول";
-  byId("authPassword").autocomplete = registering ? "new-password" : "current-password";
-  byId("authMessage").textContent = "";
-  document.querySelectorAll(".registration-field").forEach(field => field.classList.toggle("hidden", !registering));
-  ["registerPasswordConfirm", "registerName", "registerBusinessName", "registerCategory", "registerPhone", "registerCity", "registerAddress"].forEach(id => {
+  byId("authSubmit").textContent = registering ? (googleReady ? "إرسال طلب الموافقة" : "اختيار حساب Google") : "تسجيل الدخول";
+  const passwordField=byId("authPassword")?.closest(".field"); if(passwordField)passwordField.classList.toggle("hidden",registering);
+  const confirmField=byId("registerPasswordConfirm")?.closest(".field"); if(confirmField)confirmField.classList.add("hidden");
+  byId("authPassword").required = !registering;
+  byId("authEmail").readOnly = googleReady;
+  byId("authMessage").textContent = googleReady ? "تم التحقق من Google — لا تحتاج إلى كلمة مرور جديدة." : "";
+  document.querySelectorAll(".registration-field").forEach(field => {
+    if(field.contains(byId("registerPasswordConfirm")))return;
+    field.classList.toggle("hidden", !registering);
+  });
+  ["registerName", "registerBusinessName", "registerCategory", "registerPhone", "registerCity", "registerAddress"].forEach(id => {
     byId(id).required = registering;
   });
+  byId("registerPasswordConfirm").required = false;
+  const identity=byId("serviceGoogleIdentity");
+  if(identity){const g=serviceGoogleRegistration?.google||{};const email=serviceGoogleRegistration?.user?.email||g.email||"";identity.innerHTML=email?`<strong>${escapeHtml(g.displayName||serviceGoogleRegistration?.user?.displayName||"حساب Google")}</strong><small>${escapeHtml(email)}</small>`:'<strong>حساب Google غير محدد</strong><small>اضغط لاختيار حساب Google الموجود على الهاتف.</small>';}
 }
 
-byId("loginMode").addEventListener("click", () => setAuthMode("login"));
-byId("registerMode").addEventListener("click", () => setAuthMode("register"));
+async function startServiceGoogleRegistration() {
+  if(serviceGoogleRegistrationStarting)return;
+  serviceGoogleRegistrationStarting=true;
+  serviceGoogleRegistrationPending=false;
+  serviceGoogleRegistration=null;
+  setAuthMode("register");
+  const choose=byId("serviceChooseGoogle"); if(choose)setBusy(choose,true,"جاري فتح حسابات Google…");
+  try{
+    const settingsSnapshot=await getDoc(doc(db,"appSettings","pricing"));
+    pricingSettings=settingsSnapshot.exists()?settingsSnapshot.data():{};
+    const credential=await nativeGoogleRegistration(auth,pricingSettings,"service-register");
+    const existing=await getDoc(doc(db,"users",credential.user.uid));
+    if(existing.exists()){
+      const role=existing.data()?.role||"";
+      serviceGoogleRegistrationStarting=false;
+      if(["serviceApplicant","serviceProvider"].includes(role)){
+        authMode="login";history.replaceState(null,"","./services.html");return;
+      }
+      await signOut(auth).catch(()=>{});
+      throw Object.assign(new Error("هذا البريد مستخدم لحساب آمرني من نوع آخر. اختر حساب Google مختلفًا للخدمات."),{code:"google/role-conflict"});
+    }
+    serviceGoogleRegistration=credential;
+    serviceGoogleRegistrationPending=true;
+    const google=credential.google||{};
+    byId("authEmail").value=credential.user?.email||google.email||"";
+    if(!byId("registerName").value.trim())byId("registerName").value=google.displayName||credential.user?.displayName||"";
+    setAuthMode("register");
+    window.setTimeout(()=>byId("registerPhone")?.focus(),80);
+  }catch(error){console.error(error);serviceGoogleRegistration=null;serviceGoogleRegistrationPending=false;const msg=googleRegistrationMessage(error);byId("authMessage").textContent=msg;toast(msg);setAuthMode("register");byId("authMessage").textContent=msg;}
+  finally{serviceGoogleRegistrationStarting=false;if(choose)setBusy(choose,false);}
+}
+
+byId("loginMode").addEventListener("click", () => {serviceGoogleRegistration=null;serviceGoogleRegistrationPending=false;setAuthMode("login");});
+byId("registerMode").addEventListener("click", () => startServiceGoogleRegistration());
+byId("serviceChooseGoogle")?.addEventListener("click",()=>{signOut(auth).catch(()=>{}).finally(()=>startServiceGoogleRegistration());});
 byId("logoutBtn").addEventListener("click", () => signOut(auth));
 byId("deniedLogout").addEventListener("click", () => signOut(auth));
 byId("serviceBlockedLogout")?.addEventListener("click", () => signOut(auth));
@@ -722,18 +770,13 @@ byId("authForm").addEventListener("submit", async event => {
   byId("authMessage").textContent = "";
 
   if (authMode === "register") {
+    if(!serviceGoogleRegistrationPending || !serviceGoogleRegistration?.user){ await startServiceGoogleRegistration(); return; }
     const data = registrationData();
     const validationMessage = validateApplication(data);
     if (validationMessage) {
       byId("authMessage").textContent = validationMessage;
       return;
     }
-    if (password !== passwordConfirm) {
-      byId("authMessage").textContent = "كلمتا المرور غير متطابقتين.";
-      byId("registerPasswordConfirm")?.focus();
-      return;
-    }
-
     let credential = null;
     let profileSaved = false;
     setBusy(submit, true, "جاري إنشاء الحساب وإرسال الطلب…");
@@ -743,13 +786,14 @@ byId("authForm").addEventListener("submit", async event => {
       syncServiceGovernorateControls();
       if(!serviceGovernorateEnabled(data.governorate||data.city))throw new Error("GOVERNORATE_DISABLED");
       const deviceInfo = requireNativeRegistrationDevice();
-      credential = await createUserWithEmailAndPassword(auth, email, password);
+      credential = serviceGoogleRegistration;
+      await setCurrentUserPhone(data.phone, data.ownerName, "serviceApplicant");
       await updateProfile(credential.user, { displayName: data.ownerName });
       const batch = writeBatch(db);
       const welcomeBonus=signupBonusFields();
       batch.set(doc(db, "users", credential.user.uid), {
         name: data.ownerName,
-        email,
+        email: credential.user.email || email,
         role: "serviceApplicant",
         balance: 0,
         ...welcomeBonus,
@@ -770,7 +814,7 @@ byId("authForm").addEventListener("submit", async event => {
         category: data.category,
         serviceType: "other",
         phone: data.phone,
-        email,
+        email: credential.user.email || email,
         city: data.city,
         governorate: data.governorate,
         address: data.address,
@@ -782,26 +826,28 @@ byId("authForm").addEventListener("submit", async event => {
       });
       await batch.commit();
       profileSaved = true;
-      toast("تم إنشاء الحساب وإرسال طلبك إلى الإدارة");
+      serviceGoogleRegistrationPending=false;
+      serviceGoogleRegistration=null;
+      authMode="login";
+      toast("تم إنشاء الحساب عبر Google وإرسال طلبك إلى الإدارة");
       history.replaceState(null, "", "./services.html");
     } catch (error) {
       console.error(error);
       if (credential?.user && !profileSaved) {
-        try {
-          await deleteUser(credential.user);
-        } catch (rollbackError) {
-          console.warn("تعذر التراجع عن الحساب غير المكتمل", rollbackError);
-        }
+        try { await signOut(auth); } catch (rollbackError) { console.warn("تعذر إنهاء جلسة Google غير المكتملة", rollbackError); }
+        serviceGoogleRegistration=null; serviceGoogleRegistrationPending=false;
       }
       const deviceMessage = error?.message === "GOVERNORATE_DISABLED"
         ? "التسجيل متوقف حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة."
         : error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
         ? "إنشاء حساب خدمة جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
         : (String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بالفعل بحساب آمرني آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة." : "");
-      byId("authMessage").textContent = deviceMessage || authErrorMessage(error);
+      byId("authMessage").textContent = deviceMessage || (String(error?.code||"").startsWith("google/") ? googleRegistrationMessage(error) : authErrorMessage(error));
     } finally {
       setBusy(submit, false);
+      const message=byId("authMessage").textContent;
       setAuthMode(authMode);
+      if(message)byId("authMessage").textContent=message;
     }
     return;
   }
@@ -1484,12 +1530,16 @@ onAuthStateChanged(auth, user => {
     byId("accountName").textContent = "";
     setAuthMode(authMode);
     showView("authView");
+    if(authMode==="register"&&!serviceGoogleRegistrationStarting&&!serviceGoogleRegistrationPending)window.setTimeout(()=>startServiceGoogleRegistration(),120);
     return;
   }
 
   showView("loadingView");
   roleUnsubscribe = onSnapshot(doc(db, "users", user.uid), async snapshot => {
     if (!snapshot.exists()) {
+      if(authMode==="register"&&(serviceGoogleRegistrationStarting||serviceGoogleRegistrationPending)){
+        setAuthMode("register");showView("authView");return;
+      }
       byId("deniedText").textContent = "ملف الحساب غير مكتمل. سجّل الخروج ثم أنشئ حساب خدمة جديدًا.";
       showView("deniedView");
       return;

@@ -266,6 +266,32 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
   auth.currentUser = mapUser(data.user);
   return { user: auth.currentUser };
 }
+export async function signInWithGoogleIdToken(_auth, idToken, nonce = "") {
+  const token = String(idToken || "").trim();
+  if (!token) { const e = new Error("MISSING_GOOGLE_ID_TOKEN"); e.code = "auth/google-token-missing"; throw e; }
+  const credentials = { provider: "google", token };
+  const cleanNonce = String(nonce || "").trim();
+  if (cleanNonce) credentials.nonce = cleanNonce;
+  const { data, error } = await client.auth.signInWithIdToken(credentials);
+  if (error) throw authError(error);
+  auth.currentUser = mapUser(data.user);
+  return { user: auth.currentUser, session: data.session || null };
+}
+export async function setCurrentUserPhone(phone, name = "", role = "customer") {
+  const normalized = normalizedSignupPhone(phone);
+  if (!normalized) { const e = new Error("INVALID_PHONE"); e.code = "auth/invalid-phone"; throw e; }
+  const requestedRole = ["customer", "driverApplicant", "serviceApplicant"].includes(String(role || ""))
+    ? String(role)
+    : "customer";
+  const { error } = await client.rpc("karwa_prepare_google_registration", {
+    p_phone: normalized,
+    p_name: String(name || "").trim(),
+    p_role: requestedRole
+  });
+  if (error) throw authError(error);
+  await client.auth.updateUser({ data: { phone: normalized } }).catch(() => {});
+  return normalized;
+}
 export async function createUserWithEmailAndPassword(_auth, email, password) {
   let phone = signupPhoneFromPage();
   if (!phone && globalThis.AmrniDialog?.prompt) {

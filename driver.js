@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=118";
 import {
   browserLocalPersistence,
   getAuth,
@@ -7,9 +7,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   deleteUser,
+  setCurrentUserPhone,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=118";
 import {
   addDoc,
   collection,
@@ -31,9 +32,10 @@ import {
   karwaSensitiveAction,
   karwaDriverAutoComplete,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=117";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
+} from "./supabase-compat.js?v=118";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=118";
+import { nativeGoogleRegistration, googleRegistrationMessage } from "./google-auth.js?v=118";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=118";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -270,7 +272,10 @@ const state = {
   restaurantGps: null,
   restaurantMeals: [],
   governorateAutoOffline: false,
-  directRegistration: new URLSearchParams(window.location.search).get("mode") === "register"
+  directRegistration: new URLSearchParams(window.location.search).get("mode") === "register",
+  googleRegistrationStarting: false,
+  googleRegistrationPending: false,
+  googleRegistration: null
 };
 
 let driverPricingSettings = {};
@@ -1145,27 +1150,59 @@ function authMessage(error) {
 }
 
 function configureDirectRegistrationUI() {
-  const active = state.directRegistration && !state.user;
+  const active = state.directRegistration;
   const fields = byId("driverAccountFields");
   if (fields) fields.hidden = !active;
-  ["driverRegisterEmail", "driverRegisterPassword", "driverRegisterPasswordConfirm"].forEach(id => {
-    const input = byId(id);
-    if (input) input.required = active;
-  });
   if (active) {
-    byId("applicationHeroTitle").textContent = "إنشاء حساب كابتن";
-    byId("applicationHeroText").textContent = "أكمل التسجيل مرة واحدة. بعد الإرسال يصل طلبك مباشرةً إلى الإدارة للموافقة.";
-    byId("applicationHeroBadge").textContent = "تسجيل مباشر";
-    byId("applicationStatus").textContent = "تسجيل جديد";
+    const google=state.googleRegistration?.google||{};
+    const email=state.googleRegistration?.user?.email||google.email||"";
+    const identity=byId("driverGoogleIdentity");
+    if(identity)identity.innerHTML=email?`<strong>${escapeHtml(google.displayName||state.googleRegistration?.user?.displayName||"حساب Google")}</strong><small>${escapeHtml(email)}</small>`:'<strong>اختيار حساب Google</strong><small>سيظهر لك حساب Google الموجود على الهاتف.</small>';
+    byId("applicationHeroTitle").textContent = "إنشاء حساب كابتن عبر Google";
+    byId("applicationHeroText").textContent = "اختر حساب Google الموجود على الهاتف، ثم أكمل بيانات الكابتن وأرسل طلب الموافقة.";
+    byId("applicationHeroBadge").textContent = state.googleRegistrationPending ? "Google موثّق" : "تسجيل Google";
+    byId("applicationStatus").textContent = state.googleRegistrationPending ? "هوية Google جاهزة" : "تسجيل جديد";
     byId("applicationNotice").className = "notice";
-    byId("applicationNotice").textContent = "الحساب سيُنشأ بعد اكتمال جميع البيانات، ثم يبقى غير مفعل حتى موافقة الإدارة.";
-    byId("submitApplication").disabled = false;
-    byId("submitApplication").textContent = "إنشاء الحساب وإرسال طلب الموافقة";
+    byId("applicationNotice").textContent = state.googleRegistrationPending ? "تم التحقق من بريد Google. أكمل بقية البيانات؛ لا تحتاج إلى كلمة مرور جديدة." : "ابدأ باختيار حساب Google الموجود على هذا الهاتف.";
+    byId("submitApplication").disabled = !state.googleRegistrationPending;
+    byId("submitApplication").textContent = state.googleRegistrationPending ? "إرسال طلب الموافقة" : "اختر حساب Google أولًا";
   } else {
     byId("applicationHeroTitle").textContent = "انضم إلى كباتن آمرني";
     byId("applicationHeroText").textContent = "أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.";
     byId("applicationHeroBadge").textContent = "طلب انضمام";
   }
+}
+
+async function startDriverGoogleRegistration() {
+  if (!state.directRegistration || state.googleRegistrationStarting || state.googleRegistrationPending) return;
+  state.googleRegistrationStarting=true;
+  configureDirectRegistrationUI();
+  const choose=byId("driverChooseGoogle"); if(choose)busy(choose,true,"جاري فتح حسابات Google…");
+  try{
+    const settingsSnapshot=await getDoc(doc(db,"appSettings","pricing"));
+    driverPricingSettings=settingsSnapshot.exists()?settingsSnapshot.data():{};
+    const credential=await nativeGoogleRegistration(auth,driverPricingSettings,"driver-register");
+    const existing=await getDoc(doc(db,"users",credential.user.uid));
+    if(existing.exists()){
+      const role=existing.data()?.role||"";
+      state.googleRegistrationStarting=false;
+      if(["driver","driverApplicant"].includes(role)){
+        state.directRegistration=false; history.replaceState(null,"","./driver.html"); return;
+      }
+      await signOut(auth).catch(()=>{});
+      throw Object.assign(new Error("هذا البريد مستخدم لحساب آمرني من نوع آخر. اختر حساب Google مختلفًا للكابتن."),{code:"google/role-conflict"});
+    }
+    state.googleRegistration=credential;
+    state.googleRegistrationPending=true;
+    const google=credential.google||{};
+    if(!byId("driverName").value.trim())byId("driverName").value=google.displayName||credential.user?.displayName||"";
+    configureDirectRegistrationUI();
+    window.setTimeout(()=>byId("driverPhone")?.focus(),80);
+  }catch(error){
+    console.error(error); state.googleRegistration=null; state.googleRegistrationPending=false;
+    toast(googleRegistrationMessage(error));
+    configureDirectRegistrationUI();
+  }finally{state.googleRegistrationStarting=false;if(choose)busy(choose,false);}
 }
 
 function showView(name) {
@@ -1414,9 +1451,11 @@ function openApplication() {
   state.viewUnsubscribes.push(unsubscribe);
 }
 
+byId("driverChooseGoogle")?.addEventListener("click",()=>{state.googleRegistrationPending=false;state.googleRegistration=null;signOut(auth).catch(()=>{}).finally(()=>startDriverGoogleRegistration());});
+
 byId("applicationForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const directSignup = !state.user && state.directRegistration;
+  const directSignup = state.directRegistration && state.googleRegistrationPending;
   const phone = byId("driverPhone").value.replace(/\s/g, "");
   const name = byId("driverName").value.trim();
   if (name.length < 2) { toast("أدخل الاسم الكامل"); return; }
@@ -1425,14 +1464,11 @@ byId("applicationForm").addEventListener("submit", async event => {
   const selectedGovernorate=normalizedDriverGovernorate(byId("driverCity").value);
   if(!selectedGovernorate){toast("اختر محافظة عراقية صحيحة");return;}
 
-  let registerEmail = "", registerPassword = "";
-  if (directSignup) {
-    registerEmail = byId("driverRegisterEmail").value.trim();
-    registerPassword = byId("driverRegisterPassword").value;
-    const confirmPassword = byId("driverRegisterPasswordConfirm").value;
-    if (!registerEmail || !registerEmail.includes("@")) { toast("أدخل بريدًا إلكترونيًا صحيحًا"); return; }
-    if (registerPassword.length < 6) { toast("كلمة المرور يجب أن تكون 6 أحرف على الأقل"); return; }
-    if (registerPassword !== confirmPassword) { toast("كلمتا المرور غير متطابقتين"); return; }
+  let registerEmail = state.googleRegistration?.user?.email || state.user?.email || "";
+  if (state.directRegistration && !directSignup) {
+    toast("اختر حساب Google أولًا");
+    startDriverGoogleRegistration();
+    return;
   } else if (!state.user) {
     showView("auth");
     return;
@@ -1465,8 +1501,10 @@ byId("applicationForm").addEventListener("submit", async event => {
     if(!driverGovernorateEnabled(selectedGovernorate))throw new Error("GOVERNORATE_DISABLED");
     if (directSignup) {
       deviceInfo = requireNativeRegistrationDevice();
-      createdCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
-      accountUser = createdCredential.user;
+      createdCredential = state.googleRegistration;
+      accountUser = createdCredential?.user || state.user;
+      if (!accountUser) throw Object.assign(new Error("GOOGLE_ACCOUNT_REQUIRED"),{code:"google/account-required"});
+      await setCurrentUserPhone(phone, name, "driverApplicant");
       await updateProfile(accountUser, { displayName: name });
       welcomeBonus=driverSignupBonusFields();
     }
@@ -1515,6 +1553,8 @@ byId("applicationForm").addEventListener("submit", async event => {
 
     if (directSignup) {
       state.directRegistration = false;
+      state.googleRegistrationPending = false;
+      state.googleRegistration = null;
       history.replaceState(null, "", "./driver.html");
       toast("تم إنشاء حساب الكابتن وربطه بهذا الهاتف وإرسال الطلب إلى الإدارة.");
     } else {
@@ -1523,7 +1563,8 @@ byId("applicationForm").addEventListener("submit", async event => {
   } catch (error) {
     console.error(error);
     if (directSignup && createdCredential?.user) {
-      try { await deleteUser(createdCredential.user); } catch (rollbackError) { console.warn("تعذر حذف حساب التسجيل غير المكتمل", rollbackError); }
+      try { await signOut(auth); } catch (rollbackError) { console.warn("تعذر إنهاء جلسة Google غير المكتملة", rollbackError); }
+      state.googleRegistration=null; state.googleRegistrationPending=false;
     }
     const deviceMessage = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
       ? "إنشاء حساب كابتن جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
@@ -1841,6 +1882,7 @@ onAuthStateChanged(auth, user => {
     if (state.directRegistration) {
       fillApplication();
       showView("application");
+      window.setTimeout(()=>startDriverGoogleRegistration(),120);
     } else {
       showView("auth");
     }
@@ -1852,6 +1894,7 @@ onAuthStateChanged(auth, user => {
     if (!snapshot.exists()) {
       if (state.directRegistration) {
         showView("application");
+        configureDirectRegistrationUI();
         return;
       }
       byId("authError").textContent = "ملف الحساب غير موجود. أعد تسجيل الدخول أو أنشئ حساب كابتن جديدًا.";

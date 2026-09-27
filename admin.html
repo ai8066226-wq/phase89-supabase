@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="./portal.css?v=81">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
-  <script src="./app-dialogs.js?v=117" defer></script>
+  <script src="./app-dialogs.js?v=118" defer></script>
 
   <style>
     .admin-settings-form{display:grid;gap:12px}.admin-settings-form h3{margin:8px 0 0}.admin-settings-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}.admin-settings-grid label{display:grid;gap:6px;color:#52637a;font-size:11px;font-weight:800}.admin-settings-grid input{min-height:42px;padding:8px 10px;border:1px solid #d8e2e8;border-radius:10px;background:#fff}.wide-fields{grid-template-columns:repeat(2,minmax(180px,1fr))}.topup-admin-row{display:grid;gap:8px;padding:13px;border:1px solid #dfe7ef;border-radius:14px;background:#fff}.topup-admin-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.topup-admin-actions{display:flex;gap:8px;flex-wrap:wrap}.topup-admin-actions button{min-height:36px}.topup-admin-row.approved{border-color:#b9e5d6;background:#f5fcf9}.topup-admin-row.rejected{opacity:.72}@media(max-width:800px){.admin-settings-grid,.wide-fields{grid-template-columns:1fr 1fr}}@media(max-width:520px){.admin-settings-grid,.wide-fields{grid-template-columns:1fr}}
@@ -61,7 +61,7 @@
   <section class="auth-wrap" id="authView">
     <div class="card auth-card">
       <h1>دخول الإدارة</h1>
-      <p>هذه الصفحة مخصصة للحسابات التي تحمل صلاحية المدير فقط. <small style="opacity:.55">v117</small></p>
+      <p>هذه الصفحة مخصصة للحسابات التي تحمل صلاحية المدير فقط. <small style="opacity:.55">v118</small></p>
       <form id="loginForm" action="javascript:void(0)" onsubmit="return false;">
         <div class="field">
           <label for="email">البريد الإلكتروني</label>
@@ -252,6 +252,12 @@
             </div>
             <p class="muted">تم إلغاء الشحن اليدوي وكروت الرصيد من التشغيل. يحدد كل كابتن تسعيرته الخاصة لكل كيلومتر من إعداداته، وتُحسب أجرة رحلة التكسي من المسافة × سعر الكيلومتر الخاص بالكابتن بعد قبول الطلب.</p>
             <div class="admin-note">سعر الاشتراك نفسه يُضبط من Google Play Console، وليس من داخل لوحة آمرني، حتى يبقى الدفع والتجديد والإلغاء تحت نظام Google Play.</div>
+            <form id="googleAuthSettingsForm" style="margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:16px;background:#f8fbfc;display:grid;gap:10px">
+              <div><strong style="display:block;margin-bottom:4px">تسجيل الحسابات عبر Google</strong><small class="muted">عند الضغط على «إنشاء حساب» في Android يفتح آمرني حسابات Google الموجودة على الهاتف.</small></div>
+              <label style="display:grid;gap:6px;font-weight:900">Google Web Client ID<input id="googleWebClientId" type="text" dir="ltr" autocomplete="off" placeholder="123456789-xxxx.apps.googleusercontent.com" style="min-height:44px;padding:10px;border:1px solid var(--line);border-radius:11px"></label>
+              <small class="muted">هذا المعرّف عام وليس سرًا. يجب أن يكون Web OAuth Client ID المسجل أيضًا في Supabase Authentication > Google.</small>
+              <button class="primary" id="saveGoogleAuthSettings" type="submit">حفظ إعداد تسجيل Google</button>
+            </form>
           </div>
         </div>
 
@@ -410,8 +416,8 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="./native-notifications.js?v=117"></script>
-  <script src="./iraq-governorates.js?v=117"></script>
+  <script src="./native-notifications.js?v=118"></script>
+  <script src="./iraq-governorates.js?v=118"></script>
   <script>
   // Admin portal is intentionally isolated from the PWA update/reload path.
   // Old workers used to reload this page while auth was completing.
@@ -429,6 +435,6 @@
     }
   })();
 </script>
-  <script type="module" src="./admin.js?v=117"></script>
+  <script type="module" src="./admin.js?v=118"></script>
 </body>
 </html>
