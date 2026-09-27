@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=118";
+import { initializeApp } from "./supabase-compat.js?v=117";
 import {
   browserLocalPersistence,
   getAuth,
@@ -7,10 +7,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   deleteUser,
-  setCurrentUserPhone,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=118";
+} from "./supabase-compat.js?v=117";
 import {
   addDoc,
   collection,
@@ -32,10 +31,9 @@ import {
   karwaSensitiveAction,
   karwaDriverAutoComplete,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=118";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=118";
-import { nativeGoogleRegistration, googleRegistrationMessage } from "./google-auth.js?v=118";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=118";
+} from "./supabase-compat.js?v=117";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -75,8 +73,8 @@ function driverSupabaseMessage(error, action = "تنفيذ العملية") {
   if (e.code === "unauthenticated") return "انتهت جلسة تسجيل الدخول. سجّل الدخول من جديد.";
   if (e.code === "not-found") return "تعذر العثور على بيانات الطلب أو حساب الكابتن.";
   if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الاتصال بخادم آمرني. تحقق من الإنترنت ثم أعد المحاولة.";
-  if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصال Supabase.`;
-  return `تعذر ${action}. ${error?.message ? String(error.message).replace(/^FirebaseError:\s*/i, "") : "تحقق من إعدادات Supabase."}`;
+  if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصالك بالإنترنت.`;
+  return `تعذر ${action}. حاول مجددًا أو تواصل مع الدعم.`;
 }
 
 try {
@@ -272,10 +270,7 @@ const state = {
   restaurantGps: null,
   restaurantMeals: [],
   governorateAutoOffline: false,
-  directRegistration: new URLSearchParams(window.location.search).get("mode") === "register",
-  googleRegistrationStarting: false,
-  googleRegistrationPending: false,
-  googleRegistration: null
+  directRegistration: new URLSearchParams(window.location.search).get("mode") === "register"
 };
 
 let driverPricingSettings = {};
@@ -822,10 +817,10 @@ function evaluateRouteDeviation(current,accuracy=25){
   const threshold=Math.max(55,Math.min(90,Number(accuracy||25)*1.7));
   if(deviation.meters<=threshold){state.offRouteHits=0;return;}
   state.offRouteHits+=1;
-  const alert=byId("offRouteAlert");if(alert){alert.textContent=`خرجت عن المسار بنحو ${Math.round(deviation.meters)} م — جاري تجهيز طريق جديد من موقعك الحالي…`;alert.classList.remove("hidden");}
+  const alert=byId("offRouteAlert");if(alert){alert.textContent=`خرجت عن المسار بنحو ${Math.round(deviation.meters)} م — جارٍ تجهيز طريق جديد من موقعك الحالي…`;alert.classList.remove("hidden");}
   if(state.offRouteHits<2||state.routeRecalcInFlight||Date.now()-state.lastOffRouteRerouteAt<3500)return;
   state.offRouteHits=0;state.lastOffRouteRerouteAt=Date.now();
-  speakDriverNavigation("تم اكتشاف خروج عن المسار. جاري حساب طريق جديد من موقعك الحالي.",22);
+  speakDriverNavigation("تم اكتشاف خروج عن المسار. جارٍ حساب طريق جديد من موقعك الحالي.",22);
   drawPickupRoute(true,"offroute").catch(error=>console.warn("تعذر إعادة حساب المسار بعد الانحراف",error));
 }
 
@@ -1049,7 +1044,7 @@ async function sharePosition(position, force = false) {
   if (!state.user || !state.driverData?.online || !position) return;
   const locationAccuracy=Number(position.coords?.accuracy||9999);
   if (!Number.isFinite(locationAccuracy) || locationAccuracy > 45) {
-    byId("locationHint").textContent=`جاري تحسين GPS… الدقة الحالية ${Math.round(locationAccuracy)} م`;
+    byId("locationHint").textContent=`جارٍ تحسين GPS… الدقة الحالية ${Math.round(locationAccuracy)} م`;
     return;
   }
   const now = Date.now();
@@ -1076,14 +1071,14 @@ async function sharePosition(position, force = false) {
   ));
   if (results.some(result => result.status === "rejected")) {
     console.error("تعذر إرسال بعض تحديثات الموقع", results);
-    byId("locationHint").textContent = "تعذر إرسال الموقع؛ تحقق من سياسات Supabase.";
+    byId("locationHint").textContent = "تعذر تحديث موقعك. تحقق من الإنترنت وأذونات الموقع.";
   }
 }
 
 function startLocationSharing() {
   if (state.locationWatchId !== null) return;
   initializeDriverMap();
-  setLocationStatus("جاري تثبيت GPS", "pending");
+  setLocationStatus("جارٍ تثبيت GPS", "pending");
   const onPosition = position => {
     state.lastPosition = position;
     showOwnPosition(position);
@@ -1105,7 +1100,7 @@ function startLocationSharing() {
     state.locationWatchId = window.KarwaGeo.watchPosition(onPosition, onError, {
       maxAccuracy:45,
       onQuality:({accuracy,acceptable})=>{
-        if(!acceptable){setLocationStatus("تحسين GPS", "pending");byId("locationHint").textContent=`جاري تثبيت موقع أدق… ${Math.round(accuracy)} م`; }
+        if(!acceptable){setLocationStatus("تحسين GPS", "pending");byId("locationHint").textContent=`جارٍ تثبيت موقع أدق… ${Math.round(accuracy)} م`; }
       }
     });
   } else if (navigator.geolocation) {
@@ -1126,7 +1121,7 @@ function stopLocationSharing() {
   byId("locationHint").textContent = "فعّل حالة الاتصال لمشاركة موقعك أثناء الرحلات.";
 }
 
-function busy(button, active, text = "جاري التنفيذ…") {
+function busy(button, active, text = "جارٍ التنفيذ…") {
   if (active) {
     button.dataset.label = button.textContent;
     button.textContent = text;
@@ -1150,59 +1145,27 @@ function authMessage(error) {
 }
 
 function configureDirectRegistrationUI() {
-  const active = state.directRegistration;
+  const active = state.directRegistration && !state.user;
   const fields = byId("driverAccountFields");
   if (fields) fields.hidden = !active;
+  ["driverRegisterEmail", "driverRegisterPassword", "driverRegisterPasswordConfirm"].forEach(id => {
+    const input = byId(id);
+    if (input) input.required = active;
+  });
   if (active) {
-    const google=state.googleRegistration?.google||{};
-    const email=state.googleRegistration?.user?.email||google.email||"";
-    const identity=byId("driverGoogleIdentity");
-    if(identity)identity.innerHTML=email?`<strong>${escapeHtml(google.displayName||state.googleRegistration?.user?.displayName||"حساب Google")}</strong><small>${escapeHtml(email)}</small>`:'<strong>اختيار حساب Google</strong><small>سيظهر لك حساب Google الموجود على الهاتف.</small>';
-    byId("applicationHeroTitle").textContent = "إنشاء حساب كابتن عبر Google";
-    byId("applicationHeroText").textContent = "اختر حساب Google الموجود على الهاتف، ثم أكمل بيانات الكابتن وأرسل طلب الموافقة.";
-    byId("applicationHeroBadge").textContent = state.googleRegistrationPending ? "Google موثّق" : "تسجيل Google";
-    byId("applicationStatus").textContent = state.googleRegistrationPending ? "هوية Google جاهزة" : "تسجيل جديد";
+    byId("applicationHeroTitle").textContent = "إنشاء حساب كابتن";
+    byId("applicationHeroText").textContent = "أكمل التسجيل مرة واحدة. بعد الإرسال يصل طلبك مباشرةً إلى الإدارة للموافقة.";
+    byId("applicationHeroBadge").textContent = "تسجيل مباشر";
+    byId("applicationStatus").textContent = "تسجيل جديد";
     byId("applicationNotice").className = "notice";
-    byId("applicationNotice").textContent = state.googleRegistrationPending ? "تم التحقق من بريد Google. أكمل بقية البيانات؛ لا تحتاج إلى كلمة مرور جديدة." : "ابدأ باختيار حساب Google الموجود على هذا الهاتف.";
-    byId("submitApplication").disabled = !state.googleRegistrationPending;
-    byId("submitApplication").textContent = state.googleRegistrationPending ? "إرسال طلب الموافقة" : "اختر حساب Google أولًا";
+    byId("applicationNotice").textContent = "الحساب سيُنشأ بعد اكتمال جميع البيانات، ثم يبقى غير مفعل حتى موافقة الإدارة.";
+    byId("submitApplication").disabled = false;
+    byId("submitApplication").textContent = "إنشاء الحساب وإرسال طلب الموافقة";
   } else {
     byId("applicationHeroTitle").textContent = "انضم إلى كباتن آمرني";
     byId("applicationHeroText").textContent = "أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.";
     byId("applicationHeroBadge").textContent = "طلب انضمام";
   }
-}
-
-async function startDriverGoogleRegistration() {
-  if (!state.directRegistration || state.googleRegistrationStarting || state.googleRegistrationPending) return;
-  state.googleRegistrationStarting=true;
-  configureDirectRegistrationUI();
-  const choose=byId("driverChooseGoogle"); if(choose)busy(choose,true,"جاري فتح حسابات Google…");
-  try{
-    const settingsSnapshot=await getDoc(doc(db,"appSettings","pricing"));
-    driverPricingSettings=settingsSnapshot.exists()?settingsSnapshot.data():{};
-    const credential=await nativeGoogleRegistration(auth,driverPricingSettings,"driver-register");
-    const existing=await getDoc(doc(db,"users",credential.user.uid));
-    if(existing.exists()){
-      const role=existing.data()?.role||"";
-      state.googleRegistrationStarting=false;
-      if(["driver","driverApplicant"].includes(role)){
-        state.directRegistration=false; history.replaceState(null,"","./driver.html"); return;
-      }
-      await signOut(auth).catch(()=>{});
-      throw Object.assign(new Error("هذا البريد مستخدم لحساب آمرني من نوع آخر. اختر حساب Google مختلفًا للكابتن."),{code:"google/role-conflict"});
-    }
-    state.googleRegistration=credential;
-    state.googleRegistrationPending=true;
-    const google=credential.google||{};
-    if(!byId("driverName").value.trim())byId("driverName").value=google.displayName||credential.user?.displayName||"";
-    configureDirectRegistrationUI();
-    window.setTimeout(()=>byId("driverPhone")?.focus(),80);
-  }catch(error){
-    console.error(error); state.googleRegistration=null; state.googleRegistrationPending=false;
-    toast(googleRegistrationMessage(error));
-    configureDirectRegistrationUI();
-  }finally{state.googleRegistrationStarting=false;if(choose)busy(choose,false);}
 }
 
 function showView(name) {
@@ -1228,7 +1191,7 @@ byId("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   const button = byId("loginButton");
   byId("authError").textContent = "";
-  busy(button, true, "جاري الدخول…");
+  busy(button, true, "جارٍ الدخول…");
   try {
     await signInWithEmailAndPassword(auth, byId("email").value.trim(), byId("password").value);
   } catch (error) {
@@ -1451,11 +1414,9 @@ function openApplication() {
   state.viewUnsubscribes.push(unsubscribe);
 }
 
-byId("driverChooseGoogle")?.addEventListener("click",()=>{state.googleRegistrationPending=false;state.googleRegistration=null;signOut(auth).catch(()=>{}).finally(()=>startDriverGoogleRegistration());});
-
 byId("applicationForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const directSignup = state.directRegistration && state.googleRegistrationPending;
+  const directSignup = !state.user && state.directRegistration;
   const phone = byId("driverPhone").value.replace(/\s/g, "");
   const name = byId("driverName").value.trim();
   if (name.length < 2) { toast("أدخل الاسم الكامل"); return; }
@@ -1464,11 +1425,14 @@ byId("applicationForm").addEventListener("submit", async event => {
   const selectedGovernorate=normalizedDriverGovernorate(byId("driverCity").value);
   if(!selectedGovernorate){toast("اختر محافظة عراقية صحيحة");return;}
 
-  let registerEmail = state.googleRegistration?.user?.email || state.user?.email || "";
-  if (state.directRegistration && !directSignup) {
-    toast("اختر حساب Google أولًا");
-    startDriverGoogleRegistration();
-    return;
+  let registerEmail = "", registerPassword = "";
+  if (directSignup) {
+    registerEmail = byId("driverRegisterEmail").value.trim();
+    registerPassword = byId("driverRegisterPassword").value;
+    const confirmPassword = byId("driverRegisterPasswordConfirm").value;
+    if (!registerEmail || !registerEmail.includes("@")) { toast("أدخل بريدًا إلكترونيًا صحيحًا"); return; }
+    if (registerPassword.length < 6) { toast("كلمة المرور يجب أن تكون 6 أحرف على الأقل"); return; }
+    if (registerPassword !== confirmPassword) { toast("كلمتا المرور غير متطابقتين"); return; }
   } else if (!state.user) {
     showView("auth");
     return;
@@ -1489,7 +1453,7 @@ byId("applicationForm").addEventListener("submit", async event => {
   }
 
   const button = byId("submitApplication");
-  busy(button, true, directSignup ? "جاري إنشاء الحساب…" : "جاري الإرسال…");
+  busy(button, true, directSignup ? "جارٍ إنشاء الحساب…" : "جارٍ الإرسال…");
   let createdCredential = null;
   try {
     let accountUser = state.user;
@@ -1501,10 +1465,8 @@ byId("applicationForm").addEventListener("submit", async event => {
     if(!driverGovernorateEnabled(selectedGovernorate))throw new Error("GOVERNORATE_DISABLED");
     if (directSignup) {
       deviceInfo = requireNativeRegistrationDevice();
-      createdCredential = state.googleRegistration;
-      accountUser = createdCredential?.user || state.user;
-      if (!accountUser) throw Object.assign(new Error("GOOGLE_ACCOUNT_REQUIRED"),{code:"google/account-required"});
-      await setCurrentUserPhone(phone, name, "driverApplicant");
+      createdCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      accountUser = createdCredential.user;
       await updateProfile(accountUser, { displayName: name });
       welcomeBonus=driverSignupBonusFields();
     }
@@ -1553,8 +1515,6 @@ byId("applicationForm").addEventListener("submit", async event => {
 
     if (directSignup) {
       state.directRegistration = false;
-      state.googleRegistrationPending = false;
-      state.googleRegistration = null;
       history.replaceState(null, "", "./driver.html");
       toast("تم إنشاء حساب الكابتن وربطه بهذا الهاتف وإرسال الطلب إلى الإدارة.");
     } else {
@@ -1563,12 +1523,11 @@ byId("applicationForm").addEventListener("submit", async event => {
   } catch (error) {
     console.error(error);
     if (directSignup && createdCredential?.user) {
-      try { await signOut(auth); } catch (rollbackError) { console.warn("تعذر إنهاء جلسة Google غير المكتملة", rollbackError); }
-      state.googleRegistration=null; state.googleRegistrationPending=false;
+      try { await deleteUser(createdCredential.user); } catch (rollbackError) { console.warn("تعذر حذف حساب التسجيل غير المكتمل", rollbackError); }
     }
     const deviceMessage = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
       ? "إنشاء حساب كابتن جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
-      : (directSignup && String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بالفعل بحساب آمرني آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة." : "");
+      : (directSignup && String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بحساب آخر. إذا غيّرت هاتفك، اطلب نقل الحساب من الإدارة." : "");
     toast(error?.message==="GOVERNORATE_DISABLED"?"التسجيل أو إعادة الإرسال متوقف حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة.":deviceMessage || authMessage(error));
   } finally {
     busy(button, false);
@@ -1749,7 +1708,7 @@ function openDriverDashboard() {
       renderOrders();
     }, error => {
       console.error(error);
-      toast("تعذر تحميل الطلبات المسموح بها لهذا الحساب. انشر سياسات Supabase الجديدة.");
+      toast("تعذر تحميل الطلبات الآن. حاول مجددًا أو تواصل مع الدعم.");
     });
   };
   const ratingsUnsubscribe = onSnapshot(
@@ -1850,7 +1809,7 @@ byId("driverTopupForm")?.addEventListener("submit",async event=>{
   if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return toast("الشحن بالتحويل يبدأ من 5,000 د.ع وبمضاعفات 5,000 فقط.");
   if(transferReference.length<3)return toast("اكتب مرجع التحويل");
   if(driverHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
-  const button=event.submitter||byId("driverTopupSubmit");busy(button,true,"جاري الإرسال…");
+  const button=event.submitter||byId("driverTopupSubmit");busy(button,true,"جارٍ الإرسال…");
   try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.userData?.name||state.user.displayName||"كابتن",email:state.user.email||"",accountType:"captain"});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);const msg=String(error?.message||"").toUpperCase();toast(msg.includes("TOPUP_TRANSFER_DISABLED")?"طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.":(["permission-denied","failed-precondition","already-exists"].includes(error?.code)||msg.includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{busy(button,false);updateDriverTopupFormState();}
 });
 
@@ -1859,7 +1818,7 @@ byId("driverTopupCardRedeemForm")?.addEventListener("submit",async event=>{
   if(!driverCardTopupEnabled())return toast("طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.");
   const code=String(byId("driverTopupCardCode")?.value||"").replace(/\D/g,"");
   if(code.length!==16)return toast("أدخل رقم الكرت المكوّن من 16 رقمًا.");
-  const button=event.submitter||byId("driverRedeemTopupCard");busy(button,true,"جاري الشحن…");
+  const button=event.submitter||byId("driverRedeemTopupCard");busy(button,true,"جارٍ الشحن…");
   try{const result=await karwaRedeemTopupCard(code);state.userData={...(state.userData||{}),balance:Number(result?.balance ?? state.userData?.balance ?? 0)};renderDriverWallet();event.currentTarget.reset();toast(`تم شحن ${money(result?.amount||0)} بنجاح. الكرت أصبح مستخدمًا.`);}
   catch(error){console.error(error);const msg=String(error?.message||"");toast(msg.includes("TOPUP_CARD_METHOD_DISABLED")?"طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.":msg.includes("TOPUP_CARD_USED")?"هذا الكرت مستخدم مسبقًا.":msg.includes("INVALID_TOPUP_CARD")?"رقم الكرت غير صحيح أو غير موجود.":msg.includes("TOPUP_CARD_DISABLED")?"هذا الكرت غير فعال.":"تعذر شحن الرصيد بالكرت.");}
   finally{busy(button,false);}
@@ -1882,7 +1841,6 @@ onAuthStateChanged(auth, user => {
     if (state.directRegistration) {
       fillApplication();
       showView("application");
-      window.setTimeout(()=>startDriverGoogleRegistration(),120);
     } else {
       showView("auth");
     }
@@ -1894,7 +1852,6 @@ onAuthStateChanged(auth, user => {
     if (!snapshot.exists()) {
       if (state.directRegistration) {
         showView("application");
-        configureDirectRegistrationUI();
         return;
       }
       byId("authError").textContent = "ملف الحساب غير موجود. أعد تسجيل الدخول أو أنشئ حساب كابتن جديدًا.";
@@ -2113,7 +2070,7 @@ function setupDriverMapPlaceTool() {
   const run=async()=>{
     const queryText=input.value.trim(),requestId=++sequence;
     if(queryText.length<2){results.innerHTML='<div class="map-place-state">اكتب حرفين على الأقل للبحث.</div>';return;}
-    button.disabled=true;results.innerHTML='<div class="map-place-state">جاري البحث عن المكان…</div>';
+    button.disabled=true;results.innerHTML='<div class="map-place-state">جارٍ البحث عن المكان…</div>';
     try{
       const places=await searchDriverMapPlaces(queryText,{category:category?.value||"",scope:scope?.value||"nearby"});if(requestId!==sequence)return;results.innerHTML="";
       if(!places.length){results.innerHTML='<div class="map-place-state">لم نجد نتيجة. جرّب اسم الحي أو شارعًا قريبًا.</div>';return;}
@@ -2125,7 +2082,7 @@ function setupDriverMapPlaceTool() {
   locateButton?.addEventListener("click",async()=>{
     const usePosition=position=>{state.lastPosition=position;showOwnPosition(position);selectPlace({lat:position.coords.latitude,lon:position.coords.longitude,name:"موقعي الحالي",display_name:`دقة الموقع نحو ${Math.round(position.coords.accuracy||0)} متر`,namedetails:{"name:ar":"موقعي الحالي"}});};
     const lastAcc=Number(state.lastPosition?.coords?.accuracy||9999),lastAge=Date.now()-Number(state.lastPosition?.timestamp||0);
-    locateButton.disabled=true;locateButton.textContent="جاري تثبيت GPS…";
+    locateButton.disabled=true;locateButton.textContent="جارٍ تثبيت GPS…";
     try{const pos=(state.lastPosition&&lastAcc<=35&&lastAge<10000)?state.lastPosition:await getDriverPrecisePosition();usePosition(pos);}
     catch(error){handleDriverLocationError(error);}
     finally{locateButton.disabled=false;locateButton.textContent="⌖ تحديد موقعي على الخريطة";}

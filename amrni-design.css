@@ -1,0 +1,145 @@
+/* آمرني — واجهة موحدة للعميل والكابتن والشريك والإدارة. */
+:root {
+  --amrni-ink: #142b3d;
+  --amrni-navy: #103c56;
+  --amrni-teal: #087a75;
+  --amrni-gold: #d9aa52;
+  --amrni-muted: #526779;
+  --amrni-line: #dce7eb;
+  --amrni-surface: #ffffff;
+  --amrni-canvas: #f3f7f8;
+  --amrni-shadow: 0 12px 34px rgba(16, 48, 65, .07);
+  color-scheme: light;
+}
+
+html { text-size-adjust: 100%; }
+body {
+  color: var(--amrni-ink);
+  background-color: var(--amrni-canvas);
+  font-family: system-ui, "Noto Sans Arabic", Tahoma, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 3px solid #d9aa52 !important;
+  outline-offset: 3px;
+}
+:where(input, select, textarea)::placeholder { color: #697e8c; opacity: 1; }
+:where(.muted, .card small, .stat small, .metric small) { line-height: 1.6; }
+:where(.card, .stat, .metric, .order-card, .admin-module-card) {
+  border-color: var(--amrni-line);
+  box-shadow: var(--amrni-shadow);
+}
+:where(.card, .stat, .metric, .order-card) { overflow-wrap: anywhere; }
+:where(.hero, .welcome, .auth-intro) {
+  background: linear-gradient(120deg, #103c56 0%, #0b6070 63%, #087a75 100%);
+  box-shadow: 0 20px 46px rgba(10, 58, 75, .16);
+}
+:where(.hero, .welcome, .auth-intro)::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--amrni-gold), transparent);
+  pointer-events: none;
+}
+:where(.hero, .welcome, .auth-intro) { position: relative; }
+:where(.hero, .welcome, .auth-intro) h1 { line-height: 1.32; letter-spacing: 0; }
+:where(.topbar) { border-bottom-color: var(--amrni-line); box-shadow: 0 3px 18px rgba(15, 48, 66, .045); }
+:where(.topbar .logo, .topbar .brand-mark, .sidebar .brand-logo) {
+  background: linear-gradient(145deg, #0b5d70, #087a75);
+  box-shadow: 0 8px 18px rgba(8, 87, 100, .20);
+}
+:where(.primary, .primary-button, .button.primary) {
+  min-height: 44px;
+  background: linear-gradient(125deg, #0c5c71, #087a75);
+  box-shadow: 0 6px 15px rgba(8, 103, 112, .15);
+}
+:where(.secondary, .secondary-button, .button.secondary) { min-height: 42px; }
+:where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-width: 0;
+  min-height: 44px;
+  border-color: #cddde3;
+  background-color: #fff;
+}
+:where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  border-color: var(--amrni-teal);
+  box-shadow: 0 0 0 4px rgba(8, 122, 117, .13);
+}
+:where(.role-badge, .badge, .status-chip, .status, .demo-badge) { letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* العميل: معلومات واضحة فوق الخريطة، وقائمة واحدة متسقة. */
+.customer-page .sidebar { background: linear-gradient(180deg, #103c56, #092f46); }
+.customer-page .sidebar .brand { margin-bottom: 32px; }
+.customer-page .sidebar .brand small { color: #d4e7e8; }
+.customer-page .nav-button { min-height: 48px; color: #d9e9ec; }
+.customer-page .nav-button:hover, .customer-page .nav-button.active { background: rgba(255, 255, 255, .13); }
+.customer-page .nav-button.active { box-shadow: inset -3px 0 var(--amrni-gold); }
+.customer-page .support-card { border-color: rgba(255, 255, 255, .17); background: rgba(255, 255, 255, .09); }
+.customer-page .support-card p { color: #e3eff0; }
+.customer-page .welcome { min-height: 138px; }
+.customer-page .service-button.active { border-color: #0d6173; background: linear-gradient(130deg, #103c56, #0d6173); }
+.customer-page .vehicle-button.active { border-color: #087a75; background: #ecf8f6; }
+.customer-page .icon-button, .customer-page .avatar { border-radius: 13px; }
+.customer-page .mobile-navigation { background: rgba(10, 46, 65, .97); }
+.customer-page .mobile-navigation button.active { background: #087a75; }
+.customer-page .page-heading p { color: var(--amrni-muted); }
+.customer-page .service-tabs, .customer-page .vehicle-list { scrollbar-width: thin; }
+.customer-page #authModal .role-entry-card p,
+.customer-page #authModal .auth-brand-copy p,
+.customer-page #authModal .auth-form-heading p,
+.customer-page #authModal .auth-note,
+.customer-page #authModal .role-entry-heading p { font-size: max(12px, .75rem); line-height: 1.65; }
+.customer-page #authModal #authForm label { font-size: 13px; }
+.customer-page #authModal .role-entry-actions button { font-size: 12px; }
+
+/* لوحة الإدارة والكابتن: إيقاع ثابت للأقسام والقراءة. */
+.admin-page .shell, .driver-page .shell { width: min(1320px, calc(100% - 36px)); }
+.admin-page .admin-stats .stat, .driver-page .stats .stat { border-top: 3px solid #0c807b; }
+.admin-page .admin-module-card { min-height: 96px; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.admin-page .admin-module-card:hover { border-color: #7abbb5; transform: translateY(-2px); }
+.admin-page .admin-panel { scroll-margin-top: 90px; }
+.admin-page .admin-panel > .card-heading { min-height: 64px; }
+.admin-page .admin-panel > .card-heading h2 { line-height: 1.4; }
+.admin-page .auth-wrap .auth-card, .driver-page .auth-wrap .auth-card { border-top: 4px solid #087a75; }
+.admin-page .auth-wrap h1, .driver-page .auth-wrap h1 { line-height: 1.35; }
+.admin-page .admin-settings-grid, .admin-page .finance-account-row { min-width: 0; }
+.driver-page .order-card, .driver-page .card { scroll-margin-top: 88px; }
+
+/* الشركاء: هوية مشتركة مع واجهة الحجز. */
+.partner-page .topbar { background: rgba(255, 255, 255, .96); }
+.partner-page .auth-intro { isolation: isolate; }
+.partner-page .feature { border-color: rgba(255, 255, 255, .20); }
+.partner-page .metric { border-top: 3px solid #0c807b; }
+.partner-page .service-quick-nav a { min-height: 44px; }
+.partner-page .summary > div { background: #f6fafb; }
+.partner-page .loading-card { border-top: 4px solid #087a75; }
+
+.legal-page main { max-width: 920px; }
+.legal-page .card { border-top: 4px solid #087a75; }
+.legal-page h1 { line-height: 1.4; }
+
+@media (max-width: 950px) {
+  .admin-page .shell, .driver-page .shell { width: min(100% - 24px, 1320px); }
+  .admin-page .topbar, .driver-page .topbar { padding-inline: 14px; }
+  .admin-page .hero, .driver-page .hero, .partner-page .hero { gap: 16px; }
+}
+@media (max-width: 620px) {
+  body { font-size: 14px; }
+  .customer-page .welcome { min-height: 105px; }
+  .customer-page .welcome h1 { font-size: clamp(20px, 5vw, 28px); }
+  .customer-page .mobile-navigation { bottom: max(8px, env(safe-area-inset-bottom)); }
+  .customer-page .mobile-navigation button { min-height: 52px; }
+  .admin-page .hero, .driver-page .hero, .partner-page .hero { border-radius: 20px; }
+  .admin-page .card, .driver-page .card, .partner-page .card { border-radius: 18px; }
+  .partner-page .topbar-inner { min-height: 64px; }
+}
+@media print {
+  :where(.card, .stat, .metric, .order-card) { box-shadow: none; }
+  :where(.hero, .welcome) { color: #142b3d; background: white; box-shadow: none; }
+}

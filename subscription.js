@@ -1,4 +1,4 @@
-import { karwaVerifyGooglePlaySubscription } from "./supabase-compat.js?v=118";
+import { karwaVerifyGooglePlaySubscription } from "./supabase-compat.js?v=117";
 
 export const AMRNI_MONTHLY_PRODUCT_ID = "amrni_monthly_access";
 

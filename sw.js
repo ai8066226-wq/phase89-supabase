@@ -1,6 +1,42 @@
-const CACHE='amrni-phase92-full-v118';
-const CORE=["./","./index.html","./driver.html","./admin.html","./services.html","./iraq-governorates.js?v=118","./portal.css?v=85","./app.js?v=118","./supabase-compat.js?v=118","./driver.js?v=118","./admin.js?v=118","./services.js?v=118","./device-binding.js?v=118","./service-themes.js?v=85","./pwa.js?v=118","./precise-location.js?v=85","./app-dialogs.js?v=118","./native-notifications.js?v=118","./karwa-icon-192.png","./karwa-icon-512.png","./manifest.webmanifest","./karwa-icon.svg","./service-themes-manifest.json?v=85","./theme-ac.webp?v=85","./theme-bakery.webp?v=85","./theme-cafe.webp?v=85","./theme-carwash.webp?v=85","./theme-cleaning.webp?v=85","./theme-clinic.webp?v=85","./theme-delivery.webp?v=85","./theme-dessert.webp?v=85","./theme-electrical.webp?v=85","./theme-fastfood.webp?v=85","./theme-fitness.webp?v=85","./theme-grocery.webp?v=85","./theme-maintenance.webp?v=85","./theme-parcel.webp?v=85","./theme-pest.webp?v=85","./theme-pets.webp?v=85","./theme-pharmacy.webp?v=85","./theme-pizza.webp?v=85","./theme-plumbing.webp?v=85","./theme-retail.webp?v=85","./theme-salon.webp?v=85","./theme-spa.webp?v=85","./theme-taxi.webp?v=85","./theme-travel.webp?v=85","./service-image-library.js?v=89","./service-library/barber.webp?v=89","./service-library/biryani.webp?v=89","./service-library/burger.webp?v=89","./service-library/car-repair.webp?v=89","./service-library/coffee.webp?v=89","./service-library/dairy.webp?v=89","./service-library/decor.webp?v=89","./service-library/delivery.webp?v=89","./service-library/desserts.webp?v=89","./service-library/eggs.webp?v=89","./service-library/electrical.webp?v=89","./service-library/falafel-plate.webp?v=89","./service-library/falafel-wrap.webp?v=89","./service-library/fitness.webp?v=89","./service-library/fries.webp?v=89","./service-library/fruit.webp?v=89","./service-library/gardening.webp?v=89","./service-library/grilled-chicken.webp?v=89","./service-library/grilled-fish.webp?v=89","./service-library/home-cleaning.webp?v=89","./service-library/ice-cream.webp?v=89","./service-library/kebab.webp?v=89","./service-library/kunafa.webp?v=89","./service-library/laundry.webp?v=89","./service-library/mango-juice.webp?v=89","./service-library/meat-shawarma.webp?v=89","./service-library/medical.webp?v=89","./service-library/orange-juice.webp?v=89","./service-library/pasta.webp?v=89","./service-library/pastries.webp?v=89","./service-library/pet-care.webp?v=89","./service-library/photography.webp?v=89","./service-library/pizza.webp?v=89","./service-library/plumbing.webp?v=89","./service-library/salad.webp?v=89","./service-library/samosa.webp?v=89","./service-library/sandwich.webp?v=89","./service-library/shawarma.webp?v=89","./service-library/soft-drink.webp?v=89","./service-library/soup.webp?v=89","./service-library/tailoring.webp?v=89","./service-library/tea.webp?v=89","./service-library/tutoring.webp?v=89","./service-library/vegetables.webp?v=89","./service-library/water.webp?v=89"];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting()});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match(e.request,{ignoreSearch:true})).then(r=>r||caches.match('./index.html'))));});
+// تخزين ملفات التطبيق العامة فقط؛ لا تُحفظ استجابات الحسابات أو واجهات البيانات.
+const CACHE = 'amrni-static-v118';
+const CORE=["./","./index.html","./driver.html","./admin.html","./services.html","./iraq-governorates.js?v=117","./portal.css?v=85","./app.js?v=117","./supabase-compat.js?v=117","./driver.js?v=117","./admin.js?v=117","./services.js?v=117","./device-binding.js?v=117","./service-themes.js?v=85","./pwa.js?v=117","./precise-location.js?v=85","./app-dialogs.js?v=117","./native-notifications.js?v=117","./karwa-icon-192.png","./karwa-icon-512.png","./manifest.webmanifest","./karwa-icon.svg","./service-themes-manifest.json?v=85","./theme-ac.webp?v=85","./theme-bakery.webp?v=85","./theme-cafe.webp?v=85","./theme-carwash.webp?v=85","./theme-cleaning.webp?v=85","./theme-clinic.webp?v=85","./theme-delivery.webp?v=85","./theme-dessert.webp?v=85","./theme-electrical.webp?v=85","./theme-fastfood.webp?v=85","./theme-fitness.webp?v=85","./theme-grocery.webp?v=85","./theme-maintenance.webp?v=85","./theme-parcel.webp?v=85","./theme-pest.webp?v=85","./theme-pets.webp?v=85","./theme-pharmacy.webp?v=85","./theme-pizza.webp?v=85","./theme-plumbing.webp?v=85","./theme-retail.webp?v=85","./theme-salon.webp?v=85","./theme-spa.webp?v=85","./theme-taxi.webp?v=85","./theme-travel.webp?v=85","./service-image-library.js?v=89","./service-library/barber.webp?v=89","./service-library/biryani.webp?v=89","./service-library/burger.webp?v=89","./service-library/car-repair.webp?v=89","./service-library/coffee.webp?v=89","./service-library/dairy.webp?v=89","./service-library/decor.webp?v=89","./service-library/delivery.webp?v=89","./service-library/desserts.webp?v=89","./service-library/eggs.webp?v=89","./service-library/electrical.webp?v=89","./service-library/falafel-plate.webp?v=89","./service-library/falafel-wrap.webp?v=89","./service-library/fitness.webp?v=89","./service-library/fries.webp?v=89","./service-library/fruit.webp?v=89","./service-library/gardening.webp?v=89","./service-library/grilled-chicken.webp?v=89","./service-library/grilled-fish.webp?v=89","./service-library/home-cleaning.webp?v=89","./service-library/ice-cream.webp?v=89","./service-library/kebab.webp?v=89","./service-library/kunafa.webp?v=89","./service-library/laundry.webp?v=89","./service-library/mango-juice.webp?v=89","./service-library/meat-shawarma.webp?v=89","./service-library/medical.webp?v=89","./service-library/orange-juice.webp?v=89","./service-library/pasta.webp?v=89","./service-library/pastries.webp?v=89","./service-library/pet-care.webp?v=89","./service-library/photography.webp?v=89","./service-library/pizza.webp?v=89","./service-library/plumbing.webp?v=89","./service-library/salad.webp?v=89","./service-library/samosa.webp?v=89","./service-library/sandwich.webp?v=89","./service-library/shawarma.webp?v=89","./service-library/soft-drink.webp?v=89","./service-library/soup.webp?v=89","./service-library/tailoring.webp?v=89","./service-library/tea.webp?v=89","./service-library/tutoring.webp?v=89","./service-library/vegetables.webp?v=89","./service-library/water.webp?v=89","./privacy.html","./amrni-design.css?v=118","./subscription.js?v=117","./native-notifications.css?v=81"];
+const STATIC_PATHS = new Set(CORE.map(file => new URL(file, self.registration.scope).pathname));
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE)
+    .then(cache => cache.addAll(CORE.map(file => new Request(file, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(key =>
+      key !== CACHE && (key.startsWith('amrni-static-') || key.startsWith('karwa-phase'))
+    ).map(key => caches.delete(key))))
+    .then(() => self.clients.claim()));
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || !STATIC_PATHS.has(url.pathname)) return;
+  const canonical = new Request(url.origin + url.pathname);
+  event.respondWith(fetch(request, { cache: 'no-store' })
+    .then(response => {
+      if (response.ok && response.type === 'basic') {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE).then(cache => cache.put(canonical, copy)));
+      }
+      return response;
+    })
+    .catch(async () => {
+      const cache = await caches.open(CACHE);
+      return (await cache.match(canonical, { ignoreSearch: true })) || Response.error();
+    }));
+});

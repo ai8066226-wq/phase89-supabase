@@ -1563,7 +1563,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
-  <script src="./app-dialogs.js?v=118" defer></script>
+  <script src="./app-dialogs.js?v=117" defer></script>
 
 <style id="phase20-map-first">
 /* خريطة العميل بملء المساحة المرئية مع درج خدمات جانبي */
@@ -2497,9 +2497,10 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 .karwa-whatsapp-link.private{border-color:#d6e4ea;background:#f8fbfc;color:#244a5e}.karwa-whatsapp-link:active{transform:translateY(1px)}
 @media(max-width:520px){.karwa-whatsapp-actions{grid-template-columns:1fr}}
 </style>
+  <link rel="stylesheet" href="./amrni-design.css?v=118">
 </head>
 
-<body>
+<body class="customer-page">
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
@@ -2537,14 +2538,14 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           <span>⌖</span>
           <span>
             <small>موقعك الحالي</small>
-            <strong id="cityLabel">بغداد، العراق</strong>
+            <strong id="cityLabel">تحديد الموقع…</strong>
           </span>
         </button>
 
         <div class="top-actions">
           <button class="icon-button" id="notificationButton" aria-label="الإشعارات">♢</button>
           <button class="avatar" id="accountButton" aria-label="فتح الحساب">
-            <span id="smallAvatar">م</span>
+            <span id="smallAvatar">آ</span>
           </button>
         </div>
       </header>
@@ -2553,10 +2554,10 @@ body.customer-map-mode #home>.welcome::after { display: none; }
         <section class="view active" id="home">
           <div class="welcome">
             <div>
-              <h1>هلا <span id="firstName">محمد</span>، وين نوصلك؟</h1>
-              <p>اختر الخدمة وحدد التفاصيل خلال أقل من دقيقة.</p>
+              <h1>مرحبًا <span id="firstName">بك</span>، إلى أين تريد الذهاب؟</h1>
+              <p>احجز رحلة أو اطلب خدمة، وتابع التفاصيل من مكان واحد.</p>
             </div>
-            <span class="demo-badge sync-badge" id="connectionBadge">جاري الاتصال…</span>
+            <span class="demo-badge sync-badge" id="connectionBadge">جارٍ الاتصال…</span>
           </div>
 
           <div class="card tracking-card" id="trackingCard">
@@ -2591,7 +2592,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <button id="cancelOrder">إلغاء الطلب</button>
               <a class="secondary-button hidden" id="callDriver" href="#">📞 اتصال بالكابتن</a>
               <button class="secondary-button" id="shareTrip">🔗 مشاركة الرحلة</button>
-              <button class="secondary-button" id="sosTrip" style="border-color:#dc2626;color:#b91c1c">🆘 SOS / سلامة</button>
+              <button class="secondary-button" id="sosTrip" style="border-color:#dc2626;color:#b91c1c">🆘 طلب مساعدة عاجلة</button>
             </div>
           </div>
 
@@ -2737,7 +2738,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
                 </div>
 
                 <div class="food-flow-note"><strong>🍽️ طعام</strong><span>اختر المطعم أولًا، ثم اختر الأكلة وشاهد التفاصيل قبل إرسال الطلب.</span></div>
-                <div class="restaurant-marketplace" id="restaurantMarketplace"><div class="restaurant-empty">جاري تحميل المطاعم…</div></div>
+                <div class="restaurant-marketplace" id="restaurantMarketplace"><div class="restaurant-empty">جارٍ تحميل المطاعم…</div></div>
 
                 <div class="meal-detail-backdrop" id="mealDetailBackdrop" hidden>
                   <div class="meal-detail-card" role="dialog" aria-modal="true" aria-labelledby="mealDetailTitle">
@@ -2773,7 +2774,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 
                 <section class="selected-service-box" id="selectedServiceBox" hidden>
                   <div class="selected-service-head"><div><small id="selectedServiceCategory">خدمة معتمدة</small><h3 id="selectedServiceName">اسم النشاط</h3></div><button id="closeSelectedService" type="button" aria-label="إلغاء اختيار الخدمة">×</button></div>
-                  <div class="selected-service-summary"><span>📍 <b id="selectedServiceAddress">العنوان</b></span><span>GPS: <b id="selectedServiceGps">غير محدد</b></span><button class="text-button" id="locateSelectedService" type="button">عرض الموقع على الخريطة</button></div>
+                  <div class="selected-service-summary"><span>📍 <b id="selectedServiceAddress">العنوان</b></span><span>الموقع: <b id="selectedServiceGps">غير محدد</b></span><button class="text-button" id="locateSelectedService" type="button">عرض الموقع على الخريطة</button></div>
                   <div class="field"><label for="otherServiceItem">الخدمة أو المنتج</label><select id="otherServiceItem"><option value="">اختر خدمة</option></select></div>
                   <div class="selected-item-detail" id="selectedItemDetail"><div class="selected-item-image" id="selectedItemImage">🍽️</div><div><h4 id="selectedItemName">اختر خدمة لعرض التفاصيل</h4><p id="selectedItemDescription">سيظهر وصف الخدمة وسعر الوحدة هنا.</p><strong class="selected-service-price" id="selectedServicePrice">—</strong></div></div>
                   <div class="quantity-delivery-grid">
@@ -2816,7 +2817,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
                 <span class="customer-account-badge" id="customerSettingsAccountStatus">✓ حساب متصل</span>
               </section>
               <dl class="customer-info-grid">
-                <div><dt>موقعك</dt><dd id="customerSettingsLocation">بغداد، العراق</dd></div>
+                <div><dt>موقعك</dt><dd id="customerSettingsLocation">تحديد الموقع…</dd></div>
                 <div><dt>الاشتراك</dt><dd id="customerSettingsBalance">الاشتراك مطلوب</dd></div>
                 <div><dt>الطلبات</dt><dd id="customerSettingsOrders">0</dd></div>
                 <div><dt>قيد التنفيذ</dt><dd id="customerSettingsActiveOrders">0</dd></div>
@@ -2850,8 +2851,8 @@ body.customer-map-mode #home>.welcome::after { display: none; }
                 </div>
                 <div class="customer-settings-label"><span>طريقة العرض</span><span id="customerMapViewValue">2D</span></div>
                 <div class="customer-settings-segment" role="group" aria-label="طريقة عرض الخريطة">
-                  <button type="button" data-customer-map-view="2d" aria-pressed="true">2D مسطحة</button>
-                  <button type="button" data-customer-map-view="3d" aria-pressed="false">3D منظور</button>
+                  <button type="button" data-customer-map-view="2d" aria-pressed="true">ثنائية الأبعاد</button>
+                  <button type="button" data-customer-map-view="3d" aria-pressed="false">ثلاثية الأبعاد</button>
                 </div>
               </section>
               <section class="customer-settings-group" aria-label="تفضيلات العميل">
@@ -2890,7 +2891,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
         <section class="view" id="wallet">
           <div class="page-heading">
             <h1>الاشتراك الشهري</h1>
-            <p>تشغيل آمرني يعتمد على اشتراك شهري موحّد وآمن عبر Google Play فقط. لا يوجد شحن يدوي أو كروت رصيد.</p>
+            <p>اطّلع على حالة اشتراكك وجدّده بأمان عبر Google Play.</p>
           </div>
 
           <div class="wallet-card">
@@ -2908,7 +2909,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <div class="referral-actions"><button class="primary-button" id="subscriptionButton" type="button">الاشتراك الشهري عبر Google Play</button><button class="secondary-button" id="subscriptionRestore" type="button">استعادة / تحديث الاشتراك</button></div>
             </div>
             <div class="card referral-card">
-              <h2>اشتراك واحد بدل المحفظة</h2>
+              <h2>تسعير واضح للخدمات</h2>
               <p class="muted">لا توجد رسوم ثابتة تُخصم من رصيد داخلي عند إنشاء الطلب. اشتراك Google Play هو ترخيص استخدام المنصة، بينما أجرة الرحلة أو الخدمة تبقى مستقلة حسب الطلب.</p>
               <div class="referral-code-box"><small>التكسي</small><strong>حسب الكابتن</strong><span>يحدد كل كابتن سعر الكيلومتر الخاص به، وتُحسب الأجرة النهائية عند قبوله الرحلة.</span></div>
             </div>
@@ -2923,8 +2924,8 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 
           <div class="profile-grid">
             <div class="card profile-main">
-              <div class="big-avatar" id="bigAvatar">م</div>
-              <h2 id="profileName">محمد علي</h2>
+              <div class="big-avatar" id="bigAvatar">آ</div>
+              <h2 id="profileName">حسابك في آمرني</h2>
               <p class="profile-email" id="profileEmail">سجّل الدخول لمزامنة بياناتك</p>
               <button class="secondary-button" id="editName">تعديل الاسم</button>
               <button class="secondary-button danger-button" id="logoutButton">تسجيل الخروج</button>
@@ -2961,7 +2962,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               </div>
 
               <div class="setting">
-                <div class="setting-icon">文</div>
+                <div class="setting-icon">ع</div>
                 <div class="setting-copy">
                   <strong>اللغة</strong>
                   <small>لغة التطبيق الحالية</small>
@@ -3122,9 +3123,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
       </div>
       <div class="role-entry-grid" id="roleEntryGrid" aria-labelledby="accountTypeTitle">
         <div class="role-entry-heading"><small>ابدأ الآن</small><h3 id="accountTypeTitle">اختر نوع حسابك</h3><p>اختر البوابة المناسبة، ثم سجّل الدخول أو أنشئ حسابًا جديدًا.</p></div>
-        <article class="role-entry-card customer"><div class="role-entry-icon">👤</div><h3>عميل</h3><p>اطلب تكسي أو توصيل وتابع طلباتك بسهولة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="customer" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="customer" data-mode="register">إنشاء حساب عبر Google</button></div></article>
-        <article class="role-entry-card captain"><div class="role-entry-icon">🚕</div><h3>كابتن</h3><p>استقبل الرحلات والطلبات المناسبة لنوع خدمتك.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="driverApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="driverApplicant" data-mode="register">إنشاء حساب عبر Google</button></div></article>
-        <article class="role-entry-card services"><div class="role-entry-icon">🧰</div><h3>خدمات أخرى</h3><p>سجّل نشاطك وأرسل طلب الاعتماد، ثم أدر خدماتك من لوحة مستقلة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="serviceApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="serviceApplicant" data-mode="register">إنشاء حساب عبر Google</button></div></article>
+        <article class="role-entry-card customer"><div class="role-entry-icon">👤</div><h3>عميل</h3><p>اطلب تكسي أو توصيل وتابع طلباتك بسهولة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="customer" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="customer" data-mode="register">إنشاء حساب</button></div></article>
+        <article class="role-entry-card captain"><div class="role-entry-icon">🚕</div><h3>كابتن</h3><p>استقبل الرحلات والطلبات المناسبة لنوع خدمتك.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="driverApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="driverApplicant" data-mode="register">إنشاء حساب</button></div></article>
+        <article class="role-entry-card services"><div class="role-entry-icon">🧰</div><h3>خدمات أخرى</h3><p>سجّل نشاطك وأرسل طلب الاعتماد، ثم أدر خدماتك من لوحة مستقلة.</p><div class="role-entry-actions"><button type="button" class="primary-button role-auth-action" data-role="serviceApplicant" data-mode="login">تسجيل الدخول</button><button type="button" class="secondary-button role-auth-action" data-role="serviceApplicant" data-mode="register">إنشاء حساب</button></div></article>
       </div>
       <div id="authFormPanel" hidden>
         <button type="button" class="auth-back-button" id="authBackToRoles">→ العودة لاختيار نوع الحساب</button>
@@ -3152,11 +3153,11 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script>try{if(window.maplibregl&&maplibregl.setRTLTextPlugin&&(!maplibregl.getRTLTextPluginStatus||maplibregl.getRTLTextPluginStatus()==="unavailable")){maplibregl.setRTLTextPlugin("https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",true).catch(()=>{});}}catch(e){}</script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=118"></script>
+  <script src="./native-notifications.js?v=117"></script>
   <script src="./service-themes.js?v=81"></script>
-  <script src="./iraq-governorates.js?v=118"></script>
-  <script type="module" src="./app.js?v=118"></script>
-  <script src="./pwa.js?v=118"></script>
+  <script src="./iraq-governorates.js?v=117"></script>
+  <script type="module" src="./app.js?v=117"></script>
+  <script src="./pwa.js?v=117"></script>
 
 <script id="phase20-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{

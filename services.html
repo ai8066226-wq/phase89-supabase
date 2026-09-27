@@ -8,7 +8,7 @@
   <title>آمرني | بوابة الخدمات الأخرى</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
-  <script src="./app-dialogs.js?v=118" defer></script>
+  <script src="./app-dialogs.js?v=117" defer></script>
   <style>
     :root{--ink:#12243f;--muted:#69798f;--line:#dfe7ef;--surface:#fff;--soft:#f4f7fb;--brand:#087b75;--brand-dark:#0b4f70;--ok:#08765b;--warn:#976000;--bad:#ae263b;--shadow:0 18px 52px rgba(16,43,72,.11)}
     *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;font-family:Tahoma,Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 85% 0,rgba(27,174,158,.14),transparent 32rem),radial-gradient(circle at 5% 35%,rgba(30,97,148,.08),transparent 28rem),var(--soft)}
@@ -131,20 +131,20 @@
 .karwa-whatsapp-link.private{border-color:#d6e4ea;background:#f8fbfc;color:#244a5e}.karwa-whatsapp-link:active{transform:translateY(1px)}
 @media(max-width:520px){.karwa-whatsapp-actions{grid-template-columns:1fr}}
 </style>
+  <link rel="stylesheet" href="./amrni-design.css?v=118">
 </head>
-<body>
+<body class="partner-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="./index.html" aria-label="آمرني - الصفحة الرئيسية"><span class="brand-mark">آ</span><span>آمرني<small>بوابة الخدمات الأخرى</small></span></a><div class="account"><span id="accountName"></span><button class="button danger hidden" id="logoutBtn" type="button">تسجيل الخروج</button></div></div></header>
 
-  <section class="shell" id="loadingView"><div class="loading-card"><div class="spinner"></div><strong>جاري التحقق من الحساب…</strong><p class="muted">لحظات ونفتح لك المسار المناسب.</p></div></section>
+  <section class="shell" id="loadingView"><div class="loading-card"><div class="spinner"></div><strong>جارٍ التحقق من الحساب…</strong><p class="muted">سيتم فتح لوحة حسابك خلال لحظات.</p></div></section>
 
   <main class="shell hidden" id="authView">
     <div class="auth-layout">
       <section class="auth-intro"><span class="eyebrow">بوابة شركاء آمرني</span><h1>حوّل خدمتك إلى تجربة رقمية موثوقة</h1><p>أنشئ حساب مزود خدمة، وأرسل طلب الاعتماد تلقائيًا إلى الإدارة، ثم أدر ملفك وخدماتك من لوحة واحدة بعد الموافقة.</p><div class="feature-list"><div class="feature"><span>1</span><div><b>تسجيل احترافي</b><small>بيانات واضحة تساعد الإدارة على مراجعة الطلب.</small></div></div><div class="feature"><span>2</span><div><b>اعتماد آمن</b><small>لا تُفتح لوحة الخدمة إلا بعد موافقة الإدارة.</small></div></div><div class="feature"><span>3</span><div><b>إدارة مرنة</b><small>حدّث ملف النشاط وقائمة الخدمات أو المنتجات بسهولة.</small></div></div></div></section>
       <section class="card auth-card">
         <h2 id="authHeading">مرحبًا بعودتك</h2><p class="muted" id="authLead">سجّل الدخول لمتابعة طلبك أو إدارة خدمتك.</p>
-        <div class="tabs" role="tablist" aria-label="الدخول أو إنشاء حساب"><button class="tab active" id="loginMode" type="button" role="tab">تسجيل الدخول</button><button class="tab" id="registerMode" type="button" role="tab">إنشاء حساب عبر Google</button></div>
+        <div class="tabs" role="tablist" aria-label="الدخول أو إنشاء حساب"><button class="tab active" id="loginMode" type="button" role="tab">تسجيل الدخول</button><button class="tab" id="registerMode" type="button" role="tab">إنشاء حساب</button></div>
         <form id="authForm"><div class="form-grid">
-          <div class="field registration-field full hidden"><label>حساب Google</label><div id="serviceGoogleIdentity" style="display:grid;gap:3px;padding:11px;border:1px solid #dbe5eb;border-radius:12px;background:#f8fbfc"><strong>حساب Google غير محدد</strong><small>اضغط لاختيار حساب Google الموجود على الهاتف.</small></div><button class="button secondary wide" id="serviceChooseGoogle" type="button" style="margin-top:8px">اختيار / تغيير حساب Google</button></div>
           <div class="field full"><label for="authEmail">البريد الإلكتروني</label><input id="authEmail" type="email" inputmode="email" autocomplete="email" required placeholder="name@example.com"></div>
           <div class="field full"><label for="authPassword">كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="6 أحرف على الأقل"></div>
           <div class="field registration-field full hidden"><label for="registerPasswordConfirm">تأكيد كلمة المرور</label><input id="registerPasswordConfirm" type="password" autocomplete="new-password" minlength="6" placeholder="أعد كتابة كلمة المرور"></div>
@@ -187,7 +187,7 @@
       <div class="unified-wallet-balance"><small>سعر الاشتراك</small><strong id="subscriptionPrice">يُحدد في Google Play</strong><span id="subscriptionNotice">يلزم اشتراك صالح لنشر النشاط وقبول الطلبات الجديدة.</span></div>
       <div class="unified-topup-grid">
         <div><div class="unified-topup-destination"><span class="unified-wallet-icon">▶</span><div><small>بداية الاشتراك</small><strong id="subscriptionStartedAt">—</strong><span>الانتهاء: <b id="subscriptionExpiresAt">—</b></span></div></div></div>
-        <div><h3 style="margin-top:0">إدارة الاشتراك</h3><p class="muted">الدفع والتجديد حصريًا من Google Play. لا توجد حوالات يدوية أو كروت رصيد.</p><div style="display:grid;gap:8px"><button class="button primary wide" id="subscriptionButton" type="button">الاشتراك الشهري عبر Google Play</button><button class="button secondary wide" id="subscriptionRestore" type="button">استعادة / تحديث الاشتراك</button></div></div>
+        <div><h3 style="margin-top:0">إدارة الاشتراك</h3><p class="muted">الدفع والتجديد حصريًا من Google Play. يمكنك إدارة الدفع والتجديد من Google Play.</p><div style="display:grid;gap:8px"><button class="button primary wide" id="subscriptionButton" type="button">الاشتراك الشهري عبر Google Play</button><button class="button secondary wide" id="subscriptionRestore" type="button">استعادة / تحديث الاشتراك</button></div></div>
       </div>
     </section>
     <div class="content-grid" id="profileSection">
@@ -229,11 +229,11 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./precise-location.js?v=81"></script>
-  <script src="./native-notifications.js?v=118"></script>
+  <script src="./native-notifications.js?v=117"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./service-image-library.js?v=89"></script>
-  <script src="./iraq-governorates.js?v=118"></script>
-  <script type="module" src="./services.js?v=118"></script>
-  <script src="./pwa.js?v=118"></script>
+  <script src="./iraq-governorates.js?v=117"></script>
+  <script type="module" src="./services.js?v=117"></script>
+  <script src="./pwa.js?v=117"></script>
 </body>
 </html>

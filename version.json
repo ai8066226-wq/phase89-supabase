@@ -1,8 +1,8 @@
 {
   "phase": 92,
-  "version": "2.10.0",
+  "version": "2.9.1",
   "webBasePhase": 87,
-  "updateMode": "native-google-account-registration-v118",
+  "updateMode": "google-play-monthly-subscription-driver-per-km-v117",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -11,7 +11,7 @@
   "serviceThemes": "24-preloaded-textless-auto-by-service-type",
   "ratings": "unified-customer-taxi-delivery-service-admin-analytics",
   "quantitySystem": "unit-aware-restaurant-services-piece-person-weight-liter-pack-meter-hour-day",
-  "updateFix": "credential-manager-google-id-token-supabase-v118",
+  "updateFix": "subscription-entitlement-server-gated-driver-pricing-v117",
   "arrivalFallback": "taxi-no-otp-both-gps-near-destination-120m-8s-single-settlement",
   "cancellationAudit": "required-reason-actor-name-email-role-for-customer-driver-service-admin",
   "customerOrderEditing": "owner-edits-service-quantity-notes-and-parcel-delivery-details-until-courier-pickup-status3-atomic-guarded",
@@ -32,7 +32,7 @@
   "serviceImageLibrary": "45-ready-food-and-service-images",
   "imageCrop": "cover-16x9-item-1x1-auto-center-crop-webp-max-100kb-v112",
   "database": "supabase-postgres-karwa-documents-firestore-compatible-bridge",
-  "auth": "supabase-auth-google-native-android-credential-manager-id-token-plus-legacy-email-login-v118",
+  "auth": "supabase-auth-native-android-transport-public-signup-webview-origin-bypass-v100",
   "storage": "supabase-storage-service-assets-webp-only-server-limit-100kb-v112",
   "realtime": "supabase-postgres-changes-admin-all-request-queues-driver-rls-live-dispatch-plus-4s-safety-v104",
   "firebaseRemaining": "firebase-cloud-messaging-worker-only-for-push",
@@ -49,7 +49,7 @@
   "adminMapLoading": "lazy-leaflet-after-admin-auth-jsdelivr-unpkg-fallback",
   "pwaUpdateNotice": "hidden-when-current-shown-once-5.5s-per-new-version",
   "adminSession": "persistent-local-supabase-session-exit-portal-without-signout",
-  "registrationForms": "google-account-first-customer-driver-service-name-email-prefill-phone-and-role-data-v118",
+  "registrationForms": "unified-customer-driver-service-email-password-confirm-name-phone-single-field-v101",
   "globalPricing": "realtime-plus-12s-fallback-all-portals-synced-app-settings-v102",
   "driverDispatch": "server-rls-matched-10km-live-parcel-food-serviceDelivery-all-approved-delivery-captains-v103",
   "providerAcceptance": "explicit-wallet-fee-precheck-and-errors-service-delivery-rpc-verified-v103",
@@ -80,6 +80,5 @@
   "subscriptionProductId": "amrni_monthly_access",
   "subscriptionEnforcement": "server-expiry-gate-customer-driver-service-v117",
   "driverPricing": "captain-specific-rate-per-km-server-finalized-v117",
-  "googleRegistration": "android-credential-manager-1.6.0-googleid-1.2.1-supabase-id-token-nonce-v118",
-  "googleWebClientId": "admin-managed-appSettings-pricing-v118"
+  "interface": "unified-rtl-design-copy-accessibility-cache-scope-v118"
 }

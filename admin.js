@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=118";
+import { initializeApp } from "./supabase-compat.js?v=117";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=118";
+} from "./supabase-compat.js?v=117";
 import {
   collection,
   doc,
@@ -24,7 +24,7 @@ import {
   karwaAdminAccountAction,
   karwaCreateTopupCard,
   karwaListTopupCards
-} from "./supabase-compat.js?v=118";
+} from "./supabase-compat.js?v=117";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -359,7 +359,7 @@ function toast(message) {
   window.adminToast = setTimeout(() => element.classList.remove("show"), 2800);
 }
 
-function busy(button, active, text = "جاري التنفيذ…") {
+function busy(button, active, text = "جارٍ التنفيذ…") {
   if (active) {
     button.dataset.label = button.textContent;
     button.textContent = text;
@@ -649,7 +649,7 @@ async function enterAdminPortal(user) {
   }
 
   const status = byId("authError");
-  if (status && !byId("authView")?.classList.contains("hidden")) status.textContent = "جاري التحقق من صلاحية الإدارة…";
+  if (status && !byId("authView")?.classList.contains("hidden")) status.textContent = "جارٍ التحقق من صلاحية الإدارة…";
   const allowed = await verifyAdminAccessWithRetry(user);
   if (token !== adminAccessCheckToken || auth.currentUser?.uid !== user.uid) return false;
 
@@ -692,13 +692,13 @@ byId("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   const button = byId("loginButton");
   byId("authError").textContent = "";
-  busy(button, true, "جاري الدخول…");
+  busy(button, true, "جارٍ الدخول…");
   try {
     // The auth observer below performs the single authorization transition.
     // Avoid calling enterAdminPortal here as well; duplicate transitions caused
     // a race where the login form disappeared before the dashboard opened.
     await signInWithEmailAndPassword(auth, byId("email").value.trim(), byId("password").value);
-    byId("authError").textContent = "جاري التحقق من صلاحية الإدارة…";
+    byId("authError").textContent = "جارٍ التحقق من صلاحية الإدارة…";
   } catch (error) {
     console.error("Admin sign-in failed", { code: error?.code, message: error?.message });
     byId("authError").textContent = authMessage(error);
@@ -1251,7 +1251,6 @@ function renderPricingSettings(){
   const transferToggle=byId("topupTransferEnabled"),cardToggle=byId("topupCardEnabled");
   if(transferToggle&&document.activeElement!==transferToggle)transferToggle.checked=c.topupTransferEnabled!==false;
   if(cardToggle&&document.activeElement!==cardToggle)cardToggle.checked=c.topupCardEnabled!==false;
-  const googleClient=byId("googleWebClientId"); if(googleClient&&document.activeElement!==googleClient)googleClient.value=String(c.googleWebClientId||"");
   renderTopupMethodAdminControls();
 }
 function selectedGovernorateNames(){
@@ -1338,7 +1337,7 @@ byId("topupCardGeneratorForm")?.addEventListener("submit",async event=>{
   if(byId("topupCardEnabled")?.checked===false)return toast("فعّل طريقة كروت الشحن أولًا ثم ولّد الكرت.");
   const amount=Math.round(Number(byId("topupCardAmount")?.value||0));
   if(!Number.isFinite(amount)||amount<1000||amount>1000000||amount%1000!==0)return toast("قيمة الكرت يجب أن تكون من 1,000 إلى 1,000,000 د.ع وبمضاعفات 1,000.");
-  const button=event.submitter||byId("generateTopupCard");busy(button,true,"جاري التوليد…");
+  const button=event.submitter||byId("generateTopupCard");busy(button,true,"جارٍ التوليد…");
   try{
     const result=await karwaCreateTopupCard(amount);
     state.lastGeneratedTopupCardCode=String(result?.code||"");
@@ -1364,19 +1363,6 @@ function renderTopupRequests(){
   const accountLabels={customer:"عميل",captain:"كابتن",service:"خدمات أخرى",driver:"كابتن",other:"خدمات أخرى"};
   box.innerHTML=rows.map(x=>{const status=x.status||"pending";const date=x.createdAt?.seconds?new Date(x.createdAt.seconds*1000).toLocaleString("ar-IQ"):"—";const accountType=accountLabels[x.accountType]||accountLabels[x.accountRole]||"عميل";return `<article class="topup-admin-row ${escapeHtml(status)}"><div class="topup-admin-head"><div><strong>${escapeHtml(x.customerName||"مشترك")}</strong><small> • ${escapeHtml(x.email||"")} • <b>${escapeHtml(accountType)}</b></small></div><span class="status-chip ${status==='approved'?'approved':status==='rejected'?'cancelled':'pending'}">${labels[status]||escapeHtml(status)}</span></div><div class="order-meta"><span>نوع التسجيل: <b>${escapeHtml(accountType)}</b></span><span>المبلغ: <b>${money(x.amount)}</b></span><span>المرجع: <b>${escapeHtml(x.transferReference||"—")}</b></span><span>${date}</span></div>${status==='pending'?`<div class="topup-admin-actions"><button class="primary" data-action="approve-topup" data-id="${x.firestoreId}">اعتماد وإضافة الرصيد</button><button class="danger" data-action="reject-topup" data-id="${x.firestoreId}">رفض</button></div>`:`${x.reviewNote?`<p class="admin-note">${escapeHtml(x.reviewNote)}</p>`:""}`}</article>`;}).join("");
 }
-
-byId("googleAuthSettingsForm")?.addEventListener("submit",async event=>{
-  event.preventDefault(); if(!state.user)return;
-  const button=byId("saveGoogleAuthSettings"); busy(button,true,"جارٍ الحفظ…");
-  try{
-    const googleWebClientId=String(byId("googleWebClientId")?.value||"").trim();
-    if(!googleWebClientId.endsWith(".apps.googleusercontent.com"))throw new Error("INVALID_GOOGLE_CLIENT_ID");
-    await setDoc(doc(db,"appSettings","pricing"),{googleWebClientId,googleAuthUpdatedAt:serverTimestamp(),googleAuthUpdatedBy:state.user.uid},{merge:true});
-    state.pricingSettings={...(state.pricingSettings||{}),googleWebClientId};
-    toast("تم حفظ Google Web Client ID. إنشاء الحسابات الجديدة سيستخدم حساب Google في الهاتف.");
-  }catch(error){console.error(error);toast(error?.message==="INVALID_GOOGLE_CLIENT_ID"?"أدخل Google Web Client ID صحيحًا ينتهي بـ apps.googleusercontent.com":"تعذر حفظ إعداد تسجيل Google");}
-  finally{busy(button,false);}
-});
 
 byId("pricingSettingsForm")?.addEventListener("submit",async event=>{
   event.preventDefault(); if(!state.user)return;
@@ -1556,7 +1542,7 @@ function renderAdminAreaMap(){
 function fitAdminAreaRadius(){if(!state.areaMap||!state.areaCircle)return;state.areaMap.fitBounds(state.areaCircle.getBounds(),{padding:[28,28]});}
 function locateAdminArea(){
   if(!navigator.geolocation)return toast("الموقع غير مدعوم في هذا المتصفح");
-  const button=byId("adminAreaMapLocate");busy(button,true,"جاري تحديد الموقع…");
+  const button=byId("adminAreaMapLocate");busy(button,true,"جارٍ تحديد الموقع…");
   navigator.geolocation.getCurrentPosition(position=>{const point={latitude:position.coords.latitude,longitude:position.coords.longitude};setAdminAreaCenter(point,true);state.areaMap?.setView([point.latitude,point.longitude],13);busy(button,false);},()=>{busy(button,false);toast("تعذر تحديد الموقع. اختر نقطة مباشرة من الخريطة.");},{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
 }
 function setupAdminAreaMapControls(){
@@ -1804,17 +1790,17 @@ function renderAccountDirectory() {
       <div class="account-directory-cell"><small>الاشتراك</small>${(()=>{const subUser=state.users.find(u=>u.firestoreId===account.id)||{};const meta=adminSubscriptionMeta(subUser);return `<b>${escapeHtml(meta.label)}</b><small>ينتهي: ${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</small>`;})()}</div>
       <button class="danger" type="button" data-action="delete-account" data-id="${escapeHtml(account.id)}" data-name="${escapeHtml(name)}" data-email="${escapeHtml(account.email || "")}" data-role="${escapeHtml(account.role)}" data-category="${escapeHtml(categoryText)}">حذف نهائي</button>
     </article>`;
-  }).join("") : `<div class="empty"><span>🔎</span>${state.accountDirectoryLoading ? "جاري تحميل الحسابات…" : "لا توجد حسابات مطابقة للتصفية المحددة."}</div>`;
+  }).join("") : `<div class="empty"><span>🔎</span>${state.accountDirectoryLoading ? "جارٍ تحميل الحسابات…" : "لا توجد حسابات مطابقة للتصفية المحددة."}</div>`;
 }
 async function loadAccountDirectory({quiet=false} = {}) {
   if (state.accountDirectoryLoading) return;
   state.accountDirectoryLoading = true;
   if (!quiet) {
     const host = byId("accountDirectoryList");
-    if (host && !state.accountDirectory.length) host.innerHTML = `<div class="empty"><span>⏳</span>جاري قراءة آخر نشاط للحسابات…</div>`;
+    if (host && !state.accountDirectory.length) host.innerHTML = `<div class="empty"><span>⏳</span>جارٍ قراءة آخر نشاط للحسابات…</div>`;
   }
   const refresh = byId("refreshAccountDirectory");
-  if (!quiet) busy(refresh, true, "جاري التحديث…");
+  if (!quiet) busy(refresh, true, "جارٍ التحديث…");
   try {
     const result = await karwaAdminAccountAction("list");
     state.accountDirectory = Array.isArray(result?.accounts) ? result.accounts : [];

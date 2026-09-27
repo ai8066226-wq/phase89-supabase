@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=118";
+import { initializeApp } from "./supabase-compat.js?v=117";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -7,10 +7,9 @@ import {
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
-  setCurrentUserPhone,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=118";
+} from "./supabase-compat.js?v=117";
 import {
   addDoc,
   collection,
@@ -32,10 +31,9 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=118";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=118";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=118";
-import { nativeGoogleRegistration, googleRegistrationMessage } from "./google-auth.js?v=118";
+} from "./supabase-compat.js?v=117";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
+import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -72,9 +70,9 @@ function customerSupabaseMessage(error, action = "تنفيذ العملية") {
   if (e.named === "INVALID_ROUTE" || e.code === "invalid-argument") return "تعذر اعتماد المسار. أعد تحديد الانطلاق والوجهة وانتظر حساب المسافة والوقت.";
   if (e.code === "not-found") return "تعذر العثور على البيانات المطلوبة. حدّث الطلب وحاول مجددًا.";
   if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الوصول إلى خادم آمرني. تحقق من الإنترنت ثم أعد المحاولة.";
-  if (e.code === "failed-precondition") return `تعذر ${action} بسبب شرط في قاعدة البيانات. راجع بيانات الحساب والطلب.`;
-  if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصال Supabase.`;
-  return `تعذر ${action}. ${error?.message ? "التفاصيل: " + String(error.message).replace(/^FirebaseError:\s*/i, "") : "تحقق من إعدادات Supabase."}`;
+  if (e.code === "failed-precondition") return `تعذر ${action} راجع بيانات الحساب والطلب ثم حاول مجددًا.`;
+  if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصالك بالإنترنت.`;
+  return `تعذر ${action}. حاول مجددًا أو تواصل مع الدعم.`;
 }
 
 const byId = id => document.getElementById(id);
@@ -115,7 +113,6 @@ function writeCustomerPreference(key, value) {
 }
 
 let customerRegistrationInProgress = false;
-let customerGoogleRegistration = null;
 
 const state = {
   user: null,
@@ -320,7 +317,7 @@ async function reverseGeocode(lat,lng){
   try{const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=ar&zoom=18&addressdetails=1&lat=${lat}&lon=${lng}`;const r=await fetch(u,{headers:{Accept:"application/json"},signal:AbortSignal.timeout(6000)});if(!r.ok)throw 0;const x=await r.json();return cleanPlaceLabel(x);}catch(e){return null;}
 }
 function bookingIcon(type){if(!window.L)return null;return window.L.divIcon({className:"",html:`<div class="karwa-map-marker ${type}"><span>${type==="pickup"?"📍":"🏁"}</span></div>`,iconSize:[42,42],iconAnchor:[21,38]});}
-function updateRouteSummary(){byId("routeSummary").children[0].textContent=`المسافة: ${state.routeDistanceKm?state.routeDistanceKm.toFixed(1)+" كم":"—"}`;byId("routeSummary").children[1].textContent=`الوقت: ${state.routeDurationMin?Math.round(state.routeDurationMin)+" دقيقة":"—"}`;byId("routeMode").textContent=state.routeSource==="valhalla"?"ملاحة Valhalla":state.routeSource==="osrm"?"مسار احتياطي OSRM":state.routeSource==="fallback"?"تقدير احتياطي مباشر":"اختر نقطتين من الخريطة";}
+function updateRouteSummary(){byId("routeSummary").children[0].textContent=`المسافة: ${state.routeDistanceKm?state.routeDistanceKm.toFixed(1)+" كم":"—"}`;byId("routeSummary").children[1].textContent=`الوقت: ${state.routeDurationMin?Math.round(state.routeDurationMin)+" دقيقة":"—"}`;byId("routeMode").textContent=state.routeSource==="valhalla"?"مسار الطريق":state.routeSource==="osrm"?"مسار بديل":state.routeSource==="fallback"?"مسافة تقديرية":"اختر نقطتين من الخريطة";}
 
 function decodeValhallaShape(encoded){let index=0,lat=0,lng=0,out=[];while(index<encoded.length){let b,shift=0,result=0;do{b=encoded.charCodeAt(index++)-63;result|=(b&31)<<shift;shift+=5;}while(b>=32);lat+=(result&1)?~(result>>1):(result>>1);shift=0;result=0;do{b=encoded.charCodeAt(index++)-63;result|=(b&31)<<shift;shift+=5;}while(b>=32);lng+=(result&1)?~(result>>1):(result>>1);out.push([lat/1e6,lng/1e6]);}return out;}
 async function valhallaRoute(a,b,timeout=6500){const body={locations:[{lat:Number(a.latitude),lon:Number(a.longitude)},{lat:Number(b.latitude),lon:Number(b.longitude)}],costing:"auto",units:"kilometers",language:"ar-IQ",directions_options:{units:"kilometers",language:"ar-IQ"},alternates:1};const r=await fetch("https://valhalla1.openstreetmap.de/route",{method:"POST",headers:{"Content-Type":"application/json","X-Client-Id":"karwa0.app"},body:JSON.stringify(body),signal:AbortSignal.timeout(timeout)});if(!r.ok)throw new Error("VALHALLA_"+r.status);const x=await r.json(),leg=x.trip?.legs?.[0],sum=x.trip?.summary;if(!leg||!sum)throw new Error("VALHALLA_NO_ROUTE");return{coords:decodeValhallaShape(leg.shape),km:Number(sum.length||0),mins:Number(sum.time||0)/60,maneuvers:leg.maneuvers||[],provider:"Valhalla"};}
@@ -732,7 +729,7 @@ function syncTrackingSubscription() {
   );
 }
 
-function setButtonBusy(button, busy, busyLabel = "جاري التنفيذ…") {
+function setButtonBusy(button, busy, busyLabel = "جارٍ التنفيذ…") {
   if (busy) {
     button.dataset.originalText = button.textContent;
     button.textContent = busyLabel;
@@ -777,24 +774,19 @@ function closeAuthModal() {
 function setAuthMode(mode) {
   state.authMode = mode;
   const registering = mode === "register";
-  const googleRegister = registering && !!customerGoogleRegistration;
   byId("loginTab").classList.toggle("active", !registering);
   byId("registerTab").classList.toggle("active", registering);
   byId("nameField").hidden = !registering;
   byId("phoneField").hidden = !registering;
-  byId("passwordConfirmField").hidden = !registering || googleRegister;
+  byId("passwordConfirmField").hidden = !registering;
   byId("roleField").hidden = !registering;
   if(byId("inviteField"))byId("inviteField").hidden=!registering;
-  const passwordField=byId("authPassword")?.closest(".field");
-  if(passwordField)passwordField.hidden=googleRegister;
   byId("authName").required = registering;
   byId("authPhone").required = registering;
-  byId("authPasswordConfirm").required = registering && !googleRegister;
-  byId("authPassword").required = !googleRegister;
-  byId("authEmail").readOnly = googleRegister;
+  byId("authPasswordConfirm").required = registering;
   byId("authPassword").autocomplete = registering ? "new-password" : "current-password";
-  byId("authSubmit").textContent = googleRegister ? "إكمال إنشاء الحساب" : registering ? "اختيار Google وإنشاء الحساب" : "تسجيل الدخول";
-  byId("authMessage").textContent = googleRegister ? "تم التحقق من حساب Google. أكمل رقم الهاتف والبيانات المطلوبة." : "";
+  byId("authSubmit").textContent = registering ? "إنشاء الحساب وإرسال البيانات" : "تسجيل الدخول";
+  byId("authMessage").textContent = "";
 }
 
 function authErrorMessage(error) {
@@ -807,8 +799,8 @@ function authErrorMessage(error) {
     "auth/weak-password": "كلمة المرور يجب أن تكون ستة أحرف على الأقل.",
     "auth/too-many-requests": "محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.",
     "auth/network-request-failed": "تعذر الاتصال بالإنترنت.",
-    "auth/operation-not-allowed": "فعّل Email/Password من إعدادات Supabase Authentication.",
-    "auth/unauthorized-domain": "تحقق من Site URL وRedirect URLs في Supabase Authentication."
+    "auth/operation-not-allowed": "خدمة التسجيل غير متاحة حاليًا. تواصل مع الدعم.",
+    "auth/unauthorized-domain": "تعذر إكمال تسجيل الدخول. تواصل مع الدعم."
   };
   return messages[error.code] || "تعذر إكمال العملية. حاول مرة أخرى.";
 }
@@ -1012,7 +1004,7 @@ function subscribeToOrders(user) {
     syncCustomerTripLocationSharing();
   }, error => {
     console.error(error);
-    showToast("تعذر قراءة الطلبات. تحقق من سياسات Supabase.");
+    showToast("تعذر تحميل الطلبات الآن. حاول مجددًا بعد قليل.");
   });
 }
 
@@ -1031,91 +1023,32 @@ function subscribeToRatings(user) {
   });
 }
 
-async function loadGoogleRegistrationSettings() {
-  try {
-    const settingsSnapshot = await getDoc(doc(db, "appSettings", "pricing"));
-    state.appSettings = settingsSnapshot.exists() ? settingsSnapshot.data() : (state.appSettings || {});
-  } catch (error) { console.warn("تعذر تحميل إعداد Google", error); }
-  return state.appSettings || {};
-}
-
-async function finishExistingGoogleAccount(credential) {
-  const user = credential?.user;
-  if (!user) return false;
-  const roleSnap = await getDoc(doc(db, "users", user.uid));
-  if (!roleSnap.exists()) return false;
-  customerRegistrationInProgress = false;
-  customerGoogleRegistration = null;
-  const accountData = roleSnap.data() || {};
-  const role = accountData.role || "customer";
-  if (["driver","driverApplicant"].includes(role)) { window.location.replace("./driver.html"); return true; }
-  if (["serviceApplicant","serviceProvider"].includes(role)) { window.location.replace("./services.html"); return true; }
-  if (role !== "customer") { await signOut(auth); throw Object.assign(new Error("ROLE_MISMATCH"),{code:"auth/role-mismatch"}); }
-  const deviceCheck = await enforceDeviceSession(db,user,accountData);
-  if (!deviceCheck.ok) { await signOut(auth); throw Object.assign(new Error(deviceCheck.message),{code:"device/not-authorized"}); }
-  await startVerifiedCustomerSession(user);
-  closeAuthModal();
-  showToast("تم الدخول بحساب Google الموجود مسبقًا");
-  return true;
-}
-
-async function startCustomerGoogleRegistration(button) {
-  customerRegistrationInProgress = true;
-  customerGoogleRegistration = null;
-  if (button) setButtonBusy(button,true,"جاري فتح حسابات Google…");
-  byId("authMessage").textContent = "";
-  try {
-    const settings = await loadGoogleRegistrationSettings();
-    const credential = await nativeGoogleRegistration(auth, settings, "customer-register");
-    if (await finishExistingGoogleAccount(credential)) return;
-    customerGoogleRegistration = credential;
-    const google = credential.google || {};
-    byId("authEmail").value = credential.user?.email || google.email || "";
-    byId("authName").value = google.displayName || credential.user?.displayName || "";
-    byId("authRole").value = "customer";
-    byId("selectedRoleIcon").textContent = "👤";
-    byId("selectedRoleLabel").textContent = "عميل • إنشاء حساب عبر Google";
-    byId("roleEntryGrid").hidden = true;
-    byId("authFormPanel").hidden = false;
-    setAuthMode("register");
-    window.setTimeout(() => byId("authPhone")?.focus(), 80);
-  } catch (error) {
-    customerRegistrationInProgress = false;
-    customerGoogleRegistration = null;
-    console.error(error);
-    byId("roleEntryGrid").hidden = false;
-    byId("authFormPanel").hidden = true;
-    byId("authMessage").textContent = googleRegistrationMessage(error);
-    showToast(googleRegistrationMessage(error));
-  } finally { if (button) setButtonBusy(button,false); }
-}
-
 document.querySelectorAll(".role-auth-action").forEach(button => {
-  button.addEventListener("click", async () => {
+  button.addEventListener("click", () => {
     const role = button.dataset.role || "customer";
     const mode = button.dataset.mode || "login";
-    if (role === "serviceApplicant") { window.location.assign(`./services.html?mode=${mode}`); return; }
-    if (role === "driverApplicant") { window.location.assign(`./driver.html?mode=${mode}`); return; }
-    if (role === "customer" && mode === "register") { await startCustomerGoogleRegistration(button); return; }
-    customerGoogleRegistration = null;
+    if (role === "serviceApplicant") {
+      window.location.assign(`./services.html?mode=${mode}`);
+      return;
+    }
+    if (role === "driverApplicant") {
+      window.location.assign(`./driver.html?mode=${mode}`);
+      return;
+    }
     byId("authRole").value = role;
-    byId("selectedRoleIcon").textContent = "👤";
-    byId("selectedRoleLabel").textContent = "عميل • تسجيل الدخول";
+    const meta = role === "customer" ? ["👤","عميل"] : role === "driverApplicant" ? ["🚕","كابتن"] : ["🧰","خدمات أخرى"];
+    byId("selectedRoleIcon").textContent = meta[0];
+    byId("selectedRoleLabel").textContent = meta[1] + " • " + (mode === "register" ? "إنشاء حساب" : "تسجيل الدخول");
     byId("roleEntryGrid").hidden = true;
     byId("authFormPanel").hidden = false;
     setAuthMode(mode);
-    window.setTimeout(() => byId("authEmail")?.focus(), 80);
+    window.setTimeout(() => byId(mode === "register" ? "authName" : "authEmail")?.focus(), 80);
   });
 });
 byId("authBackToRoles").addEventListener("click", () => {
-  const hadGooglePending=!!customerGoogleRegistration;
-  customerGoogleRegistration=null;
-  customerRegistrationInProgress=false;
-  if(hadGooglePending)signOut(auth).catch(()=>{});
   byId("authFormPanel").hidden = true;
   byId("roleEntryGrid").hidden = false;
   byId("authForm").reset();
-  byId("authEmail").readOnly=false;
   byId("authMessage").textContent = "";
 });
 
@@ -1138,7 +1071,7 @@ byId("authForm").addEventListener("submit", async event => {
     byId("authMessage").textContent = "اكتب اسمًا صحيحًا.";
     return;
   }
-  if (state.authMode === "register" && !customerGoogleRegistration && password !== passwordConfirm) {
+  if (state.authMode === "register" && password !== passwordConfirm) {
     byId("authMessage").textContent = "كلمتا المرور غير متطابقتين.";
     byId("authPasswordConfirm")?.focus();
     return;
@@ -1167,9 +1100,7 @@ byId("authForm").addEventListener("submit", async event => {
           state.appSettings = state.appSettings || {};
         }
         const deviceInfo = requireNativeRegistrationDevice();
-        if (!customerGoogleRegistration?.user) throw Object.assign(new Error("GOOGLE_ACCOUNT_REQUIRED"),{code:"google/account-required"});
-        credential = customerGoogleRegistration;
-        await setCurrentUserPhone(byId("authPhone").value, byId("authName")?.value || customerGoogleRegistration?.displayName || "", "customer");
+        credential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(credential.user, { displayName: name });
         const ownReferral=makeReferralCode(credential.user.uid);
         let invitedByUserId="";
@@ -1177,7 +1108,7 @@ byId("authForm").addEventListener("submit", async event => {
         const welcomeBonus=signupBonusFields();
         const registrationBatch=writeBatch(db);
         registrationBatch.set(doc(db, "users", credential.user.uid), {
-          name,email:credential.user.email||email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
+          name,email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
           ...(inviteCode&&invitedByUserId?{invitedByCode:inviteCode,invitedByUserId}:{}),createdAt:serverTimestamp(),updatedAt:serverTimestamp()
         });
         addDeviceRegistrationWrites(registrationBatch,db,credential.user.uid,"customer",deviceInfo);
@@ -1195,15 +1126,13 @@ byId("authForm").addEventListener("submit", async event => {
         state.referralCode = ownReferral;
         if(inviteCode&&invitedByUserId&&byId("couponCode")){byId("couponCode").value=inviteCode;if(byId("couponStatus"))byId("couponStatus").textContent="كود الدعوة محفوظ — حدّد المسار ثم اضغط تطبيق";}
         customerRegistrationInProgress = false;
-        customerGoogleRegistration = null;
         await startVerifiedCustomerSession(credential.user);
         closeAuthModal();
         showToast("تم إنشاء حساب العميل بنجاح");
       } catch (registrationError) {
         if (credential?.user && !profileSaved) {
-          try { await signOut(auth); } catch (rollbackError) { console.warn("تعذر إنهاء جلسة تسجيل Google غير المكتملة", rollbackError); }
+          try { await deleteUser(credential.user); } catch (rollbackError) { console.warn("تعذر حذف حساب التسجيل غير المكتمل", rollbackError); }
         }
-        customerGoogleRegistration = null;
         throw registrationError;
       }
     } else {
@@ -1216,14 +1145,12 @@ byId("authForm").addEventListener("submit", async event => {
     const deviceError = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
       ? "إنشاء حساب جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
       : (state.authMode === "register" && String(error?.code||"").includes("permission-denied")
-        ? "هذا الهاتف مرتبط بالفعل بحساب آمرني آخر، أو إعدادات ربط الجهاز في Supabase غير محدثة."
+        ? "هذا الهاتف مرتبط بحساب آخر. إذا غيّرت هاتفك، اطلب نقل الحساب من الإدارة."
         : "");
-    byId("authMessage").textContent = deviceError || (String(error?.code||"").startsWith("google/") ? googleRegistrationMessage(error) : authErrorMessage(error));
+    byId("authMessage").textContent = deviceError || authErrorMessage(error);
   } finally {
     setButtonBusy(submit, false);
-    const message=byId("authMessage").textContent;
     setAuthMode(state.authMode);
-    if(message)byId("authMessage").textContent=message;
   }
 });
 
@@ -1332,7 +1259,7 @@ async function locateUser(targetInput) {
     const position = await getKarwaPrecisePosition({
       onProgress: ({ bestAccuracy }) => {
         if (requestToken !== state.locationRequestToken) return;
-        if (info && Number(bestAccuracy) > 35) info.textContent = `جاري تحسين دقة GPS… ${Math.round(bestAccuracy)} م`;
+        if (info && Number(bestAccuracy) > 35) info.textContent = `جارٍ تحسين دقة GPS… ${Math.round(bestAccuracy)} م`;
       }
     });
     if (requestToken !== state.locationRequestToken) return;
@@ -1427,7 +1354,7 @@ byId("bookRide").addEventListener("click", async event => {
     return;
   }
   const button = event.currentTarget;
-  setButtonBusy(button, true, "جاري الحجز…");
+  setButtonBusy(button, true, "جارٍ الحجز…");
   try {
     await createOrder("ride", `مشوار ${state.vehicle}`, `${from} ← ${to}`, 0, {
       payment: "نقدًا",
@@ -1465,7 +1392,7 @@ byId("bookParcel").addEventListener("click", async event => {
     return;
   }
   const button = event.currentTarget;
-  setButtonBusy(button, true, "جاري الطلب…");
+  setButtonBusy(button, true, "جارٍ الطلب…");
   try {
     const parcelNotes = byId("parcelNotes")?.value.trim() || "";
     await createOrder("parcel", `توصيل غرض إلى ${recipientName}`, `${from} ← ${to}`, price, {
@@ -1563,7 +1490,7 @@ function subscribeRestaurants() {
   state.unsubscribeRestaurants = onSnapshot(query(collection(db, "restaurants"), where("active", "==", true)), snapshot => {
     state.restaurants = snapshot.docs.map(item => ({ firestoreId: item.id, ...item.data() })).filter(item => item.active !== false).sort((a,b) => String(a.name||"").localeCompare(String(b.name||""), "ar"));
     renderRestaurants();
-  }, error => { console.error(error); const host=byId("restaurantMarketplace"); if(host) host.innerHTML='<div class="restaurant-empty">تعذر تحميل المطاعم. تأكد من نشر سياسات Supabase الجديدة.</div>'; });
+  }, error => { console.error(error); const host=byId("restaurantMarketplace"); if(host) host.innerHTML='<div class="restaurant-empty">تعذر تحميل المطاعم الآن. حاول مجددًا أو تواصل مع الدعم.</div>'; });
 }
 
 byId("openRestaurantCreator")?.addEventListener("click", () => { if (!requireUser()) return; byId("restaurantCreator").hidden = false; byId("restaurantCreator").scrollIntoView({behavior:"smooth",block:"nearest"}); });
@@ -1590,11 +1517,11 @@ byId("publishRestaurant")?.addEventListener("click", async event => {
   if (name.length<2 || address.length<3 || phone.replace(/\D/g,"").length<8) { showToast("أكمل اسم المطعم والعنوان ورقم الهاتف بشكل صحيح"); return; }
   if (!state.restaurantGps) { showToast("حدد موقع المطعم GPS قبل النشر"); return; }
   if (!state.restaurantDraftMeals.length) { showToast("أضف وجبة واحدة على الأقل"); return; }
-  const button=event.currentTarget; setButtonBusy(button,true,"جاري النشر…");
+  const button=event.currentTarget; setButtonBusy(button,true,"جارٍ النشر…");
   try {
     await addDoc(collection(db,"restaurants"), {ownerId:state.user.uid,name,address,phone,location:{...state.restaurantGps},meals:state.restaurantDraftMeals.map(m=>({...m})),active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     state.restaurantDraftMeals=[]; state.restaurantGps=null; renderRestaurantDraftMeals(); ["restaurantName","restaurantAddress","restaurantPhone"].forEach(id=>byId(id).value=""); byId("restaurantGpsStatus").textContent="لم يتم تحديد الموقع بعد"; byId("restaurantCreator").hidden=true; showToast("تم نشر إعلان المطعم بنجاح");
-  } catch(error) { console.error(error); showToast("تعذر نشر المطعم. تأكد من نشر سياسات Supabase الجديدة."); }
+  } catch(error) { console.error(error); showToast("تعذر نشر المطعم. حاول مجددًا أو تواصل مع الدعم."); }
   finally { setButtonBusy(button,false); }
 });
 function updateMealQuantityTotal(){
@@ -1787,7 +1714,7 @@ async function saveParcelOrderEdit(button) {
   if (recipientName.length < 2) return showToast("أدخل اسم المستلم.");
   if (recipientPhone.replace(/\D/g, "").length < 8) return showToast("أدخل رقم هاتف صحيحًا للمستلم.");
   if (notes.length > 500) return showToast("الملاحظات يجب ألا تتجاوز 500 حرف.");
-  setButtonBusy(button, true, "جاري حفظ التعديل…");
+  setButtonBusy(button, true, "جارٍ حفظ التعديل…");
   try {
     await runTransaction(db, async tx => {
       const ref = doc(db, "orders", orderId);
@@ -1904,7 +1831,7 @@ async function saveCustomerServiceEdit(button) {
   if (!draft.length || draft.length>MAX_MULTI_ORDER_ITEMS) return showToast("يجب أن يحتوي الطلب على صنف واحد على الأقل");
   if (draft.some(item=>!quantityIsValid(item.quantity,item.itemUnit))) return showToast("راجع كميات الأصناف قبل الحفظ");
   if (note.length < 3 || note.length > 500) return showToast("اكتب ملاحظة طلب واضحة بين 3 و500 حرف.");
-  setButtonBusy(button, true, "جاري حفظ التعديل…");
+  setButtonBusy(button, true, "جارٍ حفظ التعديل…");
   try {
     await runTransaction(db, async tx => {
       const requestRef = doc(db, "serviceRequests", requestId);
@@ -2140,7 +2067,7 @@ function subscribeServiceProfiles() {
     },
     error => {
       console.error(error);
-      byId("otherServicesMarketplace").innerHTML = '<div class="restaurant-empty">تعذر تحميل الخدمات. انشر سياسات Supabase المرفقة.</div>';
+      byId("otherServicesMarketplace").innerHTML = '<div class="restaurant-empty">تعذر تحميل الخدمات الآن. حاول مجددًا.</div>';
     }
   );
 }
@@ -2299,7 +2226,7 @@ byId("bookOtherService")?.addEventListener("click", async event => {
   const allDelivery=orderItemsDeliverable(orderItems);
   const itemDeliveryFee=allDelivery?orderItemsDeliveryFee(orderItems):0;
   const button = event.currentTarget;
-  setButtonBusy(button, true, "جاري إرسال الطلب…");
+  setButtonBusy(button, true, "جارٍ إرسال الطلب…");
   try {
     await createServiceRequestWithCustomerFee({
       customerId: state.user.uid, customerName: state.name, providerId: profile.firestoreId, providerName: profile.businessName,
@@ -2313,7 +2240,7 @@ byId("bookOtherService")?.addEventListener("click", async event => {
     showToast(`تم إرسال ${orderItems.length} ${orderItems.length===1?"صنف":"أصناف"} إلى ${profile.businessName} بقيمة ${formatMoney(subtotal)}.`);
   } catch (error) {
     console.error(error);
-    showToast(String(error?.message||"").includes("الرصيد غير كافٍ") ? error.message : "تعذر إرسال الطلب. تأكد من نشر سياسات Supabase الجديدة.");
+    showToast(String(error?.message||"").includes("الرصيد غير كافٍ") ? error.message : "تعذر إرسال الطلب. حاول مجددًا أو تواصل مع الدعم.");
   } finally { setButtonBusy(button, false); }
 });
 
@@ -2337,7 +2264,7 @@ byId("myServiceRequests")?.addEventListener("click", async event => {
     if (!await window.AmrniDialog.confirm("هل تريد إلغاء طلب الخدمة الحالي؟", { title:"إلغاء طلب الخدمة", icon:"!", tone:"danger", confirmText:"متابعة الإلغاء" })) return;
     const reason = await requestCancellationReason("طلب الخدمة");
     if (!reason) return;
-    setButtonBusy(cancelButton, true, "جاري الإلغاء…");
+    setButtonBusy(cancelButton, true, "جارٍ الإلغاء…");
     try {
       await karwaCustomerCancelServiceRequest(cancelButton.dataset.cancelServiceRequest, reason);
       showToast("تم إلغاء طلب الخدمة وتسجيل السبب للإدارة");
@@ -2356,7 +2283,7 @@ byId("myServiceRequests")?.addEventListener("click", async event => {
   if (!request || request.status !== "accepted" || request.deliveryStatus !== "awaitingCustomerChoice") return showToast("هذا الطلب لم يعد ينتظر اختيار طريقة الاستلام.");
 
   if (locateButton) {
-    setButtonBusy(locateButton, true, "جاري تثبيت GPS…");
+    setButtonBusy(locateButton, true, "جارٍ تثبيت GPS…");
     try {
       const position = await getKarwaPrecisePosition();
       const location = { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy };
@@ -2373,7 +2300,7 @@ byId("myServiceRequests")?.addEventListener("click", async event => {
   }
 
   if (pickupButton) {
-    setButtonBusy(pickupButton, true, "جاري الحفظ…");
+    setButtonBusy(pickupButton, true, "جارٍ الحفظ…");
     try {
       await updateDoc(doc(db, "serviceRequests", requestId), {
         deliveryRequested: false,
@@ -2403,7 +2330,7 @@ byId("myServiceRequests")?.addEventListener("click", async event => {
     if (address.length < 3) return showToast("اكتب عنوان التوصيل بالتفصيل");
     if (!validServiceLocation(location)) return showToast("حدد موقعك GPS قبل طلب التوصيل");
     if (!validServiceLocation(request.providerLocation)) return showToast("موقع النشاط غير محدد؛ اطلب من مزود الخدمة تحديث موقعه");
-    setButtonBusy(deliveryButton, true, "جاري إرسال التوصيل…");
+    setButtonBusy(deliveryButton, true, "جارٍ إرسال التوصيل…");
     try {
       await karwaSensitiveAux("customer_choose_service_delivery",{requestId,address,location:{latitude:Number(location.latitude),longitude:Number(location.longitude)}});
       delete state.serviceDeliveryLocations[requestId];
@@ -2494,7 +2421,7 @@ byId("orderFood").addEventListener("click", async event => {
   const subtotal=orderItemsSubtotal(orderItems);
   const deliveryFee=deliveryRequested ? orderItemsDeliveryFee(orderItems) : 0;
   const lead=orderItems[0];
-  const button=event.currentTarget; setButtonBusy(button,true,"جاري إرسال الطلب للمطعم…");
+  const button=event.currentTarget; setButtonBusy(button,true,"جارٍ إرسال الطلب للمطعم…");
   try {
     await createServiceRequestWithCustomerFee({customerId:state.user.uid,customerName:state.name,providerId:first.restaurantId,providerName:profile.businessName,providerCategory:"restaurant",providerCity:profile.city||"",providerAddress:profile.address,providerLocation:{...profile.location},items:orderItems,itemCount:orderItems.length,itemIndex:lead.itemIndex,itemName:lead.itemName,itemUnit:lead.itemUnit,quantity:lead.quantity,unitPrice:lead.unitPrice,itemPrice:lead.unitPrice,subtotal,deliveryRequested,deliveryFee,totalPrice:subtotal+deliveryFee,deliveryStatus:deliveryRequested ? "pendingProvider" : "notRequested",deliveryOrderId:"",requestText:`طلب طعام: ${orderItemsText(orderItems)}`,customerAddress:address,customerLocation:deliveryRequested ? {...state.customerLocation} : null,status:"pending",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     state.cart=[]; renderCart(); byId("foodCustomerAddress").value=""; byId("foodLocationStatus").textContent="يجب تحديد موقعك قبل إرسال طلب التوصيل للمطعم."; showToast(deliveryRequested ? `تم إرسال ${orderItems.length} أصناف للمطعم مع طلب التوصيل.` : `تم إرسال ${orderItems.length} أصناف للمطعم للاستلام.`);
@@ -2550,7 +2477,7 @@ byId("cancelOrder").addEventListener("click", async event => {
   const reason = await requestCancellationReason("الطلب");
   if (!reason) return;
   const button = event.currentTarget;
-  setButtonBusy(button, true, "جاري الإلغاء…");
+  setButtonBusy(button, true, "جارٍ الإلغاء…");
   try {
     await karwaCustomerCancelOrder(state.activeOrder.firestoreId, reason);
     showToast("تم إلغاء الطلب وتسجيل السبب للإدارة");
@@ -2787,7 +2714,7 @@ byId("ratingForm").addEventListener("submit", async event => {
     return;
   }
   const button = byId("submitRating");
-  setButtonBusy(button, true, "جاري الإرسال…");
+  setButtonBusy(button, true, "جارٍ الإرسال…");
   try {
     const base = {
       ratingType: context.ratingType,
@@ -2887,7 +2814,7 @@ byId("copyReferral")?.addEventListener("click",async()=>{if(!state.referralCode)
 function renderProfile() {
   const firstName = state.name.trim().split(" ")[0] || "ضيف";
   const firstLetter = firstName.charAt(0) || "ك";
-  byId("firstName").textContent = firstName;
+  byId("firstName").textContent = state.user ? firstName : "بك";
   byId("profileName").textContent = state.name;
   byId("profileEmail").textContent = state.user?.email || "سجّل الدخول لمزامنة بياناتك";
   byId("smallAvatar").textContent = firstLetter;
@@ -3060,7 +2987,7 @@ function setupPlaceSearch(inputId,resultsId,type){
   const run=async()=>{
     const q=input.value.trim(); const my=++seq;
     if(q.length<2){box.innerHTML="";return}
-    if(busy)return; busy=true; box.innerHTML='<div class="place-search-state">جاري البحث…</div>';
+    if(busy)return; busy=true; box.innerHTML='<div class="place-search-state">جارٍ البحث…</div>';
     try{
       const data=await searchPlaces(q); if(my!==seq)return; box.innerHTML="";
       if(!data.length){box.innerHTML='<div class="place-search-state">لم نجد المكان. جرّب اسم الحي أو أقرب معلم، أو حدده من الخريطة.</div>';return}
@@ -3115,7 +3042,7 @@ function setupCustomerMapPlaceTool() {
       return;
     }
     button.disabled = true;
-    results.innerHTML = '<div class="map-place-state">جاري البحث عن المكان…</div>';
+    results.innerHTML = '<div class="map-place-state">جارٍ البحث عن المكان…</div>';
     try {
       const places = await searchPlaces(queryText, { category: category?.value || "", scope: scope?.value || "nearby" });
       if (requestId !== sequence) return;
@@ -3156,7 +3083,7 @@ function setupCustomerMapPlaceTool() {
   [category, scope].forEach(control => control?.addEventListener("change", () => { if (input.value.trim().length >= 2) run(); }));
   locateButton?.addEventListener("click", async () => {
     locateButton.disabled = true;
-    locateButton.textContent = "جاري تثبيت GPS…";
+    locateButton.textContent = "جارٍ تثبيت GPS…";
     try {
       const position=await getKarwaPrecisePosition();
       const latitude = position.coords.latitude, longitude = position.coords.longitude;
@@ -3326,7 +3253,7 @@ onAuthStateChanged(auth, async user => {
   }
 
   if (customerRegistrationInProgress) {
-    byId("connectionBadge").textContent = "جاري إنشاء الحساب…";
+    byId("connectionBadge").textContent = "جارٍ إنشاء الحساب…";
     return;
   }
 
@@ -3370,7 +3297,7 @@ onAuthStateChanged(auth, async user => {
     console.error(error);
     const errorCode = String(error?.code || "");
     if (errorCode.includes("permission-denied")) {
-      showToast("تعذر الوصول إلى ملف الحساب. انشر سياسات Supabase المرفقة ثم أعد فتح التطبيق.");
+      showToast("تعذر تحميل حسابك الآن. أعد فتح التطبيق أو تواصل مع الدعم.");
       byId("connectionBadge").textContent = "متصل • صلاحيات الحساب غير مكتملة";
     } else {
       byId("connectionBadge").textContent = "متصل • إعادة المزامنة تلقائيًا";
