@@ -8,7 +8,19 @@
   --amrni-line: #dce7eb;
   --amrni-surface: #ffffff;
   --amrni-canvas: #f3f7f8;
-  --amrni-shadow: 0 12px 34px rgba(16, 48, 65, .07);
+  --amrni-shadow: 0 14px 38px rgba(16, 48, 65, .08);
+  /* v119 — رموز إضافية لتوحيد الحالات والعمق والحركة عبر كل البوابات دون المساس بأي صنف موجود */
+  --amrni-success: #08745c;
+  --amrni-success-bg: #dff8f1;
+  --amrni-warning: #805000;
+  --amrni-warning-bg: #fff1c9;
+  --amrni-danger: #a92935;
+  --amrni-danger-bg: #ffe6e8;
+  --amrni-info: #385084;
+  --amrni-info-bg: #e8efff;
+  --amrni-shadow-sm: 0 4px 14px rgba(16, 48, 65, .06);
+  --amrni-shadow-lg: 0 24px 58px rgba(13, 40, 59, .17);
+  --amrni-ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: light;
 }
 
@@ -72,6 +84,67 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* لمسات احترافية إضافية — بصرية بحتة فوق كل ما سبق، بلا أي صنف أو سلوك جديد */
+::selection { background: rgba(8, 122, 117, .22); color: var(--amrni-ink); }
+
+:where(html) { scrollbar-width: thin; scrollbar-color: rgba(8, 122, 117, .45) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(8, 122, 117, .38);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(8, 122, 117, .58); background-clip: padding-box; }
+
+:where(.primary, .primary-button, .button.primary, .secondary, .secondary-button, .button.secondary, .danger, .ghost) {
+  transition: transform .16s var(--amrni-ease), box-shadow .16s var(--amrni-ease), filter .16s ease, border-color .16s ease, background-color .16s ease;
+}
+:where(.primary, .primary-button, .button.primary):hover:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 12px 26px rgba(8, 103, 112, .22);
+}
+:where(.primary, .primary-button, .button.primary):active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0);
+  filter: brightness(.98);
+  box-shadow: 0 4px 10px rgba(8, 103, 112, .16);
+}
+:where(.secondary, .secondary-button, .button.secondary):hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--amrni-teal);
+  background-color: rgba(8, 122, 117, .05);
+}
+:where(button, .primary, .secondary, .ghost, .danger, [role="button"]):disabled,
+:where(button, .primary, .secondary, .ghost, .danger, [role="button"])[aria-disabled="true"] {
+  filter: grayscale(.25);
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover:not(:focus) {
+  border-color: #a9c2cb;
+}
+:where(input, select, textarea):disabled {
+  background-color: #f2f5f6;
+  color: #8a9aa5;
+  cursor: not-allowed;
+}
+
+:where(.status-chip) { gap: 6px; font-weight: 800; }
+:where(.status-chip)::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .85;
+  flex: none;
+}
+:where(.status-chip.no-items)::before { display: none; }
+
+:where(.icon-button, .avatar):hover { filter: brightness(.97); }
+
+:where(.toast, .toastBox) { box-shadow: var(--amrni-shadow-lg); }
 
 /* العميل: معلومات واضحة فوق الخريطة، وقائمة واحدة متسقة. */
 .customer-page .sidebar { background: linear-gradient(180deg, #103c56, #092f46); }
