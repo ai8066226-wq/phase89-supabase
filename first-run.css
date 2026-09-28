@@ -1,0 +1,42 @@
+html.masar-intro-candidate body{visibility:hidden;background:#09283a}
+html.masar-intro-candidate .masar-first-run{visibility:visible}
+body.masar-onboarding-open{overflow:hidden!important}
+.masar-first-run[hidden],.masar-first-run [hidden]{display:none!important}
+.masar-first-run{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:clamp(12px,3vw,28px);overflow:auto;overscroll-behavior:contain;color:#f7fcfc;background:radial-gradient(circle at 75% 15%,rgba(24,169,157,.23),transparent 28rem),radial-gradient(circle at 8% 92%,rgba(255,175,86,.14),transparent 24rem),#09283a;font:16px/1.65 Tahoma,Arial,sans-serif;direction:rtl}
+.masar-first-run *{box-sizing:border-box}
+.masar-intro-shell{width:min(960px,100%);max-height:calc(100dvh - 24px);overflow:auto;scrollbar-width:thin;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.94fr);border:1px solid rgba(255,255,255,.14);border-radius:32px;background:linear-gradient(150deg,rgba(23,73,92,.96),rgba(8,36,52,.97));box-shadow:0 35px 90px rgba(0,15,28,.38);animation:masar-intro-enter .55s cubic-bezier(.2,.8,.2,1) both}
+.masar-intro-content{padding:clamp(25px,5vw,56px);display:flex;flex-direction:column;justify-content:center;min-width:0}
+.masar-intro-brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:24px;letter-spacing:-.025em}
+.masar-intro-mark{width:46px;height:46px;display:grid;place-items:center;border-radius:15px;color:white;background:linear-gradient(140deg,#0c9b91,#075d70);box-shadow:0 8px 22px rgba(0,0,0,.2);font-size:26px}
+.masar-intro-kicker{display:inline-flex;width:max-content;max-width:100%;margin-top:clamp(22px,5vh,50px);padding:6px 12px;border:1px solid rgba(115,231,210,.25);border-radius:100px;color:#a6f3e3;background:rgba(66,213,186,.1);font-size:12px;font-weight:800}
+.masar-intro-content h1{margin:15px 0 10px;font-size:clamp(30px,4.3vw,52px);line-height:1.24;letter-spacing:-.035em;color:#fff}
+.masar-intro-content p{margin:0;color:#c3d8df;font-size:clamp(14px,1.6vw,17px);line-height:1.9}
+.masar-intro-actions{display:grid;gap:12px;margin-top:clamp(22px,4vh,38px)}
+.masar-intro-primary,.masar-intro-secondary,.masar-intro-privacy{min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:15px;padding:11px 20px;text-decoration:none;font:800 15px/1.5 Tahoma,Arial,sans-serif;cursor:pointer;transition:transform .2s,background .2s,box-shadow .2s}
+.masar-intro-primary{border:0;color:#073841;background:#7ce4d0;box-shadow:0 12px 27px rgba(80,226,196,.17)}
+.masar-intro-primary:hover{background:#a3f3e2;transform:translateY(-2px);box-shadow:0 17px 30px rgba(80,226,196,.23)}
+.masar-intro-secondary{border:1px solid rgba(196,229,234,.36);color:#f7fcfc;background:rgba(255,255,255,.055)}
+.masar-intro-secondary:hover{background:rgba(255,255,255,.12)}
+.masar-intro-privacy{min-height:40px;margin-top:10px;color:#b7d4dd;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:4px}
+.masar-intro-privacy:hover{color:#fff}
+.masar-intro-primary:focus-visible,.masar-intro-secondary:focus-visible,.masar-intro-privacy:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.masar-intro-art{position:relative;min-height:570px;display:grid;place-items:center;overflow:hidden;border-radius:32px 0 0 32px;background:radial-gradient(circle at 50% 45%,rgba(58,165,165,.24),transparent 52%),linear-gradient(135deg,rgba(8,79,99,.9),rgba(4,41,60,.85))}
+.masar-intro-art:before{content:"";position:absolute;inset:0;opacity:.37;background-image:linear-gradient(rgba(160,229,229,.075) 1px,transparent 1px),linear-gradient(90deg,rgba(160,229,229,.075) 1px,transparent 1px);background-size:38px 38px;mask-image:radial-gradient(circle,#000 28%,transparent 75%)}
+.masar-route-graphic{position:relative;width:min(91%,440px);height:auto;filter:drop-shadow(0 20px 30px rgba(0,18,26,.25))}
+.masar-route-base{fill:none;stroke:rgba(169,229,222,.22);stroke-width:10;stroke-linecap:round;stroke-linejoin:round}
+.masar-route-line{fill:none;stroke:#89f3d6;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:700;stroke-dashoffset:700;animation:masar-draw-route 2.1s .3s ease-out forwards}
+.masar-route-ring{fill:#0d5b67;stroke:#a2f6e4;stroke-width:5;animation:masar-pulse 2.7s infinite}
+.masar-route-dot{fill:#fff}
+.masar-intro-art-label{position:absolute;bottom:38px;inset-inline:24px;margin:auto;width:max-content;max-width:calc(100% - 48px);padding:9px 17px;border:1px solid rgba(255,255,255,.18);border-radius:100px;color:#d7f4f0;background:rgba(5,35,52,.72);backdrop-filter:blur(12px);font-size:12px;font-weight:700;text-align:center}
+.masar-intro-guide h2{margin:0 0 9px;font-size:clamp(24px,3vw,34px);line-height:1.35;color:#fff}
+.masar-intro-guide .masar-intro-kicker{margin:23px 0 12px}
+.masar-guide-list{display:grid;gap:10px;margin:22px 0 0;padding:0;list-style:none}
+.masar-guide-list li{display:grid;grid-template-columns:34px 1fr;align-items:start;gap:11px;padding:13px;border:1px solid rgba(203,242,239,.13);border-radius:15px;background:rgba(255,255,255,.055);color:#deeff0;font-size:13px}
+.masar-guide-list b{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(124,228,208,.15);color:#a6f3e3}
+.masar-guide-list strong{display:block;color:#fff;font-size:14px}
+@keyframes masar-intro-enter{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes masar-draw-route{to{stroke-dashoffset:0}}
+@keyframes masar-pulse{50%{stroke-width:9;stroke:rgba(162,246,228,.6)}}
+@media(max-width:720px){.masar-first-run{padding:0;align-items:stretch}.masar-intro-shell{max-height:none;min-height:100dvh;grid-template-columns:1fr;border:0;border-radius:0}.masar-intro-art{grid-row:1;min-height:clamp(190px,34dvh,300px);border-radius:0}.masar-route-graphic{width:min(70%,270px)}.masar-intro-art-label{bottom:12px}.masar-intro-content{padding:22px max(22px,env(safe-area-inset-right)) max(22px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));justify-content:start}.masar-intro-kicker{margin-top:18px}.masar-intro-content h1{font-size:clamp(28px,8vw,40px)}.masar-intro-actions{margin-top:20px}.masar-intro-privacy{margin-top:3px}.masar-guide-list{margin-top:14px}}
+@media(max-width:380px){.masar-intro-art{min-height:170px}.masar-intro-content{padding-top:16px}.masar-intro-brand{font-size:21px}.masar-intro-content h1{font-size:27px}.masar-intro-actions{gap:8px}.masar-intro-primary,.masar-intro-secondary{min-height:46px}.masar-guide-list{gap:7px}.masar-guide-list li{padding:9px}}
+@media(prefers-reduced-motion:reduce){.masar-intro-shell,.masar-route-line,.masar-route-ring{animation:none!important}.masar-route-line{stroke-dashoffset:0}.masar-intro-primary,.masar-intro-secondary{transition:none}}

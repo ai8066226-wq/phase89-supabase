@@ -3181,6 +3181,7 @@ function scheduleProfileRetry(user, attempt = 1) {
 }
 
 onAuthStateChanged(auth, async user => {
+  window.MasarFirstRun?.setAuthenticated(Boolean(user));
   state.user = user;
   if (!user) {
     if (state.profileRetryTimer) clearTimeout(state.profileRetryTimer);

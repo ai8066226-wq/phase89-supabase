@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#0b6f75">
   <meta name="description" content="بوابة كابتن مَسار لاستلام الطلبات وتحديث الرحلات">
   <title>مَسار | بوابة الكابتن</title>
+  <script>try{if(localStorage.getItem("masar.firstRun.completed.v1")!=="1")document.documentElement.classList.add("masar-intro-candidate")}catch(e){document.documentElement.classList.add("masar-intro-candidate")}</script>
+  <link rel="stylesheet" href="./first-run.css?v=124">
+  <script src="./first-run.js?v=124" defer></script>
   <link rel="stylesheet" href="./portal.css?v=85">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
@@ -755,8 +758,8 @@ body.driver-map-mode{background:#edf3f6}
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
   <script src="./iraq-governorates.js?v=117"></script>
-  <script type="module" src="./driver.js?v=123"></script>
-  <script src="./pwa.js?v=123"></script>
+  <script type="module" src="./driver.js?v=124"></script>
+  <script src="./pwa.js?v=124"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
   const view=document.getElementById("driverView");

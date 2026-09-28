@@ -1471,6 +1471,7 @@ function clearRoleContent() {
 }
 
 onAuthStateChanged(auth, user => {
+  window.MasarFirstRun?.setAuthenticated(Boolean(user));
   if(user){registerServiceNativePushToken(user);window.setTimeout(()=>registerServiceNativePushToken(user),5000);}
   currentUser = user;
   activeRole = "";

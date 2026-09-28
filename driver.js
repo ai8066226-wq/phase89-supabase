@@ -1872,6 +1872,7 @@ byId("driverTopupCardRedeemForm")?.addEventListener("submit",async event=>{
 });
 
 onAuthStateChanged(auth, user => {
+  window.MasarFirstRun?.setAuthenticated(Boolean(user));
   state.user = user;
   if (state.userUnsubscribe) state.userUnsubscribe();
   state.topupUnsubscribe?.(); state.topupUnsubscribe=null; state.topupRequests=[];
