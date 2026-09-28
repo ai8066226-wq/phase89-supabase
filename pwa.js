@@ -1,5 +1,5 @@
 let deferredInstall=null;
-const KARWA_BUILD={phase:92,version:"2.9.1"};
+const KARWA_BUILD={phase:95,version:"2.9.4"};
 const karwaIsNative=!!window.KarwaNative;
 let karwaLastVersionCheck=0;
 

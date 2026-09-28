@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=120";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=120";
 import {
   addDoc,
   collection,
@@ -31,9 +31,8 @@ import {
   karwaCustomerCancelOrder,
   karwaCustomerCancelServiceRequest,
   karwaRedeemTopupCard
-} from "./supabase-compat.js?v=117";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
+} from "./supabase-compat.js?v=120";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
 
 const firebaseApp = initializeApp({ backend: "supabase", project: "karwa" });
 const auth = getAuth(firebaseApp);
@@ -55,16 +54,16 @@ function firestoreErrorKey(error) {
   const message = String(error?.message || "").toUpperCase();
   const details = typeof error?.details === "string" ? error.details.toUpperCase() : String(error?.details?.message || error?.details?.code || "").toUpperCase();
   const haystack = `${message} ${details}`;
-  const known = ["OUTSIDE_SERVICE_AREA","AUTH_REQUIRED","CUSTOMER_ONLY","INVALID_ROUTE","CANNOT_CANCEL","NOT_OWNER","ORDER_NOT_FOUND","BAD_TOKEN","SUBSCRIPTION_REQUIRED","GOOGLE_PLAY_SUBSCRIPTION_ONLY"];
+  const known = ["OUTSIDE_SERVICE_AREA","AUTH_REQUIRED","CUSTOMER_ONLY","INVALID_ROUTE","CANNOT_CANCEL","NOT_OWNER","ORDER_NOT_FOUND","BAD_TOKEN","PROVIDER_SUBSCRIPTION_REQUIRED","SUBSCRIPTION_REQUIRED","GOOGLE_PLAY_SUBSCRIPTION_ONLY"];
   const named = known.find(key => haystack.includes(key));
   return { code, named, raw: haystack };
 }
 
 function customerSupabaseMessage(error, action = "تنفيذ العملية") {
   const e = firestoreErrorKey(error);
+  if (e.named === "PROVIDER_SUBSCRIPTION_REQUIRED") return "هذا النشاط لا يستقبل الطلبات حاليًا. اختر نشاطًا آخر أو حاول لاحقًا.";
   if (e.named === "OUTSIDE_SERVICE_AREA") return "نقطة الانطلاق أو الوجهة خارج نطاق خدمة آمرني الحالي.";
-  if (e.named === "SUBSCRIPTION_REQUIRED") return "انتهى اشتراك آمرني أو لم يتم تفعيله. جدده عبر Google Play ثم أعد المحاولة.";
-  if (e.named === "GOOGLE_PLAY_SUBSCRIPTION_ONLY") return "الشحن اليدوي متوقف. الاشتراك متاح عبر Google Play فقط.";
+  if (e.named === "SUBSCRIPTION_REQUIRED" || e.named === "GOOGLE_PLAY_SUBSCRIPTION_ONLY") return "تعذر إتمام الطلب بسبب إعدادات حساب قديمة. حدّث التطبيق وحاول من جديد.";
   if (e.named === "AUTH_REQUIRED" || e.code === "unauthenticated") return "انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد المحاولة.";
   if (e.named === "CUSTOMER_ONLY" || e.code === "permission-denied") return "هذا الحساب غير مخوّل لإنشاء طلب راكب. تحقق من نوع الحساب وصلاحياته.";
   if (e.named === "INVALID_ROUTE" || e.code === "invalid-argument") return "تعذر اعتماد المسار. أعد تحديد الانطلاق والوجهة وانتظر حساب المسافة والوقت.";
@@ -209,20 +208,11 @@ const state = {
 const marketplaceGovernorates=window.KarwaGovernorates;
 function marketplaceGovernorateEnabled(item={}){return Boolean(marketplaceGovernorates?.isEnabled(state.appSettings||{},item.governorate||item.city));}
 function syncCustomerSubscriptionUi(){
-  return mountSubscriptionUi({
-    getUser:()=>state.user,
-    getUserData:()=>state.userData||{},
-    setUserData:data=>{state.userData=data||{};const info=subscriptionInfo(state.userData);if(byId("customerSettingsBalance"))byId("customerSettingsBalance").textContent=info.active?"نشط":"مطلوب";},
-    toast:showToast,
-    onRender:info=>{if(byId("customerSettingsBalance"))byId("customerSettingsBalance").textContent=info.active?"نشط":"مطلوب";}
-  });
+  if(byId("customerSettingsBalance"))byId("customerSettingsBalance").textContent="دون شحن";
+  return {active:true};
 }
 function requireCustomerSubscription(){
-  if(hasActiveSubscription(state.userData||{}))return true;
-  syncCustomerSubscriptionUi();
-  showToast("يلزم اشتراك شهري صالح عبر Google Play لاستخدام هذه الخدمة");
-  switchView("wallet");
-  return false;
+  return true;
 }
 
 const formatMoney = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
@@ -247,10 +237,7 @@ const vehiclePricing = {
 function numericSetting(key,fallback,min=0,max=100000){const n=Number(state.appSettings?.[key]);return Math.max(min,Math.min(max,Number.isFinite(n)?n:fallback));}
 function fixedPlatformFee(key){return Math.round(numericSetting(key,DEFAULT_PLATFORM_FEES[key]??0,0,100000));}
 function customerOperationFee(kind){
-  const legacy=fixedPlatformFee("customerOrderFee");
-  if(kind==="ride")return Math.round(numericSetting("customerTaxiFee",legacy,0,100000));
-  if(kind==="parcel")return Math.round(numericSetting("customerDeliveryFee",legacy,0,100000));
-  return Math.round(numericSetting("customerServiceFee",legacy,0,100000));
+  return 0;
 }
 function customerFeeSummary(){
   return `تكسي ${formatMoney(customerOperationFee("ride"))} • توصيل ${formatMoney(customerOperationFee("parcel"))} • مطاعم/خدمات ${formatMoney(customerOperationFee("service"))}`;
@@ -477,7 +464,7 @@ function renderCustomerSettingsInfo() {
   if (byId("customerSettingsEmail")) byId("customerSettingsEmail").textContent = state.user?.email || "سجّل الدخول لمزامنة الحساب";
   if (byId("customerSettingsAccountStatus")) byId("customerSettingsAccountStatus").textContent = state.user ? "✓ حساب متصل" : "وضع الزائر";
   if (byId("customerSettingsLocation")) byId("customerSettingsLocation").textContent = byId("cityLabel")?.textContent || "العراق";
-  if (byId("customerSettingsBalance")) byId("customerSettingsBalance").textContent = subscriptionInfo(state.userData||{}).active ? "نشط" : "مطلوب";
+  if (byId("customerSettingsBalance")) byId("customerSettingsBalance").textContent = "دون شحن";
   if (byId("customerSettingsOrders")) byId("customerSettingsOrders").textContent = String(state.orders.length);
   if (byId("customerSettingsActiveOrders")) byId("customerSettingsActiveOrders").textContent = String(activeOrders);
   if (byId("customerSettingsLogout")) byId("customerSettingsLogout").hidden = !state.user;
@@ -823,8 +810,8 @@ function renderReferralCard(){
   if(byId("referralCodeValue"))byId("referralCodeValue").textContent=state.referralCode||"—";
   if(byId("referralDiscountValue"))byId("referralDiscountValue").textContent=`خصم ${Number(state.appSettings.referralDiscountPercent||10)}% حتى ${formatMoney(state.appSettings.referralMaxDiscount||3000)}`;
 }
-function customerTransferTopupEnabled(){return state.appSettings?.topupTransferEnabled!==false;}
-function customerCardTopupEnabled(){return state.appSettings?.topupCardEnabled!==false;}
+function customerTransferTopupEnabled(){return false;}
+function customerCardTopupEnabled(){return false;}
 function renderCustomerTopupMethods(){
   const transfer=customerTransferTopupEnabled(),card=customerCardTopupEnabled();
   if(byId("customerTransferTopupMethod"))byId("customerTransferTopupMethod").hidden=!transfer;
@@ -950,13 +937,12 @@ async function loadUserProfile(user) {
     state.bonusBalance=Number(welcomeBonus.bonusBalance||0);
     state.bonusExpiresAt=welcomeBonus.bonusExpiresAt;
     state.notifications = true;
-    state.userData = {name:state.name,email:user.email||"",role:"customer",balance:0,notifications:true,subscriptionStatus:"required",subscriptionEntitled:false};
+    state.userData = {name:state.name,email:user.email||"",role:"customer",balance:0,notifications:true};
     await setDoc(userRef, {
       name: state.name,
       email: user.email || "",
       role: "customer",
       balance: state.balance,
-      subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
       ...welcomeBonus,
       notifications: true,
       createdAt: serverTimestamp(),
@@ -1108,7 +1094,7 @@ byId("authForm").addEventListener("submit", async event => {
         const welcomeBonus=signupBonusFields();
         const registrationBatch=writeBatch(db);
         registrationBatch.set(doc(db, "users", credential.user.uid), {
-          name,email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,subscriptionStatus:"required",subscriptionEntitled:false,subscriptionProductId:"amrni_monthly_access",subscriptionPlatform:"google_play",
+          name,email,role:"customer",balance:0,...welcomeBonus,notifications:true,referralCode:ownReferral,deviceBound:true,
           ...(inviteCode&&invitedByUserId?{invitedByCode:inviteCode,invitedByUserId}:{}),createdAt:serverTimestamp(),updatedAt:serverTimestamp()
         });
         addDeviceRegistrationWrites(registrationBatch,db,credential.user.uid,"customer",deviceInfo);
@@ -1402,7 +1388,7 @@ byId("bookParcel").addEventListener("click", async event => {
     });
   } catch (error) {
     console.error(error);
-    showToast(String(error?.message||"").includes("الرصيد غير كافٍ") ? error.message : "تعذر حفظ طلب التوصيل.");
+    showToast(customerSupabaseMessage(error, "حفظ طلب التوصيل"));
   } finally {
     setButtonBusy(button, false);
   }

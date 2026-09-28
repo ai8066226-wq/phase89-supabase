@@ -746,6 +746,9 @@ export async function karwaVerifyGooglePlaySubscription(purchase = {}) {
 export async function karwaSensitiveAction(action, payload = {}) {
   return karwaRpc("karwa_sensitive_action", { p_action: String(action || ""), p_payload: resolveValue(payload, undefined) || {} });
 }
+export async function karwaMonthlySubscriptionAction(action, payload = {}) {
+  return karwaRpc("karwa_monthly_subscription_action", { p_action: String(action || ""), p_payload: resolveValue(payload, undefined) || {} });
+}
 export async function karwaSensitiveAux(action, payload = {}) {
   return karwaRpc("karwa_sensitive_aux", { p_action: String(action || ""), p_payload: resolveValue(payload, undefined) || {} });
 }

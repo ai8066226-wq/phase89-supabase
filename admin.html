@@ -40,7 +40,8 @@
     .subscription-admin-intro,.subscription-admin-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}.subscription-admin-intro>div,.subscription-admin-stats>div{padding:14px;border:1px solid var(--line);border-radius:16px;background:#f8fbfc;display:grid;gap:6px}.subscription-admin-intro small,.subscription-admin-stats small{color:var(--muted);font-weight:800}.subscription-admin-intro strong,.subscription-admin-stats strong{font-size:18px}.subscription-admin-stats{grid-template-columns:repeat(4,minmax(0,1fr))}.subscription-admin-list{display:grid;gap:10px;margin-top:14px}.subscription-admin-row{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(4,minmax(125px,1fr));gap:10px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}.subscription-admin-row.is-expired{border-color:#f0c9cf;background:#fffafb}.subscription-admin-row .identity{display:grid;gap:3px}.subscription-admin-row .identity small,.subscription-admin-cell small{color:var(--muted);font-size:10px}.subscription-admin-cell{display:grid;gap:4px}.subscription-state{display:inline-flex;width:max-content;max-width:100%;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;background:#ffe9ed;color:#a6293d}.subscription-state.active{background:#e1f7ef;color:#08765b}.subscription-state.grace{background:#fff2cc;color:#8b6500}@media(max-width:900px){.subscription-admin-stats,.subscription-admin-intro{grid-template-columns:1fr 1fr}.subscription-admin-row{grid-template-columns:1fr 1fr}}@media(max-width:560px){.subscription-admin-stats,.subscription-admin-intro,.subscription-admin-row{grid-template-columns:1fr}}
 </style>
   <link rel="stylesheet" href="./native-notifications.css?v=81">
-  <link rel="stylesheet" href="./amrni-design.css?v=119">
+  <link rel="stylesheet" href="./amrni-design.css?v=118">
+  <link rel="stylesheet" href="./monthly-subscription.css?v=121">
 </head>
 <body class="admin-page">
   <header class="topbar">
@@ -106,10 +107,21 @@
         <span>الإشعارات والأقسام في مكان واحد</span>
       </div>
       <nav class="admin-module-grid" aria-label="أقسام لوحة الإدارة">
-        <a class="admin-module-card" data-tone="amber" href="#subscriptionsPanel">
-          <span class="module-notification" id="navSubscriptionsCount" aria-live="polite">0</span>
+        <a class="admin-module-card" data-tone="amber" href="#topupsPanel">
+          <span class="module-notification" id="navTopupsCount" aria-live="polite">0</span>
           <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span>
-          <span class="module-copy"><strong>الاشتراكات الشهرية</strong><small>الحالة وتاريخ البدء والانتهاء لكل الفئات</small></span>
+          <span class="module-copy"><strong>الاشتراكات الشهرية</strong><small>طلبات الاشتراكات القديمة وسجلها</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="violet" href="#subscriptionsPanel">
+          <span class="module-notification" id="navSubscriptionsCount" aria-live="polite">0</span>
+          <span class="module-icon" aria-hidden="true">◷</span>
+          <span class="module-copy"><strong>سجل المشتركين</strong><small>التواريخ والحسابات التي تحتاج تجديدًا</small></span>
+          <span class="module-open">فتح القسم <b>←</b></span>
+        </a>
+        <a class="admin-module-card" data-tone="teal" href="#pricingPanel">
+          <span class="module-icon" aria-hidden="true">⚙</span>
+          <span class="module-copy"><strong>سياسة الاشتراك</strong><small>التفعيل واستلام الطلبات بعد الشراء</small></span>
           <span class="module-open">فتح القسم <b>←</b></span>
         </a>
         <a class="admin-module-card" data-tone="violet" href="#servicesPanel">
@@ -151,7 +163,7 @@
         <a class="admin-module-card" data-tone="slate" href="#pricingPanel">
           <span class="module-notification is-status" id="navPricingCount">جاهز</span>
           <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h3M11 12h9M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></svg></span>
-          <span class="module-copy"><strong>الاشتراك والتسعير</strong><small>Google Play وأسعار الكباتن</small></span>
+          <span class="module-copy"><strong>رسوم الكباتن</strong><small>رصيد الكابتن وتسعير الرحلات</small></span>
           <span class="module-open">فتح القسم <b>←</b></span>
         </a>
         <a class="admin-module-card" data-tone="teal" href="#governoratesPanel">
@@ -244,31 +256,10 @@
           </div>
         </div>
         <div class="card admin-panel" id="pricingPanel">
-          <div class="card-heading"><h2>نظام الاشتراك وتسعيرة الكباتن</h2><span class="status-chip approved">Google Play فقط</span></div>
-          <div class="admin-panel-body">
-            <div class="subscription-admin-intro">
-              <div><small>معرّف اشتراك Google Play</small><strong>amrni_monthly_access</strong></div>
-              <div><small>دورة الفوترة</small><strong>شهرية متجددة</strong></div>
-              <div><small>رسوم العمليات الداخلية</small><strong>0 د.ع</strong></div>
-            </div>
-            <p class="muted">تم إلغاء الشحن اليدوي وكروت الرصيد من التشغيل. يحدد كل كابتن تسعيرته الخاصة لكل كيلومتر من إعداداته، وتُحسب أجرة رحلة التكسي من المسافة × سعر الكيلومتر الخاص بالكابتن بعد قبول الطلب.</p>
-            <div class="admin-note">سعر الاشتراك نفسه يُضبط من Google Play Console، وليس من داخل لوحة آمرني، حتى يبقى الدفع والتجديد والإلغاء تحت نظام Google Play.</div>
-          </div>
+          <div class="card-heading"><h2>إدارة الاشتراك الشهري</h2><span class="status-chip approved">العميل مجانًا</span></div>
+          <div class="admin-panel-body"><div class="subscription-admin-intro"><div><small>العملاء</small><strong>دون اشتراك أو شحن</strong></div><div><small>مزودو الخدمات</small><strong>اشتراك شهري</strong></div><div><small>الكباتن</small><strong>اشتراك شهري</strong></div></div><p class="muted">اشتراك الكابتن والنشاط عبر Google Play، مع تجربة مجانية لمدة ١٤ يومًا للحسابات المؤهلة. يحدد Google Play السعر الشهري؛ يظهر تاريخ البداية والانتهاء بعد التحقق من الشراء. لا يحتاج العميل إلى شحن.</p><form id="monthlySubscriptionSettingsForm" class="admin-settings-form"><div class="admin-settings-grid wide-fields"><input id="monthlySubscriptionFee" type="hidden" value="5000"><p class="muted">يُحدد سعر الاشتراك الشهري والعرض التجريبي من Google Play Console.</p><label class="topup-method-switch"><div><strong>إلزام الاشتراك</strong><small>غير المفعّل يمكنه تجهيز حسابه، ولا تصله طلبات حتى التفعيل.</small></div><input id="subscriptionEnforcementEnabled" type="checkbox"></label></div><button id="saveMonthlySubscriptionSettings" type="submit" class="primary">حفظ سياسة الاشتراك</button></form></div>
         </div>
-
-        <div class="card admin-panel" id="subscriptionsPanel">
-          <div class="card-heading"><div><h2>الاشتراكات الشهرية</h2><p class="muted">متابعة تاريخ الاشتراك والانتهاء وحالة التفعيل لجميع العملاء والكباتن ومزودي الخدمات.</p></div><span class="status-chip pending" id="subscriptionsAttentionBadge">0 يحتاج تجديد</span></div>
-          <div class="admin-panel-body">
-            <div class="subscription-admin-stats">
-              <div><small>إجمالي الحسابات</small><strong id="subscriptionsTotal">0</strong></div>
-              <div><small>اشتراك نشط</small><strong id="subscriptionsActive">0</strong></div>
-              <div><small>منتهي / غير مشترك</small><strong id="subscriptionsExpired">0</strong></div>
-              <div><small>فترة سماح</small><strong id="subscriptionsGrace">0</strong></div>
-            </div>
-            <div class="service-moderation-tools"><input id="subscriptionSearchInput" type="search" autocomplete="off" placeholder="ابحث بالاسم أو البريد أو الهاتف" aria-label="بحث الاشتراكات"><select id="subscriptionRoleFilter" aria-label="تصفية الاشتراكات"><option value="all">كل الفئات</option><option value="customer">العملاء</option><option value="driver">الكباتن</option><option value="serviceProvider">مزودو الخدمات</option><option value="driverApplicant">طلبات الكباتن</option><option value="serviceApplicant">طلبات الخدمات</option></select><span class="service-moderation-count" id="subscriptionFilteredCount">0 حساب</span></div>
-            <div class="subscription-admin-list" id="subscriptionsList"><div class="empty">لا توجد بيانات اشتراك بعد.</div></div>
-          </div>
-        </div>
+        <div class="card admin-panel" id="subscriptionsPanel"><div class="card-heading"><h2>سجل المشتركين</h2><span class="status-chip pending" id="subscriptionsAttentionBadge">0 يحتاج تجديد</span></div><div class="admin-panel-body"><div class="subscription-admin-stats"><div><small>حسابات الخدمات والكباتن</small><strong id="subscriptionsTotal">0</strong></div><div><small>اشتراكات فعالة</small><strong id="subscriptionsActive">0</strong></div><div><small>تحتاج تجديدًا</small><strong id="subscriptionsExpired">0</strong></div><div><small>فترة سماح</small><strong id="subscriptionsGrace">0</strong></div></div><div class="finance-accounts-tools"><input id="subscriptionSearchInput" type="search" placeholder="بحث باسم المشترك أو الهاتف أو البريد"><select id="subscriptionRoleFilter"><option value="all">جميع المشتركين</option><option value="driver">الكباتن</option><option value="serviceProvider">مزودو الخدمات</option></select></div><small id="subscriptionFilteredCount">0 حساب</small><div id="subscriptionsList" class="subscription-admin-list"></div></div></div>
 
         <div class="card admin-panel" id="governoratesPanel">
           <div class="card-heading"><div><h2>تشغيل الخدمة حسب المحافظة</h2><p class="muted">فعّل المحافظات التي تعمل فيها آمرني. عند إيقاف محافظة يُمنع التسجيل والنشر وقبول الطلبات فيها، ويصبح الكباتن غير متصلين وتُخفى الخدمات النشطة.</p></div><span class="status-chip approved" id="governoratesStatusBadge">19 محافظة فعالة</span></div>
@@ -281,20 +272,20 @@
           </div>
         </div>
 
-        <div class="card admin-panel" id="topupsPanel" hidden aria-hidden="true" style="display:none!important">
-          <div class="card-heading"><h2>طلبات شحن الرصيد</h2><span class="status-chip pending" id="pendingTopupsBadge">0 بانتظار المراجعة</span></div>
-          <p class="muted admin-panel-intro">يمكن تشغيل التحويل اليدوي أو كروت الشحن كلٌ على حدة، تشغيلهما معًا، أو إيقافهما معًا. الإيقاف يُطبق على الخادم وليس على الواجهة فقط.</p>
+        <div class="card admin-panel" id="topupsPanel">
+          <div class="card-heading"><h2>اشتراكات الكباتن ومزودي الخدمات</h2><span class="status-chip pending" id="pendingTopupsBadge">0 بانتظار المراجعة</span></div>
+          <p class="muted admin-panel-intro">الشراء الجديد عبر Google Play. تبقى طلبات التحويل والبطاقات السابقة في السجل لمراجعتها.</p>
           <form id="topupMethodsAdminForm" class="topup-method-control">
             <div class="topup-method-switches">
-              <label class="topup-method-switch"><div><strong>طريقة التحويل اليدوي</strong><small>5000، 10000، 15000… مع مراجعة الإدارة</small></div><input id="topupTransferEnabled" type="checkbox" checked></label>
-              <label class="topup-method-switch"><div><strong>كروت الشحن الرقمية</strong><small>رمز 16 رقمًا، صالح للاستخدام مرة واحدة فقط</small></div><input id="topupCardEnabled" type="checkbox" checked></label>
+              <label class="topup-method-switch"><div><strong>طريقة التحويل اليدوي</strong><small>اعتماد التحويل يمدّد الاشتراك شهرًا</small></div><input id="topupTransferEnabled" type="checkbox" checked></label>
+              <label class="topup-method-switch"><div><strong>كروت الاشتراك الرقمية</strong><small>رمز 16 رقمًا، صالح للاستخدام مرة واحدة فقط</small></div><input id="topupCardEnabled" type="checkbox" checked></label>
             </div>
-            <div class="topup-method-actions"><span class="topup-method-summary" id="topupMethodsSummary">الطريقتان تعملان</span><button class="primary" id="saveTopupMethods" type="submit">حفظ طرق الشحن</button></div>
+            <div class="admin-settings-grid wide-fields"><label>اسم وسيلة التحويل<input id="topupTransferLabel" maxlength="60" placeholder="مثال: بطاقة دفع محلية"></label><label>رقم أو معرّف التحويل<input id="topupTransferId" maxlength="80" placeholder="معرّف الجهة المستلمة" dir="ltr"></label><label>اسم صاحب الحساب<input id="topupCardHolder" maxlength="80" placeholder="اسم المستفيد"></label></div>
+            <div class="topup-method-actions"><span class="topup-method-summary" id="topupMethodsSummary">الطريقتان تعملان</span><button class="primary" id="saveTopupMethods" type="submit">حفظ طرق الاشتراك</button></div>
           </form>
           <div class="topup-card-manager" id="adminTopupCardManager">
-            <div class="topup-card-manager-head"><div><h3>توليد كرت شحن</h3><p>حدد القيمة ثم اضغط توليد. مثال: كرت 5,000 د.ع ينتج رمزًا فريدًا من 16 رقمًا، ولا يمكن استعماله بعد التعبئة.</p></div><span class="status-chip approved" id="topupCardMethodStatus">مفعّل</span></div>
-            <div class="topup-card-quick" aria-label="قيم سريعة للكرت"><button type="button" data-topup-card-amount="5000">5,000</button><button type="button" data-topup-card-amount="10000">10,000</button><button type="button" data-topup-card-amount="15000">15,000</button><button type="button" data-topup-card-amount="20000">20,000</button><button type="button" data-topup-card-amount="25000">25,000</button><button type="button" data-topup-card-amount="50000">50,000</button></div>
-            <form id="topupCardGeneratorForm" class="topup-card-generate"><label>قيمة الكرت (د.ع)<input id="topupCardAmount" type="number" inputmode="numeric" min="1000" max="1000000" step="1000" value="5000" required></label><button class="primary" id="generateTopupCard" type="submit">توليد الرمز</button></form>
+            <div class="topup-card-manager-head"><div><h3>سجل كروت الاشتراك السابقة</h3><p>تُحفظ البطاقات القديمة للمراجعة، وتبدأ الاشتراكات الجديدة من Google Play.</p></div><span class="status-chip approved" id="topupCardMethodStatus">مفعّل</span></div>
+            <form id="topupCardGeneratorForm" class="topup-card-generate"><label>سعر الشهر (د.ع)<input id="topupCardAmount" type="number" value="5000" readonly></label><button class="primary" id="generateTopupCard" type="submit">توليد كرت اشتراك</button></form>
             <div class="generated-topup-card" id="generatedTopupCard" hidden><small>انسخ الرقم الآن — لن يُخزّن كنص قابل للاسترجاع</small><strong id="generatedTopupCardCode">0000 0000 0000 0000</strong><b id="generatedTopupCardAmount">0 د.ع</b><button type="button" id="copyGeneratedTopupCard">نسخ رقم الكرت</button></div>
             <div><h4 style="margin:2px 0 8px">آخر البطاقات</h4><div class="topup-card-history" id="topupCardsAdminList"><p class="muted">لا توجد بطاقات مولدة بعد.</p></div></div>
           </div>
@@ -417,6 +408,6 @@
   // لا يتم تسجيل عامل خدمة جديد من لوحة الإدارة.
   try { sessionStorage.setItem("karwa_admin_no_pwa", "1"); } catch (_) {}
 </script>
-  <script type="module" src="./admin.js?v=117"></script>
+  <script type="module" src="./admin.js?v=121"></script>
 </body>
 </html>

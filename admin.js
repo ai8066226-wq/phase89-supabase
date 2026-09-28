@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=120";
 import {
   browserLocalPersistence,
   getAuth,
@@ -6,7 +6,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=120";
 import {
   collection,
   doc,
@@ -22,9 +22,8 @@ import {
   writeBatch,
   karwaSensitiveAction,
   karwaAdminAccountAction,
-  karwaCreateTopupCard,
-  karwaListTopupCards
-} from "./supabase-compat.js?v=117";
+  karwaMonthlySubscriptionAction
+} from "./supabase-compat.js?v=120";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-admin-portal");
 const auth = getAuth(app);
@@ -64,6 +63,7 @@ const state = {
   orders: [],
   serviceRequests: [],
   topupRequests: [],
+  subscriptionPayments: [],
   topupLocks: [],
   walletTransactions: [],
   topupCards: [],
@@ -189,7 +189,9 @@ function financeSnapshot() {
   const recordInPeriod = (record, fields) => inPeriod(financeRecordTime(record, fields));
   const completedTrips = state.orders.filter(order => !order.cancelled && Number(order.statusIndex || 0) >= 4 && recordInPeriod(order, ["completedAt", "updatedAt", "createdAt"]));
   const completedServices = state.serviceRequests.filter(request => request.status === "completed" && recordInPeriod(request, ["statusUpdatedAt", "updatedAt", "createdAt"]));
-  const approvedTopups = state.topupRequests.filter(request => request.status === "approved" && recordInPeriod(request, ["reviewedAt", "updatedAt", "createdAt"]));
+  const approvedTopups = state.topupRequests.filter(request => request.purpose !== "monthly_subscription" && request.status === "approved" && recordInPeriod(request, ["reviewedAt", "updatedAt", "createdAt"]));
+  const monthlyPayments=state.subscriptionPayments.filter(payment=>recordInPeriod(payment,["createdAt"]));
+  const monthlyRevenue=monthlyPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
 
   const fees = {
     customerTaxi: state.orders.filter(order => order.type === "ride" && (order.customerFeeCharged === true || Number(order.customerPlatformFee || 0) > 0) && recordInPeriod(order, ["createdAt"])).reduce((sum, order) => sum + Number(order.customerPlatformFee || 0), 0),
@@ -221,7 +223,7 @@ function financeSnapshot() {
   };
   const wallets = { customer: walletByRole("customer"), driver: walletByRole("driver"), serviceProvider: walletByRole("serviceProvider") };
   wallets.all = Object.values(wallets).reduce((summary, row) => ({ count: summary.count + row.count, paid: summary.paid + row.paid, bonus: summary.bonus + row.bonus, available: summary.available + row.available }), { count: 0, paid: 0, bonus: 0, available: 0 });
-  return { start, fees, platformFees, completedTrips, completedServices, approvedTopups, tripSales, providerSales, grossSales: tripSales + providerSales, captainEarnings, topups, topupCount, ledgerCredits, ledgerDebits, wallets, accounts };
+  return { start, fees, platformFees, monthlyRevenue, monthlyCount:monthlyPayments.length, completedTrips, completedServices, approvedTopups, tripSales, providerSales, grossSales: tripSales + providerSales, captainEarnings, topups, topupCount, ledgerCredits, ledgerDebits, wallets, accounts };
 }
 
 function renderFinanceAccounts(snapshot = financeSnapshot()) {
@@ -262,7 +264,8 @@ function renderFinancialReport() {
   if (byId("financeUpdatedAt")) byId("financeUpdatedAt").textContent = `آخر تحديث: ${new Date().toLocaleString("ar-IQ")}`;
   byId("financeKpiGrid").innerHTML = [
     ["إجمالي المبيعات المكتملة", snapshot.grossSales, `${snapshot.completedTrips.length} رحلة • ${snapshot.completedServices.length} خدمة`],
-    ["إيراد آمرني من الرسوم", snapshot.platformFees, "رسوم ثابتة بدون عمولة نسبية"],
+    ["إيراد آمرني من الاشتراكات والرسوم", snapshot.platformFees+snapshot.monthlyRevenue, `${snapshot.monthlyCount} اشتراك • رسوم الطلبات القديمة ${money(snapshot.platformFees)}`],
+    ["الاشتراكات الشهرية",snapshot.monthlyRevenue,`${snapshot.monthlyCount} كرت أو تحويل معتمد`],
     ["أرباح الكباتن", snapshot.captainEarnings, `${snapshot.completedTrips.length} رحلة مكتملة`],
     ["مبيعات مزودي الخدمات", snapshot.providerSales, `${snapshot.completedServices.length} طلب خدمة مكتمل`],
     ["الشحنات المضافة للمحافظ", snapshot.topups, `${snapshot.topupCount} عملية شحن يدوي أو كرت`],
@@ -293,7 +296,8 @@ function exportFinancialReportCsv() {
     [],
     ["المؤشر", "القيمة (د.ع)"],
     ["إجمالي المبيعات المكتملة", snapshot.grossSales],
-    ["إيراد آمرني من الرسوم", snapshot.platformFees],
+    ["إيراد آمرني من الاشتراكات والرسوم", snapshot.platformFees+snapshot.monthlyRevenue],
+    ["الاشتراكات الشهرية",snapshot.monthlyRevenue],
     ["أرباح الكباتن", snapshot.captainEarnings],
     ["مبيعات مزودي الخدمات", snapshot.providerSales],
     ["الشحنات المضافة للمحافظ", snapshot.topups],
@@ -514,7 +518,7 @@ function adminNotificationCounts() {
   );
   const serviceApplications = [...state.serviceApplications, ...legacyServiceApplications]
     .filter(item => (item.status || "pending") === "pending").length;
-  const topups = state.topupRequests.filter(item => (item.status || "pending") === "pending").length;
+  const topups = state.topupRequests.filter(item => item.purpose === "monthly_subscription" && (item.status || "pending") === "pending").length;
   const waitingOrders = state.orders.filter(order =>
     !order.cancelled && !order.driverId && Number(order.statusIndex || 0) === 0
   ).length;
@@ -748,7 +752,7 @@ function adminSubscriptionInline(user={}){
   return `<span><b>الاشتراك:</b> <i class="subscription-state ${meta.css}">${escapeHtml(meta.label)}</i></span><span><b>البدء:</b> ${escapeHtml(adminSubscriptionDate(meta.startedAt))}</span><span><b>الانتهاء:</b> ${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</span>`;
 }
 function renderSubscriptions(){
-  const users=state.users.filter(user=>String(user.role||"customer")!=="admin");
+  const users=state.users.filter(user=>["driver","serviceProvider"].includes(String(user.role||"")));
   const term=String(byId("subscriptionSearchInput")?.value||"").trim().toLocaleLowerCase("ar");
   const role=byId("subscriptionRoleFilter")?.value||"all";
   const filtered=users.filter(user=>{
@@ -898,7 +902,7 @@ function driverCard(driver) {
         <span><small>رقم اللوحة</small><b>${escapeHtml(driver.plate || "-")}</b></span>
         ${!isBikeVehicle(driver) ? `<span><small>السيارة / الموديل</small><b>${escapeHtml(driver.vehicleMake || "-")} ${escapeHtml(driver.vehicleModel || "")}</b></span><span><small>حالة السيارة</small><b>${escapeHtml(driver.vehicleCondition || "غير محددة")}</b></span>` : `<span><small>نطاق العمل</small><b>توصيل أغراض وطعام</b></span>`}
       </div>
-      <div class="captain-balance"><small>اشتراك الكابتن وتسعيرته</small><strong>${Number(driver.ratePerKm||800).toLocaleString("ar-IQ")} د.ع / كم</strong><div class="actual-balance-detail">${adminSubscriptionInline(captainUser)}<span>أرباح الرحلات المكتملة: <b>${money(captainEarnings)}</b></span></div></div>
+      <div class="captain-balance"><small>تسعيرة الكابتن ورصيده</small><strong>${Number(driver.ratePerKm||800).toLocaleString("ar-IQ")} د.ع / كم</strong><div class="actual-balance-detail"><span>الرصيد: <b>${money(captainUser.balance||0)}</b></span><span>أرباح الرحلات المكتملة: <b>${money(captainEarnings)}</b></span></div></div>
       <div class="order-meta driver-trip-stats">
         <span><strong>${trips.completed}</strong> مكتملة</span>
         <span><strong>${trips.cancelled}</strong> ملغاة</span>
@@ -1043,7 +1047,7 @@ function serviceApplicationCard(application) {
     <div class="order-meta"><span>البريد: ${escapeHtml(application.email || "—")}</span><span>العنوان: ${escapeHtml(address)}</span><span>GPS: ${escapeHtml(gps)}</span></div>
     ${application.description ? `<p class="admin-note">${escapeHtml(application.description)}</p>` : ""}
     <div class="order-meta"><span>العناصر المضافة: ${Array.isArray(items) ? items.length : 0}</span><span>★ ${providerRating.count ? providerRating.average.toFixed(1) : "جديد"} • ${providerRating.count} تقييم</span><span>⚠ ${warningCount} تنبيه</span>${application.legacy ? `<span>طلب قديم — مدعوم تلقائيًا</span>` : ""}</div>
-    <div class="captain-balance"><small>اشتراك مزود الخدمة</small><strong>${escapeHtml(adminSubscriptionMeta(providerUser).label)}</strong><div class="actual-balance-detail">${adminSubscriptionInline(providerUser)}</div></div>
+    <div class="captain-balance"><small>رسوم مزود الخدمة</small><strong>دون شحن</strong><div class="actual-balance-detail"><span>النشر وقبول الطلبات متاحان دون رسوم منصة.</span></div></div>
     ${application.reviewNote ? `<p class="admin-note danger-note">ملاحظة المراجعة: ${escapeHtml(application.reviewNote)}</p>` : ""}
     ${profile?.warningMessage ? `<p class="admin-note">آخر تنبيه: ${escapeHtml(profile.warningMessage)}</p>` : ""}
     ${blocked && profile?.blockReason ? `<p class="admin-note danger-note">سبب الحظر: ${escapeHtml(profile.blockReason)}</p>` : ""}
@@ -1234,14 +1238,14 @@ function renderPricingSettings(){
   const c=state.pricingSettings||{};
   const values={
     ridePerKmEconomy:c.ridePerKmEconomy??650,ridePerKmTaxi:c.ridePerKmTaxi??800,ridePerKmFamily:c.ridePerKmFamily??980,
-    publishFee:c.publishFee??1000,
-    customerTaxiFee:c.customerTaxiFee??c.customerOrderFee??250,
-    customerDeliveryFee:c.customerDeliveryFee??c.customerOrderFee??250,
-    customerServiceFee:c.customerServiceFee??c.customerOrderFee??250,
+    publishFee:0,
+    customerTaxiFee:0,
+    customerDeliveryFee:0,
+    customerServiceFee:0,
     captainTaxiFee:c.captainTaxiFee??c.captainOrderFee??250,
     captainDeliveryFee:c.captainDeliveryFee??c.captainOrderFee??250,
-    providerRestaurantFee:c.providerRestaurantFee??c.providerOrderFee??250,
-    providerServiceFee:c.providerServiceFee??c.providerOrderFee??250,
+    providerRestaurantFee:0,
+    providerServiceFee:0,
     signupBonusAmount:c.signupBonusAmount??1000,signupBonusHours:c.signupBonusHours??24,
     referralDiscountPercent:c.referralDiscountPercent??10,referralMaxDiscount:c.referralMaxDiscount??3000
   };
@@ -1251,8 +1255,24 @@ function renderPricingSettings(){
   const transferToggle=byId("topupTransferEnabled"),cardToggle=byId("topupCardEnabled");
   if(transferToggle&&document.activeElement!==transferToggle)transferToggle.checked=c.topupTransferEnabled!==false;
   if(cardToggle&&document.activeElement!==cardToggle)cardToggle.checked=c.topupCardEnabled!==false;
+  const monthly=byId("monthlySubscriptionFee"),enforcement=byId("subscriptionEnforcementEnabled"),cardAmount=byId("topupCardAmount");
+  if(monthly&&document.activeElement!==monthly)monthly.value=String(c.monthlySubscriptionFee||5000);
+  if(enforcement&&document.activeElement!==enforcement)enforcement.checked=c.subscriptionEnforcementEnabled===true;
+  if(cardAmount)cardAmount.value=String(c.monthlySubscriptionFee||5000);
   renderTopupMethodAdminControls();
 }
+byId("monthlySubscriptionSettingsForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();if(!state.user)return;
+  const price=Math.round(Number(byId("monthlySubscriptionFee")?.value||0));
+  if(price<5000||price>1000000||price%5000!==0)return toast("حدد مبلغًا بين 5,000 و1,000,000 د.ع بمضاعفات 5,000.");
+  const enabled=byId("subscriptionEnforcementEnabled")?.checked===true;
+  const button=byId("saveMonthlySubscriptionSettings");busy(button,true,"جارٍ الحفظ…");
+  try{
+    await setDoc(doc(db,"appSettings","pricing"),{monthlySubscriptionFee:price,subscriptionEnforcementEnabled:enabled,billingModel:"google_play_monthly",customerOrderFee:0,providerOrderFee:0,updatedAt:serverTimestamp(),updatedBy:state.user.uid},{merge:true});
+    state.pricingSettings={...(state.pricingSettings||{}),monthlySubscriptionFee:price,subscriptionEnforcementEnabled:enabled};
+    renderPricingSettings();toast("تم حفظ اشتراك الكباتن ومزودي الخدمات.");
+  }catch(error){console.error(error);toast("تعذر حفظ سياسة الاشتراك.");}finally{busy(button,false);}
+});
 function selectedGovernorateNames(){
   return [...document.querySelectorAll('#governoratesGrid input[data-governorate]:checked')].map(input=>input.dataset.governorate).filter(Boolean);
 }
@@ -1316,7 +1336,7 @@ function renderTopupCardsAdmin(){
 }
 async function refreshTopupCardsAdmin(){
   if(!state.user)return;
-  try{const rows=await karwaListTopupCards(100);state.topupCards=Array.isArray(rows)?rows:[];renderTopupCardsAdmin();}
+  try{const rows=await karwaMonthlySubscriptionAction("list_cards",{});state.topupCards=Array.isArray(rows)?rows:[];renderTopupCardsAdmin();}
   catch(error){console.warn("تعذر تحميل بطاقات الشحن",error);}
 }
 byId("topupTransferEnabled")?.addEventListener("change",renderTopupMethodAdminControls);
@@ -1324,22 +1344,25 @@ byId("topupCardEnabled")?.addEventListener("change",renderTopupMethodAdminContro
 byId("topupMethodsAdminForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user)return;
   const transfer=byId("topupTransferEnabled")?.checked===true,card=byId("topupCardEnabled")?.checked===true;
+  const transferId=String(byId("topupTransferId")?.value||"").trim();
+  if(transfer&&!transferId)return toast("أضف معرّف جهة استلام التحويل قبل تشغيل هذه الطريقة.");
   const button=event.submitter||byId("saveTopupMethods");busy(button,true,"جارٍ الحفظ…");
   try{
-    await setDoc(doc(db,"appSettings","pricing"),{topupTransferEnabled:transfer,topupCardEnabled:card,updatedAt:serverTimestamp(),updatedBy:state.user.uid},{merge:true});
-    state.pricingSettings={...(state.pricingSettings||{}),topupTransferEnabled:transfer,topupCardEnabled:card};renderTopupMethodAdminControls();
-    toast(transfer&&card?"تم تشغيل طريقتي الشحن":transfer?"تم تشغيل التحويل اليدوي فقط":card?"تم تشغيل كروت الشحن فقط":"تم إيقاف جميع طرق الشحن");
-  }catch(error){console.error(error);toast("تعذر حفظ طرق الشحن");}finally{busy(button,false);}
+    const details={topupTransferEnabled:transfer,topupCardEnabled:card,topupTransferLabel:String(byId("topupTransferLabel")?.value||"").trim().slice(0,60),topupTransferId:transferId.slice(0,80),topupCardHolder:String(byId("topupCardHolder")?.value||"").trim().slice(0,80)};
+    await setDoc(doc(db,"appSettings","pricing"),{...details,updatedAt:serverTimestamp(),updatedBy:state.user.uid},{merge:true});
+    state.pricingSettings={...(state.pricingSettings||{}),...details};renderTopupMethodAdminControls();
+    toast(transfer&&card?"تم تشغيل طريقتي الاشتراك":transfer?"تم تشغيل التحويل اليدوي فقط":card?"تم تشغيل كروت الاشتراك فقط":"تم إيقاف جميع طرق الاشتراك");
+  }catch(error){console.error(error);toast("تعذر حفظ طرق الاشتراك");}finally{busy(button,false);}
 });
 document.querySelectorAll("[data-topup-card-amount]").forEach(button=>button.addEventListener("click",()=>{const input=byId("topupCardAmount");if(input)input.value=button.dataset.topupCardAmount||"5000";}));
 byId("topupCardGeneratorForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user)return;
   if(byId("topupCardEnabled")?.checked===false)return toast("فعّل طريقة كروت الشحن أولًا ثم ولّد الكرت.");
   const amount=Math.round(Number(byId("topupCardAmount")?.value||0));
-  if(!Number.isFinite(amount)||amount<1000||amount>1000000||amount%1000!==0)return toast("قيمة الكرت يجب أن تكون من 1,000 إلى 1,000,000 د.ع وبمضاعفات 1,000.");
+  if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return toast("سعر الشهر يجب أن يكون من 5,000 إلى 1,000,000 د.ع بمضاعفات 5,000.");
   const button=event.submitter||byId("generateTopupCard");busy(button,true,"جارٍ التوليد…");
   try{
-    const result=await karwaCreateTopupCard(amount);
+    const result=await karwaMonthlySubscriptionAction("create_card",{});
     state.lastGeneratedTopupCardCode=String(result?.code||"");
     const cardBox=byId("generatedTopupCard");if(cardBox)cardBox.hidden=false;
     if(byId("generatedTopupCardCode"))byId("generatedTopupCardCode").textContent=result?.formattedCode||state.lastGeneratedTopupCardCode;
@@ -1356,12 +1379,12 @@ byId("copyGeneratedTopupCard")?.addEventListener("click",async()=>{
 
 function renderTopupRequests(){
   const box=byId("topupRequestsAdmin"); if(!box)return;
-  const rows=[...state.topupRequests].sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
+  const rows=state.topupRequests.filter(item=>item.purpose==="monthly_subscription").sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
   renderAdminNotifications();
-  if(!rows.length){box.innerHTML='<p class="muted">لا توجد طلبات شحن بعد.</p>';return;}
+  if(!rows.length){box.innerHTML='<p class="muted">لا توجد طلبات اشتراك بعد.</p>';return;}
   const labels={pending:"قيد المراجعة",approved:"معتمد",rejected:"مرفوض"};
   const accountLabels={customer:"عميل",captain:"كابتن",service:"خدمات أخرى",driver:"كابتن",other:"خدمات أخرى"};
-  box.innerHTML=rows.map(x=>{const status=x.status||"pending";const date=x.createdAt?.seconds?new Date(x.createdAt.seconds*1000).toLocaleString("ar-IQ"):"—";const accountType=accountLabels[x.accountType]||accountLabels[x.accountRole]||"عميل";return `<article class="topup-admin-row ${escapeHtml(status)}"><div class="topup-admin-head"><div><strong>${escapeHtml(x.customerName||"مشترك")}</strong><small> • ${escapeHtml(x.email||"")} • <b>${escapeHtml(accountType)}</b></small></div><span class="status-chip ${status==='approved'?'approved':status==='rejected'?'cancelled':'pending'}">${labels[status]||escapeHtml(status)}</span></div><div class="order-meta"><span>نوع التسجيل: <b>${escapeHtml(accountType)}</b></span><span>المبلغ: <b>${money(x.amount)}</b></span><span>المرجع: <b>${escapeHtml(x.transferReference||"—")}</b></span><span>${date}</span></div>${status==='pending'?`<div class="topup-admin-actions"><button class="primary" data-action="approve-topup" data-id="${x.firestoreId}">اعتماد وإضافة الرصيد</button><button class="danger" data-action="reject-topup" data-id="${x.firestoreId}">رفض</button></div>`:`${x.reviewNote?`<p class="admin-note">${escapeHtml(x.reviewNote)}</p>`:""}`}</article>`;}).join("");
+  box.innerHTML=rows.map(x=>{const status=x.status||"pending";const date=x.createdAt?.seconds?new Date(x.createdAt.seconds*1000).toLocaleString("ar-IQ"):"—";const accountType=accountLabels[x.accountType]||accountLabels[x.accountRole]||"عميل";return `<article class="topup-admin-row ${escapeHtml(status)}"><div class="topup-admin-head"><div><strong>${escapeHtml(x.customerName||"مشترك")}</strong><small> • ${escapeHtml(x.email||"")} • <b>${escapeHtml(accountType)}</b></small></div><span class="status-chip ${status==='approved'?'approved':status==='rejected'?'cancelled':'pending'}">${labels[status]||escapeHtml(status)}</span></div><div class="order-meta"><span>نوع التسجيل: <b>${escapeHtml(accountType)}</b></span><span>المبلغ: <b>${money(x.amount)}</b></span><span>المرجع: <b>${escapeHtml(x.transferReference||"—")}</b></span><span>${date}</span></div>${status==='pending'?`<div class="topup-admin-actions"><button class="primary" data-action="approve-topup" data-id="${x.firestoreId}">تفعيل شهر اشتراك</button><button class="danger" data-action="reject-topup" data-id="${x.firestoreId}">رفض</button></div>`:`${x.reviewNote?`<p class="admin-note">${escapeHtml(x.reviewNote)}</p>`:""}`}</article>`;}).join("");
 }
 
 byId("pricingSettingsForm")?.addEventListener("submit",async event=>{
@@ -1372,14 +1395,14 @@ byId("pricingSettingsForm")?.addEventListener("submit",async event=>{
     payload.ridePerKmEconomy=settingNumber(byId("ridePerKmEconomy")?.value,650,0,10000);
     payload.ridePerKmTaxi=settingNumber(byId("ridePerKmTaxi")?.value,800,0,10000);
     payload.ridePerKmFamily=settingNumber(byId("ridePerKmFamily")?.value,980,0,10000);
-    payload.publishFee=Math.round(settingNumber(byId("publishFee")?.value,1000));
-    payload.customerTaxiFee=Math.round(settingNumber(byId("customerTaxiFee")?.value,250));
-    payload.customerDeliveryFee=Math.round(settingNumber(byId("customerDeliveryFee")?.value,250));
-    payload.customerServiceFee=Math.round(settingNumber(byId("customerServiceFee")?.value,250));
+    payload.publishFee=0;
+    payload.customerTaxiFee=0;
+    payload.customerDeliveryFee=0;
+    payload.customerServiceFee=0;
     payload.captainTaxiFee=Math.round(settingNumber(byId("captainTaxiFee")?.value,250));
     payload.captainDeliveryFee=Math.round(settingNumber(byId("captainDeliveryFee")?.value,250));
-    payload.providerRestaurantFee=Math.round(settingNumber(byId("providerRestaurantFee")?.value,250));
-    payload.providerServiceFee=Math.round(settingNumber(byId("providerServiceFee")?.value,250));
+    payload.providerRestaurantFee=0;
+    payload.providerServiceFee=0;
     // حقول توافق للإصدارات القديمة، بينما Phase 74 يستخدم الرسوم التفصيلية أعلاه.
     payload.customerOrderFee=payload.customerTaxiFee;
     payload.captainOrderFee=payload.captainDeliveryFee;
@@ -1657,7 +1680,7 @@ function openDashboard() {
     const incoming=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
     if(topupsReady)incoming.forEach(item=>{
       const old=previousTopups.get(item.firestoreId);
-      if(changedToPending(old,item))adminNotify({title:"طلب شحن رصيد جديد",body:`${item.customerName||"مستخدم آمرني"} طلب شحن ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`,forceNative:true});
+      if(item.purpose==="monthly_subscription"&&changedToPending(old,item))adminNotify({title:"طلب اشتراك شهري جديد",body:`${item.customerName||"مستخدم آمرني"} طلب اشتراك بقيمة ${money(item.amount)}.`,type:"wallet",route:"#topupsPanel",tag:`admin-topup-${item.firestoreId}`,forceNative:true});
     });
     state.topupRequests=incoming;
     previousTopups=new Map(incoming.map(item=>[item.firestoreId,item]));topupsReady=true;
@@ -1671,6 +1694,10 @@ function openDashboard() {
     state.walletTransactions = snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
     renderFinancialReport();
   });
+  const subscriptionPaymentsUnsubscribe=onSnapshot(collection(db,"subscriptionPayments"),snapshot=>{
+    state.subscriptionPayments=snapshot.docs.map(item=>({...item.data(),firestoreId:item.id}));
+    renderFinancialReport();
+  },error=>console.warn("تعذر تحميل سجل الاشتراكات المالي",error));
   const financeSettingsUnsubscribe = onSnapshot(doc(db,"appSettings","finance"), snapshot => {
     state.financeSettings = snapshot.exists() ? (snapshot.data() || {}) : {};
     renderFinancialReport();
@@ -1712,6 +1739,7 @@ function openDashboard() {
     topupsUnsubscribe,
     topupLocksUnsubscribe,
     walletTransactionsUnsubscribe,
+    subscriptionPaymentsUnsubscribe,
     financeSettingsUnsubscribe,
     deviceBindingsUnsubscribe,
     deviceLinksUnsubscribe,
@@ -1787,7 +1815,7 @@ function renderAccountDirectory() {
       <div class="account-directory-cell"><small>الهاتف</small><b>${escapeHtml(account.phone || "—")}</b></div>
       <div class="account-directory-cell"><small>الصنف</small><b>${escapeHtml(categoryText)}</b></div>
       <div class="account-directory-cell"><small>آخر نشاط</small><b>${escapeHtml(accountActivityText(account))}</b><small>${escapeHtml(activityDate)}</small></div>
-      <div class="account-directory-cell"><small>الاشتراك</small>${(()=>{const subUser=state.users.find(u=>u.firestoreId===account.id)||{};const meta=adminSubscriptionMeta(subUser);return `<b>${escapeHtml(meta.label)}</b><small>ينتهي: ${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</small>`;})()}</div>
+      <div class="account-directory-cell"><small>الاشتراك</small>${(()=>{const subUser=state.users.find(u=>u.firestoreId===account.id)||{};const meta=adminSubscriptionMeta(subUser);return ["driver","serviceProvider"].includes(subUser.role)?`<b>${escapeHtml(meta.label)}</b><small>ينتهي: ${escapeHtml(adminSubscriptionDate(meta.expiresAt))}</small>`:"<b>مجاني</b><small>لا يلزم اشتراك</small>";})()}</div>
       <button class="danger" type="button" data-action="delete-account" data-id="${escapeHtml(account.id)}" data-name="${escapeHtml(name)}" data-email="${escapeHtml(account.email || "")}" data-role="${escapeHtml(account.role)}" data-category="${escapeHtml(categoryText)}">حذف نهائي</button>
     </article>`;
   }).join("") : `<div class="empty"><span>🔎</span>${state.accountDirectoryLoading ? "جارٍ تحميل الحسابات…" : "لا توجد حسابات مطابقة للتصفية المحددة."}</div>`;
@@ -1988,12 +2016,12 @@ document.addEventListener("click", async event => {
       await updateDoc(doc(db,"deviceChangeRequests",id),{status:"rejected",reviewNote:note.slice(0,200),reviewedBy:state.user.uid,reviewedAt:serverTimestamp(),updatedAt:serverTimestamp()});
       toast("تم رفض طلب تغيير الجهاز");
     } else if (button.dataset.action === "approve-topup") {
-      await karwaSensitiveAction("review_topup",{requestId:id,decision:"approved",note:""});
-      toast("تم اعتماد الشحن وإضافة نفس المبلغ إلى الرصيد المشحون");
+      await karwaMonthlySubscriptionAction("review_transfer",{requestId:id,decision:"approved",note:""});
+      toast("تم اعتماد التحويل وتفعيل شهر اشتراك دون إضافة رصيد.");
     } else if (button.dataset.action === "reject-topup") {
-      const note=(await window.AmrniDialog.prompt("اكتب سبب رفض طلب شحن الرصيد ليظهر للمستخدم.","تعذر مطابقة التحويل",{title:"رفض طلب الشحن",icon:"!",tone:"warning",label:"سبب الرفض",required:true,minLength:3,maxLength:200,confirmText:"رفض طلب الشحن"}))?.trim(); if(!note)return;
-      await karwaSensitiveAction("review_topup",{requestId:id,decision:"rejected",note:note.slice(0,200)});
-      toast("تم رفض / إلغاء طلب الشحن ويمكن للمستخدم إرسال طلب جديد");
+      const note=(await window.AmrniDialog.prompt("اكتب سبب رفض الاشتراك ليظهر للمشترك.","تعذر مطابقة التحويل",{title:"رفض طلب الاشتراك",icon:"!",tone:"warning",label:"سبب الرفض",required:true,minLength:3,maxLength:200,confirmText:"رفض طلب الاشتراك"}))?.trim(); if(!note)return;
+      await karwaMonthlySubscriptionAction("review_transfer",{requestId:id,decision:"rejected",note:note.slice(0,200)});
+      toast("تم رفض طلب الاشتراك، ويمكن للمشترك إرسال طلب جديد.");
     } else if (button.dataset.action === "approve-service") {
       const legacy = button.dataset.source === "legacy";
       const application = legacy

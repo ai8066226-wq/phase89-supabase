@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=120";
 import {
   browserLocalPersistence,
   getAuth,
@@ -9,7 +9,7 @@ import {
   deleteUser,
   updateProfile,
   signOut
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=120";
 import {
   addDoc,
   collection,
@@ -29,11 +29,12 @@ import {
   writeBatch,
   karwaTouchActivity,
   karwaSensitiveAction,
+  karwaMonthlySubscriptionAction,
   karwaDriverAutoComplete,
-  karwaRedeemTopupCard
-} from "./supabase-compat.js?v=117";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
+} from "./supabase-compat.js?v=120";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=120";
+import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=121";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -55,15 +56,17 @@ function firestoreErrorKey(error) {
   const message = String(error?.message || "").toUpperCase();
   const details = typeof error?.details === "string" ? error.details.toUpperCase() : String(error?.details?.message || error?.details?.code || "").toUpperCase();
   const haystack = `${message} ${details}`;
-  const known = ["ORDER_TAKEN","DRIVER_NOT_AVAILABLE","DRIVER_ONLY","NOT_IN_DISPATCH_ROUND","ORDER_NOT_FOUND","NOT_ASSIGNED","INVALID_TRANSITION","OTP_INVALID","SUBSCRIPTION_REQUIRED"];
+  const known = ["ORDER_TAKEN","DRIVER_NOT_AVAILABLE","DRIVER_ONLY","NOT_IN_DISPATCH_ROUND","OFFER_WAIT_TURN","OUTSIDE_REQUEST_RADIUS","INSUFFICIENT_WALLET","LOCATION_REQUIRED","ORDER_NOT_FOUND","NOT_ASSIGNED","INVALID_TRANSITION","OTP_INVALID"];
   return { code, named: known.find(key => haystack.includes(key)), raw: haystack };
 }
 
 function driverSupabaseMessage(error, action = "تنفيذ العملية") {
   const e = firestoreErrorKey(error);
   if (e.named === "ORDER_TAKEN" || e.code === "already-exists") return "سبق أن قبل كابتن آخر هذا الطلب.";
-  if (e.named === "SUBSCRIPTION_REQUIRED") return "انتهى اشتراك آمرني أو لم يتم تفعيله. جدده عبر Google Play لاستقبال طلبات جديدة.";
-  if (e.named === "NOT_IN_DISPATCH_ROUND") return "هذا الطلب مخصص مؤقتًا لكباتن أقرب. انتظر انتهاء جولة التوزيع ثم حاول مجددًا.";
+  if (e.named === "OFFER_WAIT_TURN" || e.named === "NOT_IN_DISPATCH_ROUND") return "يصل الطلب الآن إلى الكباتن الأقرب أولًا. سيظهر لك عند حلول دورك.";
+  if (e.named === "OUTSIDE_REQUEST_RADIUS") return "الطلب خارج نطاق 10 كم من موقعك الحالي.";
+  if (e.named === "LOCATION_REQUIRED") return "فعّل الموقع الدقيق وانتظر تحديثه ثم أعد المحاولة.";
+  if (e.named === "INSUFFICIENT_WALLET") return "الاشتراك الشهري مطلوب لقبول الطلبات الجديدة.";
   if (e.named === "DRIVER_NOT_AVAILABLE") return "الخادم يعتبر حسابك غير متاح. فعّل الاتصال وتأكد أن حساب الكابتن مفعل وغير محظور.";
   if (e.named === "DRIVER_ONLY" || e.code === "permission-denied" && !e.named) return "صلاحية الحساب ليست كابتن أو لا تسمح بهذه العملية. راجع تفعيل الحساب من الإدارة.";
   if (e.named === "ORDER_NOT_FOUND" || e.code === "not-found" && !e.raw.includes("404")) return "الطلب لم يعد موجودًا أو تم حذفه.";
@@ -194,12 +197,17 @@ function canDriverHandleOrder(order, driver = state.driverData) {
 
 function orderMeetsDriverDispatchConditions(order, now = Date.now()) {
   if (!order || order.cancelled || Number(order.statusIndex || 0) >= 4 || order.driverId) return false;
+  if(!subscriptionInfo(state.userData||{},now).active)return false;
   if (!driverGovernorateEnabled(state.driverData?.city)) return false;
   if (!canDriverHandleOrder(order)) return false;
   if (!orderWithinRequestRadius(order)) return false;
   if (order.type === "serviceDelivery" && order.serviceCity && String(order.serviceCity).trim() !== String(state.driverData?.city || "").trim()) return false;
-  const expiresAt = order.dispatchExpiresAt?.seconds ? order.dispatchExpiresAt.seconds * 1000 : new Date(order.dispatchExpiresAt || 0).getTime();
-  return !expiresAt || expiresAt <= now || !Array.isArray(order.dispatchCandidateIds) || !order.dispatchCandidateIds.length || order.dispatchCandidateIds.includes(state.user?.uid);
+  const candidates=Array.isArray(order.dispatchCandidateIds)?order.dispatchCandidateIds:[];
+  if(!candidates.length)return false;
+  const rank=candidates.indexOf(state.user?.uid);
+  if(rank<0)return false;
+  const started=driverTimestampMillis(order.dispatchStartedAt);
+  return !started||now>=started+rank*Math.max(5,Number(order.dispatchWaveSeconds||12))*1000;
 }
 const DRIVER_MAP_STYLES = {
   day: "https://tiles.openfreemap.org/styles/bright",
@@ -287,7 +295,7 @@ function applyDriverGovernorateAvailability(){
   const city=normalizedDriverGovernorate(state.driverData?.city),enabled=driverGovernorateEnabled(city),notice=byId("driverGovernorateNotice"),online=byId("onlineSwitch");
   if(!state.driverData||!city){if(notice)notice.className="notice danger hidden";return;}
   if(notice){notice.className=enabled?"notice danger hidden":"notice danger driver-alert";notice.textContent=enabled?"":`الخدمة متوقفة حاليًا في ${driverGovernorates.label(city)}. لا يمكنك الاتصال أو قبول طلبات حتى تعيد الإدارة تفعيل المحافظة.`;}
-  if(online)online.disabled=!enabled||state.driverData.blocked===true||!hasActiveSubscription(state.userData||{});
+  if(online)online.disabled=!enabled||state.driverData.blocked===true;
   if(!enabled){
     byId("onlineSwitch")?.classList.remove("on");if(byId("onlineLabel"))byId("onlineLabel").textContent="المحافظة متوقفة";
     stopLocationSharing();renderOrders();
@@ -311,7 +319,7 @@ function driverActiveBonus(data={}){const amount=Math.max(0,Number(data.bonusBal
 function driverWalletAvailable(data=state.userData||{}){return Math.max(0,Number(data?.balance||0))+driverActiveBonus(data||{});}
 function driverWalletDebitPatch(data,amount){const fee=Math.max(0,Math.round(Number(amount||0)));const paid=Math.max(0,Number(data?.balance||0));const bonus=driverActiveBonus(data||{});if(paid+bonus<fee)return null;const useBonus=Math.min(bonus,fee);return {balance:paid-(fee-useBonus),bonusBalance:Math.max(0,Number(data?.bonusBalance||0)-useBonus),updatedAt:serverTimestamp()};}
 function driverSignupBonusFields(){return {bonusBalance:0,bonusExpiresAt:null,welcomeBonusGranted:false,welcomeBonusEvaluated:true};}
-function driverTransferTopupEnabled(){return driverPricingSettings?.topupTransferEnabled!==false;}
+function driverTransferTopupEnabled(){return driverPricingSettings?.topupTransferEnabled!==false&&Boolean(String(driverPricingSettings?.topupTransferId||"").trim());}
 function driverCardTopupEnabled(){return driverPricingSettings?.topupCardEnabled!==false;}
 function renderDriverTopupMethods(){
   const transfer=driverTransferTopupEnabled(),card=driverCardTopupEnabled();
@@ -321,40 +329,38 @@ function renderDriverTopupMethods(){
   [byId("driverTopupCardCode"),byId("driverRedeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
   updateDriverTopupFormState();
 }
-function syncDriverSubscriptionUi(){
-  return mountSubscriptionUi({
-    getUser:()=>state.user,
-    getUserData:()=>state.userData||{},
-    setUserData:data=>{state.userData=data||{};renderDriverWallet();applyDriverGovernorateAvailability();},
-    toast,
-    onRender:info=>{
-      const status=byId("subscriptionStatus");if(status)status.className=`status-chip ${info.active?"approved":"pending"}`;
-      const online=byId("onlineSwitch");if(online)online.disabled=!driverGovernorateEnabled(state.driverData?.city)||state.driverData?.blocked===true||!info.active;
-    }
-  });
-}
-function requireDriverSubscription(){
-  if(hasActiveSubscription(state.userData||{}))return true;
-  syncDriverSubscriptionUi();
-  toast("يلزم اشتراك شهري صالح عبر Google Play للاتصال أو قبول طلب جديد");
-  setDriverSettingsOpen(true);
-  return false;
-}
 function renderDriverWallet(){
-  syncDriverSubscriptionUi();
+  const info=subscriptionInfo(state.userData||{});
+  if(byId("driverSubscriptionStatus")){byId("driverSubscriptionStatus").textContent=info.status;byId("driverSubscriptionStatus").className=`status-chip ${info.active?"approved":"pending"}`;}
+  if(byId("driverSubscriptionPrice"))byId("driverSubscriptionPrice").textContent=money(monthlyPrice(driverPricingSettings));
+  if(byId("driverSubscriptionStarted"))byId("driverSubscriptionStarted").textContent=subscriptionDate(info.started);
+  if(byId("driverSubscriptionExpires"))byId("driverSubscriptionExpires").textContent=subscriptionDate(info.expires);
+  if(byId("driverSubscriptionNotice"))byId("driverSubscriptionNotice").textContent=info.active?"يمكنك استقبال الطلبات دون خصم رسوم عن كل طلب. أجرة الرحلة مستقلة حسب تسعيرتك.":"اشترك لشهر كامل لاستقبال الطلبات الجديدة. يمكنك متابعة رحلة بدأت قبل انتهاء الاشتراك.";
+  renderGooglePlaySubscription({panelId:"driverPlaySubscription",statusId:"driverSubscriptionStatus",priceId:"driverSubscriptionPrice",startedId:"driverSubscriptionStarted",expiresId:"driverSubscriptionExpires",getUser:()=>state.user,getData:()=>state.userData,updateData:patch=>{state.userData={...(state.userData||{}),...patch};applyDriverGovernorateAvailability();renderOrders();},toast});
+  if(byId("driverTransferLabel"))byId("driverTransferLabel").textContent=driverPricingSettings?.topupTransferLabel||"وسيلة التحويل";
+  if(byId("driverTransferId"))byId("driverTransferId").textContent=driverPricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
+  if(byId("driverTransferHolder"))byId("driverTransferHolder").textContent=`المستفيد: ${driverPricingSettings?.topupCardHolder||"إدارة آمرني"}`;
+  if(byId("driverTopupAmount"))byId("driverTopupAmount").value=String(monthlyPrice(driverPricingSettings));
+  renderDriverTopupMethods();
   const rate=Math.max(100,Math.min(10000,Number(state.driverData?.ratePerKm||800)));
   if(byId("driverRatePerKm")&&document.activeElement!==byId("driverRatePerKm"))byId("driverRatePerKm").value=String(Math.round(rate));
 }
-function driverHasPendingTopup(){return state.topupRequests.some(x=>(x.status||"pending")==="pending");}
+function requireDriverSubscription(){
+  if(subscriptionInfo(state.userData||{}).active)return true;
+  toast("اشتراكك الشهري غير نشط. جدّده لاستقبال الطلبات الجديدة.");
+  setDriverSettingsOpen(true);
+  return false;
+}
+function driverHasPendingTopup(){return state.topupRequests.some(x=>x.purpose==="monthly_subscription"&&(x.status||"pending")==="pending");}
 function updateDriverTopupFormState(){
   const pending=driverHasPendingTopup(),enabled=driverTransferTopupEnabled();
   [byId("driverTopupAmount"),byId("driverTopupReference"),byId("driverTopupSubmit")].forEach(el=>{if(el)el.disabled=pending||!enabled;});
-  const submit=byId("driverTopupSubmit");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"طلب الشحن قيد المراجعة":"إرسال طلب الشحن";
+  const submit=byId("driverTopupSubmit");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"الاشتراك قيد المراجعة":"إرسال طلب الاشتراك";
 }
 function renderDriverTopupRequests(){
   const box=byId("driverTopupRequestsList");if(!box)return;
-  if(!state.user){box.innerHTML='<p class="muted">سجّل الدخول لعرض طلبات الشحن.</p>';updateDriverTopupFormState();return;}
-  if(!state.topupRequests.length){box.innerHTML='<p class="muted">لا توجد طلبات شحن بعد.</p>';updateDriverTopupFormState();return;}
+  if(!state.user){box.innerHTML='<p class="muted">سجّل الدخول لعرض طلبات الاشتراك.</p>';updateDriverTopupFormState();return;}
+  if(!state.topupRequests.length){box.innerHTML='<p class="muted">لا توجد طلبات اشتراك بعد.</p>';updateDriverTopupFormState();return;}
   const labels={pending:"بانتظار المراجعة",approved:"تم الاعتماد",rejected:"مرفوض",cancelled:"ملغي"};
   box.innerHTML=state.topupRequests.map(x=>`<div class="unified-topup-row"><div><strong>${money(x.amount)}</strong><small>${escapeHtml(x.transferReference||"بدون مرجع")}</small></div><span class="unified-topup-status ${escapeHtml(x.status||"pending")}">${labels[x.status]||escapeHtml(x.status||"pending")}</span></div>`).join("");
   updateDriverTopupFormState();
@@ -364,12 +370,12 @@ function subscribeDriverTopups(user){
   state.topupSnapshotReady=false;
   state.topupUnsubscribe=onSnapshot(query(collection(db,"topupRequests"),where("userId","==",user.uid)),snapshot=>{
     const previous=new Map(state.topupRequests.map(item=>[item.firestoreId,item]));
-    const incoming=snapshot.docs.map(d=>({...d.data(),firestoreId:d.id})).sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
+    const incoming=snapshot.docs.map(d=>({...d.data(),firestoreId:d.id})).filter(item=>item.purpose==="monthly_subscription").sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
     if(state.topupSnapshotReady)incoming.forEach(item=>{
       const old=previous.get(item.firestoreId);
       if(!old||old.status===item.status||!["approved","rejected"].includes(item.status))return;
       const approved=item.status==="approved";
-      addDriverNotification({id:`topup:${item.firestoreId}:${item.status}`,type:"wallet",title:approved?"تم اعتماد شحن الرصيد":"تم رفض طلب الشحن",message:approved?`أضيف ${money(item.amount)} إلى رصيدك.`:`طلب شحن بقيمة ${money(item.amount)} يحتاج إلى مراجعة التفاصيل.`,target:"wallet"});
+      addDriverNotification({id:`subscription:${item.firestoreId}:${item.status}`,type:"wallet",title:approved?"تم تفعيل اشتراكك الشهري":"تم رفض طلب الاشتراك",message:approved?"حدّثنا تاريخ انتهاء اشتراكك. يمكنك متابعة العمل الآن.":"راجع مرجع التحويل ثم حاول مجددًا.",target:"wallet"});
     });
     state.topupRequests=incoming;
     state.topupSnapshotReady=true;
@@ -1501,7 +1507,7 @@ byId("applicationForm").addEventListener("submit", async event => {
     if (directSignup) {
       const registrationBatch=writeBatch(db);
       registrationBatch.set(doc(db, "users", accountUser.uid), {
-        name, email: registerEmail, role: "driverApplicant", balance: 0, ...welcomeBonus, notifications: true, deviceBound: true, subscriptionStatus:"required", subscriptionEntitled:false, subscriptionProductId:"amrni_monthly_access", subscriptionPlatform:"google_play",
+        name, email: registerEmail, role: "driverApplicant", balance: 0, ...welcomeBonus, notifications: true, deviceBound: true, 
         createdAt: serverTimestamp(), updatedAt: serverTimestamp()
       });
       addDeviceRegistrationWrites(registrationBatch,db,accountUser.uid,"driverApplicant",deviceInfo);
@@ -1546,6 +1552,43 @@ function formatOrderCreatedAt(order) {
 }
 
 function distanceToOrder(order){ return distanceKmBetween(currentDriverPoint(), order?.pickupLocation); }
+const dismissedOfferIds=new Set();
+const announcedOfferIds=new Set();
+function orderOfferAddress(order, destination=false){
+  const point=destination?order?.destinationLocation:order?.pickupLocation;
+  const route=String(order?.route||"").split(" ← ");
+  return String(point?.address||point?.label||(destination?route[1]:route[0])||"الموقع المحدد على الخريطة");
+}
+function renderDriverOffer(available,mine){
+  const sheet=byId("driverOfferSheet"),view=byId("driverView");if(!sheet)return;
+  const order=state.driverData?.online&&!mine.length?available.find(item=>!dismissedOfferIds.has(item.firestoreId)):null;
+  if(!order){sheet.hidden=true;sheet.removeAttribute("data-order-id");view?.classList.remove("driver-has-offer");return;}
+  const km=distanceToOrder(order),ride=order.type==="ride";
+  const price=ride?Number(order.distanceKm||0)*Number(state.driverData?.ratePerKm||800):Number(order.price||0);
+  byId("driverOfferType").textContent=`${icons[order.type]||"📦"} ${ride?"رحلة تكسي جديدة":"طلب توصيل جديد"}`;
+  byId("driverOfferPrice").textContent=(ride?"≈ ":"")+money(price);
+  byId("driverOfferDistance").textContent=`${Number.isFinite(km)?km.toFixed(1):"—"} كم إلى الاستلام`;
+  byId("driverOfferPickup").textContent=orderOfferAddress(order);
+  byId("driverOfferDestination").textContent=orderOfferAddress(order,true);
+  byId("driverOfferDetails").textContent=[order.title,order.type==="parcel"?order.parcelDetails?.notes:""].filter(Boolean).join(" • ")||"تفاصيل الطلب متاحة بعد القبول";
+  byId("driverOfferTrip").textContent=`${Number(order.distanceKm||0).toFixed(1)} كم • نحو ${Math.round(Number(order.durationMin||0))} دقيقة`;
+  byId("driverOfferFee").textContent="قبول الطلب مشمول بالاشتراك";
+  byId("driverOfferAccept").dataset.id=order.firestoreId;
+  sheet.dataset.orderId=order.firestoreId;
+  sheet.hidden=false;view?.classList.add("driver-has-offer");
+}
+byId("driverOfferDismiss")?.addEventListener("click",()=>{const id=byId("driverOfferSheet")?.dataset.orderId;if(id)dismissedOfferIds.add(id);renderOrders();});
+function announceEligibleOffers(){
+  if(!state.driverData?.online||!state.user||!state.lastPosition)return 0;
+  if(state.orders.some(o=>o.driverId===state.user.uid&&!o.cancelled&&Number(o.statusIndex||0)<4))return 0;
+  const incoming=state.orders.filter(o=>orderMeetsDriverDispatchConditions(o)&&!announcedOfferIds.has(o.firestoreId));
+  incoming.forEach(order=>{
+    announcedOfferIds.add(order.firestoreId);
+    addDriverNotification({id:`new-order:${order.firestoreId}`,type:"order",title:order.type==="ride"?"رحلة تكسي قريبة":"طلب توصيل قريب",message:`${order.title||"طلب جديد"} • ${distanceToOrder(order).toFixed(1)} كم من موقعك`,target:"available"});
+  });
+  if(incoming.length)toast(incoming.length===1?"طلب جديد بانتظار قبولك على الخريطة":`لديك ${incoming.length} طلبات قريبة على الخريطة`);
+  return incoming.length;
+}
 function orderCard(order, mode) {
   const statusIndex = Number(order.statusIndex || 0);
   const statusClass = order.cancelled ? "cancelled" : statusIndex >= 4 ? "complete" : "active";
@@ -1585,6 +1628,7 @@ function renderOrders() {
   const completed = state.orders.filter(order =>
     order.driverId === state.user?.uid && Number(order.statusIndex || 0) >= 4
   );
+  renderDriverOffer(available,mine);
 
   byId("availableCount").textContent = available.length;
   byId("activeCount").textContent = mine.length;
@@ -1629,6 +1673,9 @@ function openDriverDashboard() {
   loadDriverNotifications();
   updateDriverNotificationSetting();
   initializeDriverMap();
+  subscribeDriverTopups(state.user);
+  const offerClock=window.setInterval(()=>{if(byId("driverView")?.hidden)return;if(announceEligibleOffers())renderOrders();},2000);
+  state.viewUnsubscribes.push(()=>window.clearInterval(offerClock));
   startDriverCommunityLayers();
   window.setTimeout(() => state.map?.invalidateSize(), 120);
   byId("captainName").textContent = state.userData?.name || state.user?.displayName || "آمرني";
@@ -1666,7 +1713,6 @@ function openDriverDashboard() {
     renderOrders();
   });
 
-  let knownOrderIds = new Set();
   let ordersSnapshotReady = false;
   let ordersUnsubscribe = null;
   let subscribedOrderMode = "";
@@ -1676,7 +1722,7 @@ function openDriverDashboard() {
     if (ordersUnsubscribe) ordersUnsubscribe();
     ordersUnsubscribe = null;
     subscribedOrderMode = mode;
-    knownOrderIds = new Set();
+    announcedOfferIds.clear();dismissedOfferIds.clear();
     ordersSnapshotReady = false;
     state.orders = [];
     renderOrders();
@@ -1687,11 +1733,6 @@ function openDriverDashboard() {
     ordersUnsubscribe = onSnapshot(ordersQuery, snapshot => {
       const incoming = snapshot.docs.map(item => ({ ...item.data(), firestoreId: item.id }));
       const previousOrders = new Map(state.orders.map(order => [order.firestoreId, order]));
-      if (ordersSnapshotReady && state.driverData?.online) {
-        const freshOrders = incoming.filter(o => !knownOrderIds.has(o.firestoreId) && orderMeetsDriverDispatchConditions(o));
-        freshOrders.forEach(fresh => {const customer=String(fresh.customerName||"العميل").trim();addDriverNotification({id:`new-order:${fresh.firestoreId}`,type:"order",title:fresh.type==="ride"?`طلب تكسي من ${customer}`:`طلب توصيل من ${customer}`,message:`${fresh.title||"لديك طلب متاح"}${fresh.route?` • ${fresh.route}`:""}`,target:"available"});});
-        if(freshOrders.length)toast(freshOrders.length===1?(freshOrders[0].type==="ride"?"طلب تكسي جديد متاح":"طلب توصيل جديد متاح"):`لديك ${freshOrders.length} طلبات جديدة متاحة`);
-      }
       if(ordersSnapshotReady){
         incoming.forEach(order=>{
           const previous=previousOrders.get(order.firestoreId);
@@ -1700,9 +1741,10 @@ function openDriverDashboard() {
           addDriverNotification({id:`trip-status:${order.firestoreId}:${nextStatus}`,type:"trip",title:"تحديث حالة الرحلة",message:`${order.title||"رحلتك الحالية"} • ${driverStatusLabel(order,nextStatus)}`,target:nextStatus>=4?"":"active"});
         });
       }
-      knownOrderIds = new Set(incoming.map(o=>o.firestoreId));
       ordersSnapshotReady = true;
       state.orders = incoming.filter(o => canDriverHandleOrder(o) || o.driverId === state.user?.uid).sort((a, b) => String(b.createdAtISO || "").localeCompare(String(a.createdAtISO || "")));
+      for(const id of dismissedOfferIds)if(!state.orders.some(o=>o.firestoreId===id&&!o.driverId&&!o.cancelled))dismissedOfferIds.delete(id);
+      announceEligibleOffers();
       syncDriverCustomerTracking();
       releaseDriverLockForCompletedOrder();
       renderOrders();
@@ -1737,7 +1779,6 @@ byId("saveDriverRate")?.addEventListener("click",async event=>{
 
 byId("onlineSwitch").addEventListener("click", async () => {
   if (!state.user || !state.driverData) return;
-  if (!hasActiveSubscription(state.userData||{}) && state.driverData.online!==true) return requireDriverSubscription();
   if (state.driverData.blocked === true) {
     toast("الحساب محظور ولا يمكن تفعيل الاتصال");
     return;
@@ -1771,10 +1812,14 @@ document.addEventListener("click", async event => {
   busy(button, true);
   try {
     if (button.dataset.action === "accept") {
-      if (!requireDriverSubscription()) return;
+      if(!requireDriverSubscription())return;
+      const candidate=state.orders.find(item=>item.firestoreId===button.dataset.id);
+      if(!orderMeetsDriverDispatchConditions(candidate))throw new Error("OFFER_WAIT_TURN");
       if (!state.driverData?.online) throw new Error("OFFLINE");
       if(!driverGovernorateEnabled(state.driverData?.city))throw new Error("GOVERNORATE_DISABLED");
       const result=await karwaSensitiveAction("driver_accept_order",{orderId:button.dataset.id});
+      byId("driverOfferSheet").hidden=true;
+      byId("driverView")?.classList.remove("driver-has-offer");
       if(Number.isFinite(Number(result?.balance))){state.userData={...(state.userData||{}),balance:Number(result.balance),bonusBalance:Number(result?.bonusBalance||0)};renderDriverWallet();}
       if (state.lastPosition) await sharePosition(state.lastPosition, true);
       setTimeout(()=>drawPickupRoute(true),400); toast("تم قبول الطلب بنجاح");
@@ -1795,7 +1840,7 @@ document.addEventListener("click", async event => {
 
   } catch (error) {
     console.error(error);
-    toast(error.message === "GOVERNORATE_DISABLED" ? "الخدمة متوقفة حاليًا في محافظتك" : error.message === "OFFLINE" ? "فعّل حالة الاتصال أولًا" : error.message === "PICKUP_OTP_REQUIRED" ? "يجب إدخال رمز الاستلام من المطعم أو صاحب الخدمة" : error.message === "PICKUP_OTP_INVALID" ? "رمز الاستلام غير صحيح" : error.message === "OTP_REQUIRED" ? "يجب إدخال الرمز" : error.message === "OTP_INVALID" ? "الرمز غير صحيح" : error.message === "ORDER_TAKEN" ? "سبق أن قبل كابتن آخر هذا الطلب" : error.message === "ORDER_NOT_FOUND" ? "الطلب غير موجود" : error.message === "ORDER_NOT_AVAILABLE" ? "الطلب لم يعد متاحًا" : error.message === "DRIVER_BUSY" ? "لديك رحلة نشطة بالفعل، أكملها أولًا" : error.message === "DRIVER_PROFILE_MISSING" ? "ملف الكابتن غير موجود. أعد تفعيل الحساب من الإدارة" : error.message === "DRIVER_BLOCKED" ? "الحساب موقوف من الإدارة" : error.message === "DELIVERY_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن مسجل في خدمة التوصيل" : error.message === "TAXI_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن تكسي مسجل لخدمة الركوب" : error.message === "OUTSIDE_DRIVER_AREA" ? "هذا الطلب خارج نطاق المدينة المسجلة لحسابك" : error.message === "LOCATION_REQUIRED" ? "يجب تفعيل GPS وتحديد موقعك الحالي قبل قبول أي طلب" : error.message === "OUTSIDE_REQUEST_RADIUS" ? `هذا الطلب أصبح خارج نطاق ${DRIVER_REQUEST_RADIUS_KM} كم من موقعك الحالي` : error.message === "INSUFFICIENT_WALLET" ? `رصيدك غير كافٍ. يلزم ${driverOperationFee(state.orders.find(item=>item.firestoreId===button.dataset.id)||"parcel").toLocaleString("ar-IQ")} د.ع لقبول هذا الطلب. اشحن المحفظة أولًا.` : error.message === "USER_PROFILE_MISSING" ? "ملف المحفظة غير موجود. أعد تسجيل الدخول." : driverSupabaseMessage(error, button.dataset.action === "accept" ? "قبول الطلب" : "تحديث حالة الرحلة"));
+    toast(error.message === "GOVERNORATE_DISABLED" ? "الخدمة متوقفة حاليًا في محافظتك" : error.message === "OFFLINE" ? "فعّل حالة الاتصال أولًا" : error.message === "PICKUP_OTP_REQUIRED" ? "يجب إدخال رمز الاستلام من المطعم أو صاحب الخدمة" : error.message === "PICKUP_OTP_INVALID" ? "رمز الاستلام غير صحيح" : error.message === "OTP_REQUIRED" ? "يجب إدخال الرمز" : error.message === "OTP_INVALID" ? "الرمز غير صحيح" : error.message === "ORDER_TAKEN" ? "سبق أن قبل كابتن آخر هذا الطلب" : error.message === "ORDER_NOT_FOUND" ? "الطلب غير موجود" : error.message === "ORDER_NOT_AVAILABLE" ? "الطلب لم يعد متاحًا" : error.message === "DRIVER_BUSY" ? "لديك رحلة نشطة بالفعل، أكملها أولًا" : error.message === "DRIVER_PROFILE_MISSING" ? "ملف الكابتن غير موجود. أعد تفعيل الحساب من الإدارة" : error.message === "DRIVER_BLOCKED" ? "الحساب موقوف من الإدارة" : error.message === "DELIVERY_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن مسجل في خدمة التوصيل" : error.message === "TAXI_DRIVER_ONLY" ? "هذا الطلب مخصص لكابتن تكسي مسجل لخدمة الركوب" : error.message === "OUTSIDE_DRIVER_AREA" ? "هذا الطلب خارج نطاق المدينة المسجلة لحسابك" : error.message === "LOCATION_REQUIRED" ? "يجب تفعيل GPS وتحديد موقعك الحالي قبل قبول أي طلب" : error.message === "OUTSIDE_REQUEST_RADIUS" ? `هذا الطلب أصبح خارج نطاق ${DRIVER_REQUEST_RADIUS_KM} كم من موقعك الحالي` : error.message === "INSUFFICIENT_WALLET" ? "اشتراكك الشهري غير نشط. جدّده لقبول الطلب." : error.message === "USER_PROFILE_MISSING" ? "ملف المحفظة غير موجود. أعد تسجيل الدخول." : driverSupabaseMessage(error, button.dataset.action === "accept" ? "قبول الطلب" : "تحديث حالة الرحلة"));
   } finally {
     busy(button, false);
   }
@@ -1803,24 +1848,23 @@ document.addEventListener("click", async event => {
 
 byId("driverTopupForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user)return;
-  if(!driverTransferTopupEnabled())return toast("طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.");
-  const amount=Math.round(Number(byId("driverTopupAmount")?.value||0));
+  if(!driverTransferTopupEnabled())return toast("طريقة الاشتراك بالتحويل متوقفة حاليًا من الإدارة.");
+  const amount=monthlyPrice(driverPricingSettings);
   const transferReference=byId("driverTopupReference")?.value.trim()||"";
-  if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return toast("الشحن بالتحويل يبدأ من 5,000 د.ع وبمضاعفات 5,000 فقط.");
   if(transferReference.length<3)return toast("اكتب مرجع التحويل");
-  if(driverHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
+  if(driverHasPendingTopup())return toast("لديك طلب اشتراك قيد المراجعة.");
   const button=event.submitter||byId("driverTopupSubmit");busy(button,true,"جارٍ الإرسال…");
-  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:state.userData?.name||state.user.displayName||"كابتن",email:state.user.email||"",accountType:"captain"});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);const msg=String(error?.message||"").toUpperCase();toast(msg.includes("TOPUP_TRANSFER_DISABLED")?"طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.":(["permission-denied","failed-precondition","already-exists"].includes(error?.code)||msg.includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{busy(button,false);updateDriverTopupFormState();}
+  try{const result=await karwaMonthlySubscriptionAction("submit_transfer",{transferReference});state.topupRequests=[{firestoreId:result?.requestId||"",userId:state.user.uid,amount,transferReference,status:"pending",purpose:"monthly_subscription",createdAt:null},...state.topupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderDriverTopupRequests();event.currentTarget.reset();toast("أُرسل طلب الاشتراك الشهري للمراجعة. سيظهر تاريخ الانتهاء بعد اعتماده.");}catch(error){console.error(error);toast(subscriptionError(error));}finally{busy(button,false);updateDriverTopupFormState();}
 });
 
 byId("driverTopupCardRedeemForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user)return;
-  if(!driverCardTopupEnabled())return toast("طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.");
+  if(!driverCardTopupEnabled())return toast("كروت الاشتراك متوقفة حاليًا من الإدارة.");
   const code=String(byId("driverTopupCardCode")?.value||"").replace(/\D/g,"");
   if(code.length!==16)return toast("أدخل رقم الكرت المكوّن من 16 رقمًا.");
-  const button=event.submitter||byId("driverRedeemTopupCard");busy(button,true,"جارٍ الشحن…");
-  try{const result=await karwaRedeemTopupCard(code);state.userData={...(state.userData||{}),balance:Number(result?.balance ?? state.userData?.balance ?? 0)};renderDriverWallet();event.currentTarget.reset();toast(`تم شحن ${money(result?.amount||0)} بنجاح. الكرت أصبح مستخدمًا.`);}
-  catch(error){console.error(error);const msg=String(error?.message||"");toast(msg.includes("TOPUP_CARD_METHOD_DISABLED")?"طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.":msg.includes("TOPUP_CARD_USED")?"هذا الكرت مستخدم مسبقًا.":msg.includes("INVALID_TOPUP_CARD")?"رقم الكرت غير صحيح أو غير موجود.":msg.includes("TOPUP_CARD_DISABLED")?"هذا الكرت غير فعال.":"تعذر شحن الرصيد بالكرت.");}
+  const button=event.submitter||byId("driverRedeemTopupCard");busy(button,true,"جارٍ تفعيل الاشتراك…");
+  try{const result=await karwaMonthlySubscriptionAction("redeem_card",{code});state.userData={...(state.userData||{}),...result};renderDriverWallet();applyDriverGovernorateAvailability();event.currentTarget.reset();toast(`اشتراكك نشط حتى ${subscriptionDate(subscriptionInfo(state.userData).expires)}.`);}
+  catch(error){console.error(error);toast(subscriptionError(error));}
   finally{busy(button,false);}
 });
 

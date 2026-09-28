@@ -1,4 +1,4 @@
-import { initializeApp } from "./supabase-compat.js?v=117";
+import { initializeApp } from "./supabase-compat.js?v=120";
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile
-} from "./supabase-compat.js?v=117";
+} from "./supabase-compat.js?v=120";
 import {
   collection,
   doc,
@@ -25,13 +25,14 @@ import {
   writeBatch,
   karwaTouchActivity,
   karwaSensitiveAction,
+  karwaMonthlySubscriptionAction,
   karwaProviderCancelRequest,
   karwaProviderBackfillPickupOtp,
-  karwaRedeemTopupCard
-} from "./supabase-compat.js?v=117";
-import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=117";
-import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=117";
-import { mountSubscriptionUi, hasActiveSubscription, subscriptionInfo } from "./subscription.js?v=117";
+} from "./supabase-compat.js?v=120";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=120";
+import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=120";
+import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=121";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -106,22 +107,20 @@ function syncServiceGovernorateControls(){
   const city=normalizedServiceGovernorate(byId("pCity")?.value||currentProfile?.governorate||currentProfile?.city||currentApplication?.governorate||currentApplication?.city),enabled=serviceGovernorateEnabled(city),blocked=currentProfile?.blocked===true;
   const notice=byId("providerGovernorateNotice");
   if(notice){notice.className=city&&!enabled?"notice danger":"notice danger hidden";notice.textContent=city&&!enabled?`الخدمة متوقفة حاليًا في ${serviceGovernorates.label(city)}. يمكنك تعديل الملف، لكن لا يمكن نشر النشاط أو قبول الطلبات حتى تعيد الإدارة تفعيل المحافظة.`:"";}
-  const active=byId("pActive");if(active){active.disabled=blocked||Boolean(city&&!enabled)||!hasActiveSubscription(currentUserData||{});if(city&&!enabled||!hasActiveSubscription(currentUserData||{}))active.checked=false;}
+  const active=byId("pActive");if(active){active.disabled=blocked||Boolean(city&&!enabled);if(city&&!enabled)active.checked=false;}
   if(city&&!enabled&&byId("activeMetric"))byId("activeMetric").textContent="المحافظة متوقفة";
 }
 
 function fixedFee(key,fallback){const n=Number(pricingSettings?.[key]);return Math.max(0,Math.min(100000,Math.round(Number.isFinite(n)?n:fallback)));}
 function providerOperationFee(requestOrCategory){
-  const category=typeof requestOrCategory==="string"?requestOrCategory:String(requestOrCategory?.providerCategory||requestOrCategory?.category||currentProfile?.category||"");
-  const legacy=fixedFee("providerOrderFee",250);
-  return category==="restaurant"?fixedFee("providerRestaurantFee",legacy):fixedFee("providerServiceFee",legacy);
+  return 0;
 }
 function timestampMillis(value){if(!value)return 0;if(typeof value.toMillis==="function")return value.toMillis();if(Number.isFinite(Number(value?.seconds)))return Number(value.seconds)*1000;const t=new Date(value).getTime();return Number.isFinite(t)?t:0;}
 function activeBonusAmount(data={}){const amount=Math.max(0,Number(data.bonusBalance||0));return amount>0&&timestampMillis(data.bonusExpiresAt)>Date.now()?amount:0;}
 function walletAvailable(data=currentUserData||{}){return Math.max(0,Number(data?.balance||0))+activeBonusAmount(data||{});}
 function walletDebitPatch(data,amount){const fee=Math.max(0,Math.round(Number(amount||0)));const paid=Math.max(0,Number(data?.balance||0));const bonus=activeBonusAmount(data||{});if(paid+bonus<fee)return null;const useBonus=Math.min(bonus,fee);return {balance:paid-(fee-useBonus),bonusBalance:Math.max(0,Number(data?.bonusBalance||0)-useBonus),updatedAt:serverTimestamp()};}
 function signupBonusFields(){return {bonusBalance:0,bonusExpiresAt:null,welcomeBonusGranted:false,welcomeBonusEvaluated:true};}
-function serviceTransferTopupEnabled(){return pricingSettings?.topupTransferEnabled!==false;}
+function serviceTransferTopupEnabled(){return pricingSettings?.topupTransferEnabled!==false&&Boolean(String(pricingSettings?.topupTransferId||"").trim());}
 function serviceCardTopupEnabled(){return pricingSettings?.topupCardEnabled!==false;}
 function renderServiceTopupMethods(){
   const transfer=serviceTransferTopupEnabled(),card=serviceCardTopupEnabled();
@@ -132,38 +131,40 @@ function renderServiceTopupMethods(){
   updateServiceTopupFormState();
 }
 function syncServiceSubscriptionUi(){
-  return mountSubscriptionUi({
-    getUser:()=>currentUser,
-    getUserData:()=>currentUserData||{},
-    setUserData:data=>{currentUserData=data||{};renderServiceWallet();syncServiceGovernorateControls();},
-    toast,
-    onRender:info=>{
-      const status=byId("subscriptionStatus");if(status)status.className=`status ${info.active?"ok":"bad"}`;
-      if(byId("serviceWalletMetric"))byId("serviceWalletMetric").textContent=info.active?"نشط":"مطلوب";
-    }
-  });
+  const info=subscriptionInfo(currentUserData||{});
+  if(byId("serviceWalletMetric"))byId("serviceWalletMetric").textContent=info.status;
+  if(byId("serviceSubscriptionStatus")){byId("serviceSubscriptionStatus").textContent=info.status;byId("serviceSubscriptionStatus").className=`status ${info.active?"ok":"bad"}`;}
+  if(byId("serviceSubscriptionPrice"))byId("serviceSubscriptionPrice").textContent=`${monthlyPrice(pricingSettings).toLocaleString("ar-IQ")} د.ع`;
+  if(byId("serviceSubscriptionStarted"))byId("serviceSubscriptionStarted").textContent=subscriptionDate(info.started);
+  if(byId("serviceSubscriptionExpires"))byId("serviceSubscriptionExpires").textContent=subscriptionDate(info.expires);
+  if(byId("serviceSubscriptionNotice"))byId("serviceSubscriptionNotice").textContent=info.active?"يمكنك استقبال الطلبات وقبولها خلال فترة اشتراكك، دون رسوم عن كل طلب.":"يمكنك إعداد نشاطك الآن؛ يبدأ استقبال الطلبات بعد تفعيل اشتراكك. العميل لا يحتاج إلى شحن رصيد.";
+  renderGooglePlaySubscription({panelId:"servicePlaySubscription",statusId:"serviceSubscriptionStatus",priceId:"serviceSubscriptionPrice",startedId:"serviceSubscriptionStarted",expiresId:"serviceSubscriptionExpires",getUser:()=>currentUser,getData:()=>currentUserData,updateData:patch=>{currentUserData={...(currentUserData||{}),...patch};renderProviderRequests(providerRequests);syncServiceGovernorateControls();},toast});
+  if(byId("serviceTransferLabel"))byId("serviceTransferLabel").textContent=pricingSettings?.topupTransferLabel||"وسيلة التحويل";
+  if(byId("serviceTransferId"))byId("serviceTransferId").textContent=pricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
+  if(byId("serviceTransferHolder"))byId("serviceTransferHolder").textContent=`المستفيد: ${pricingSettings?.topupCardHolder||"إدارة آمرني"}`;
+  if(byId("serviceTopupAmount"))byId("serviceTopupAmount").value=String(monthlyPrice(pricingSettings));
+  renderServiceTopupMethods();
+  return info;
 }
 function requireServiceSubscription(){
-  if(hasActiveSubscription(currentUserData||{}))return true;
-  syncServiceSubscriptionUi();
-  toast("يلزم اشتراك شهري صالح عبر Google Play لنشر النشاط أو قبول طلب جديد");
+  if(subscriptionInfo(currentUserData||{}).active)return true;
+  toast("اشتراك الخدمة الشهري غير نشط. جدّده لنشر النشاط أو قبول طلب جديد.");
   byId("serviceWalletSection")?.scrollIntoView({behavior:"smooth",block:"start"});
   return false;
 }
 function renderServiceWallet(){
-  const info=syncServiceSubscriptionUi();
-  if(byId("serviceWalletMetric"))byId("serviceWalletMetric").textContent=info.active?"نشط":"مطلوب";
+  syncServiceSubscriptionUi();
 }
-function serviceHasPendingTopup(){return serviceTopupRequests.some(x=>(x.status||"pending")==="pending");}
+function serviceHasPendingTopup(){return serviceTopupRequests.some(x=>x.purpose==="monthly_subscription"&&(x.status||"pending")==="pending");}
 function updateServiceTopupFormState(){
   const pending=serviceHasPendingTopup(),enabled=serviceTransferTopupEnabled();
-  [byId("serviceTopupAmount"),byId("serviceTopupReference"),byId("serviceTopupSubmit")].forEach(el=>{if(el)el.disabled=pending||!enabled;});
-  const submit=byId("serviceTopupSubmit");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"طلب الشحن قيد المراجعة":"إرسال طلب الشحن";
+  [byId("serviceTopupReference"),byId("serviceTopupSubmit")].forEach(el=>{if(el)el.disabled=pending||!enabled;});
+  const submit=byId("serviceTopupSubmit");if(submit)submit.textContent=!enabled?"التحويل متوقف من الإدارة":pending?"الاشتراك قيد المراجعة":"إرسال طلب الاشتراك";
 }
 function renderServiceTopupRequests(){
   const box=byId("serviceTopupRequestsList");if(!box)return;
-  if(!currentUser){box.innerHTML='<p class="muted">سجّل الدخول لعرض طلبات الشحن.</p>';updateServiceTopupFormState();return;}
-  if(!serviceTopupRequests.length){box.innerHTML='<p class="muted">لا توجد طلبات شحن بعد.</p>';updateServiceTopupFormState();return;}
+  if(!currentUser){box.innerHTML='<p class="muted">سجّل الدخول لعرض طلبات الاشتراك.</p>';updateServiceTopupFormState();return;}
+  if(!serviceTopupRequests.length){box.innerHTML='<p class="muted">لا توجد طلبات اشتراك بعد.</p>';updateServiceTopupFormState();return;}
   const labels={pending:"بانتظار المراجعة",approved:"تم الاعتماد",rejected:"مرفوض",cancelled:"ملغي"};
   box.innerHTML=serviceTopupRequests.map(x=>`<div class="unified-topup-row"><div><strong>${Number(x.amount||0).toLocaleString("ar-IQ")} د.ع</strong><small>${escapeHtml(x.transferReference||"بدون مرجع")}</small></div><span class="unified-topup-status ${escapeHtml(x.status||"pending")}">${labels[x.status]||escapeHtml(x.status||"pending")}</span></div>`).join("");
   updateServiceTopupFormState();
@@ -173,21 +174,21 @@ function subscribeServiceTopups(user){
   serviceTopupSnapshotReady=false;
   topupUnsubscribe=onSnapshot(query(collection(db,"topupRequests"),where("userId","==",user.uid)),snapshot=>{
     const previous=new Map(serviceTopupRequests.map(item=>[item.firestoreId,item]));
-    const incoming=snapshot.docs.map(d=>({...d.data(),firestoreId:d.id})).sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
+    const incoming=snapshot.docs.map(d=>({...d.data(),firestoreId:d.id})).filter(item=>item.purpose==="monthly_subscription").sort((a,b)=>Number(b.createdAt?.seconds||0)-Number(a.createdAt?.seconds||0));
     if(serviceTopupSnapshotReady)incoming.forEach(item=>{
       const old=previous.get(item.firestoreId);
       if(!old||old.status===item.status||!["approved","rejected"].includes(item.status))return;
       const approved=item.status==="approved";
       window.KarwaNotify?.push?.({
-        title:approved?"تم اعتماد شحن الرصيد":"تم رفض طلب الشحن",
-        body:approved?`أضيف ${Number(item.amount||0).toLocaleString("ar-IQ")} د.ع إلى رصيد الخدمة.`:`طلب الشحن بقيمة ${Number(item.amount||0).toLocaleString("ar-IQ")} د.ع لم يعتمد.`,
+        title:approved?"تم تفعيل اشتراك الخدمة":"تم رفض طلب الاشتراك",
+        body:approved?"تم تمديد تاريخ انتهاء اشتراكك الشهري.":"راجع مرجع التحويل ثم حاول مجددًا.",
         type:"wallet",route:"#providerView",tag:`service-topup-${item.firestoreId}-${item.status}`
       });
     });
     serviceTopupRequests=incoming;
     serviceTopupSnapshotReady=true;
     renderServiceTopupRequests();
-  },error=>console.warn("تعذر تحميل طلبات شحن مزود الخدمة",error));
+  },error=>console.warn("تعذر تحميل طلبات اشتراك مزود الخدمة",error));
 }
 function serviceCommissionRate(){return 0;}
 
@@ -755,10 +756,6 @@ byId("authForm").addEventListener("submit", async event => {
         ...welcomeBonus,
         notifications: true,
         deviceBound: true,
-        subscriptionStatus:"required",
-        subscriptionEntitled:false,
-        subscriptionProductId:"amrni_monthly_access",
-        subscriptionPlatform:"google_play",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -1185,6 +1182,7 @@ const requestStatusLabels = {
 };
 
 function renderProviderRequests(requests) {
+  requests = requests.filter(request => subscriptionInfo(currentUserData||{}).active || request.status !== "pending");
   const pending = requests.filter(request => request.status === "pending").length;
   byId("requestsMetric").textContent = requests.length;
   const metricCard = byId("requestsMetricCard");
@@ -1202,7 +1200,7 @@ function renderProviderRequests(requests) {
         const deliveryAvailable = request.itemDeliveryAvailable === true || request.deliveryRequested === true || Number(request.itemDeliveryFee || request.deliveryFee || 0) > 0;
         const deliveryStatus = request.deliveryStatus || (request.deliveryRequested ? "awaitingCaptain" : "notRequested");
         const actions = status === "pending"
-          ? `<div class="request-actions"><button class="button primary" type="button" data-request-action="accepted" data-request-id="${request.firestoreId}">موافقة على الحاجة • ${money(providerOperationFee(request))}</button><button class="button danger" type="button" data-request-action="rejected" data-request-id="${request.firestoreId}">رفض</button></div>`
+          ? `<div class="request-actions"><button class="button primary" type="button" data-request-action="accepted" data-request-id="${request.firestoreId}">قبول الطلب</button><button class="button danger" type="button" data-request-action="rejected" data-request-id="${request.firestoreId}">رفض</button></div>`
           : status === "accepted"
             ? `<div class="request-actions">${deliveryStatus !== "awaitingCustomerChoice" ? `<button class="button primary" type="button" data-request-action="completed" data-request-id="${request.firestoreId}">تم إكمال الخدمة</button>` : ""}<button class="button danger" type="button" data-request-action="cancelled" data-request-id="${request.firestoreId}">إلغاء الطلب</button></div>`
             : "";
@@ -1270,10 +1268,9 @@ byId("providerRequestsList").addEventListener("click", async event => {
     if(code.includes("GOVERNORATE_DISABLED")){
       toast("الخدمة متوقفة حاليًا في محافظتك بقرار الإدارة.");
     } else if(code.includes("SUBSCRIPTION_REQUIRED")){
-      toast("انتهى اشتراك آمرني. جدده عبر Google Play ثم أعد المحاولة.");
+      requireServiceSubscription();
     } else if(code.includes("INSUFFICIENT_WALLET")){
-      const requiredFee=providerOperationFee(request);
-      toast(`رصيدك غير كافٍ لقبول الطلب. يلزم ${requiredFee.toLocaleString("ar-IQ")} د.ع. اشحن المحفظة ثم حاول مجددًا.`);
+      toast("تعذر قبول الطلب. حدّث التطبيق ثم أعد المحاولة.");
     } else if(code.includes("LOCATION_REQUIRED")){
       toast("تعذر إنشاء طلب التوصيل لأن موقع المطعم أو العميل غير محدد. حدّث الموقع ثم حاول مجددًا.");
     } else if(code.includes("REQUEST_NOT_AVAILABLE")||code.includes("TOPUP_ALREADY_REVIEWED")){
@@ -1294,6 +1291,7 @@ byId("providerRequestsList").addEventListener("click", async event => {
 
 async function openProvider() {
   showView("providerView");
+  subscribeServiceTopups(currentUser);
   const [profileSnapshot, applicationSnapshot, restaurantSnapshot] = await Promise.all([
     getDoc(doc(db, "serviceProfiles", currentUser.uid)),
     getDoc(doc(db, "serviceApplications", currentUser.uid)),
@@ -1389,7 +1387,6 @@ byId("providerForm").addEventListener("submit", async event => {
   const active = byId("pActive").checked;
   if (businessName.length < 2 || !validPhone(phone) || city.length < 2 || address.length < 3) return toast("أكمل بيانات النشاط بشكل صحيح.");
   if(active&&!serviceGovernorateEnabled(city))return toast("لا يمكن نشر النشاط لأن الخدمة متوقفة حاليًا في هذه المحافظة.");
-  if(active&&!requireServiceSubscription())return;
   if (!providerLocation) return toast("حدد موقع النشاط قبل نشره للعملاء.");
   if (category === "restaurant" && !providerItems.length) return toast("أضف وجبة واحدة على الأقل للمطعم.");
 
@@ -1426,30 +1423,34 @@ byId("providerForm").addEventListener("submit", async event => {
     console.error(error);
     await Promise.allSettled(newlyUploadedPaths.map(deleteServiceAssetPath));
     const message=String(error?.message||"").toUpperCase();
-    toast(message.includes("GOVERNORATE_DISABLED")?"لا يمكن نشر النشاط لأن الخدمة متوقفة حاليًا في هذه المحافظة.":message.includes("SUBSCRIPTION_REQUIRED")?"انتهى اشتراك آمرني. جدده عبر Google Play ثم أعد النشر.":"تعذر حفظ التغييرات أو رفع الصور. تم تنظيف أي صور جديدة لم يكتمل حفظها.");
+    toast(message.includes("GOVERNORATE_DISABLED")?"لا يمكن نشر النشاط لأن الخدمة متوقفة حاليًا في هذه المحافظة.":message.includes("SUBSCRIPTION_REQUIRED")?"الاشتراك الشهري غير نشط. جدّده ثم حاول النشر.":"تعذر حفظ التغييرات أو رفع الصور. تم تنظيف أي صور جديدة لم يكتمل حفظها.");
   } finally { setBusy(button, false); }
 });
 
 byId("serviceTopupForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!currentUser)return;
-  if(!serviceTransferTopupEnabled())return toast("طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.");
-  const amount=Math.round(Number(byId("serviceTopupAmount")?.value||0));
+  if(!serviceTransferTopupEnabled())return toast("طريقة الاشتراك بالتحويل متوقفة حاليًا من الإدارة.");
   const transferReference=byId("serviceTopupReference")?.value.trim()||"";
-  if(!Number.isFinite(amount)||amount<5000||amount>1000000||amount%5000!==0)return toast("الشحن بالتحويل يبدأ من 5,000 د.ع وبمضاعفات 5,000 فقط.");
-  if(transferReference.length<3)return toast("اكتب مرجع التحويل");
-  if(serviceHasPendingTopup())return toast("لديك طلب شحن قيد المراجعة. لا يمكن إرسال طلب آخر حتى تعتمد الإدارة الطلب أو ترفضه.");
+  if(transferReference.length<3)return toast("اكتب مرجع التحويل.");
+  if(serviceHasPendingTopup())return toast("لديك طلب اشتراك قيد المراجعة.");
   const button=event.submitter||byId("serviceTopupSubmit");setBusy(button,true,"جارٍ الإرسال…");
-  try{const result=await karwaSensitiveAction("submit_topup",{amount,transferReference,customerName:currentUserData?.name||currentUser.displayName||"مزود خدمة",email:currentUser.email||"",accountType:"service"});serviceTopupRequests=[{firestoreId:result?.requestId||"",userId:currentUser.uid,amount,transferReference,status:"pending",createdAt:null},...serviceTopupRequests.filter(x=>x.firestoreId!==result?.requestId)];renderServiceTopupRequests();event.currentTarget.reset();toast("تم إرسال طلب الشحن مرة واحدة. انتظر قرار الإدارة قبل طلب جديد.");}catch(error){console.error(error);const msg=String(error?.message||"").toUpperCase();toast(msg.includes("TOPUP_TRANSFER_DISABLED")?"طريقة الشحن بالتحويل متوقفة حاليًا من الإدارة.":(["permission-denied","failed-precondition","already-exists"].includes(error?.code)||msg.includes("TOPUP_PENDING"))?"يوجد طلب شحن قيد المراجعة بالفعل. انتظر قرار الإدارة قبل إرسال طلب جديد.":"تعذر إرسال طلب الشحن");}finally{setBusy(button,false);updateServiceTopupFormState();}
+  try{
+    const result=await karwaMonthlySubscriptionAction("submit_transfer",{transferReference});
+    const amount=monthlyPrice(pricingSettings);
+    serviceTopupRequests=[{firestoreId:result?.requestId||"",userId:currentUser.uid,amount,transferReference,purpose:"monthly_subscription",status:"pending"},...serviceTopupRequests.filter(x=>x.firestoreId!==result?.requestId)];
+    renderServiceTopupRequests();event.currentTarget.reset();renderServiceWallet();toast("أُرسل طلب الاشتراك، وسيظهر تاريخ الانتهاء عند اعتماد الإدارة للتحويل.");
+  }catch(error){console.error(error);toast(subscriptionError(error));}
+  finally{setBusy(button,false);updateServiceTopupFormState();}
 });
 
 byId("serviceTopupCardRedeemForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!currentUser)return;
-  if(!serviceCardTopupEnabled())return toast("طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.");
+  if(!serviceCardTopupEnabled())return toast("طريقة الاشتراك بالكرت متوقفة حاليًا من الإدارة.");
   const code=String(byId("serviceTopupCardCode")?.value||"").replace(/\D/g,"");
   if(code.length!==16)return toast("أدخل رقم الكرت المكوّن من 16 رقمًا.");
-  const button=event.submitter||byId("serviceRedeemTopupCard");setBusy(button,true,"جارٍ الشحن…");
-  try{const result=await karwaRedeemTopupCard(code);currentUserData={...(currentUserData||{}),balance:Number(result?.balance ?? currentUserData?.balance ?? 0)};renderServiceWallet();event.currentTarget.reset();toast(`تم شحن ${Number(result?.amount||0).toLocaleString("ar-IQ")} د.ع بنجاح. الكرت أصبح مستخدمًا.`);}
-  catch(error){console.error(error);const msg=String(error?.message||"");toast(msg.includes("TOPUP_CARD_METHOD_DISABLED")?"طريقة الشحن بالكرت متوقفة حاليًا من الإدارة.":msg.includes("TOPUP_CARD_USED")?"هذا الكرت مستخدم مسبقًا.":msg.includes("INVALID_TOPUP_CARD")?"رقم الكرت غير صحيح أو غير موجود.":msg.includes("TOPUP_CARD_DISABLED")?"هذا الكرت غير فعال.":"تعذر شحن الرصيد بالكرت.");}
+  const button=event.submitter||byId("serviceRedeemTopupCard");setBusy(button,true,"جارٍ التفعيل…");
+  try{const result=await karwaMonthlySubscriptionAction("redeem_card",{code});currentUserData={...(currentUserData||{}),...result};renderServiceWallet();syncServiceGovernorateControls();event.currentTarget.reset();toast("تم تفعيل الاشتراك لشهر كامل. يمكنك رؤية موعد انتهائه أعلاه.");}
+  catch(error){console.error(error);toast(subscriptionError(error)||"تعذر تفعيل الكرت. تحقق من الرقم وقيمته.");}
   finally{setBusy(button,false);}
 });
 
@@ -1504,7 +1505,7 @@ onAuthStateChanged(auth, user => {
     }
     byId("accountName").textContent = currentUserData.name || user.displayName || user.email || "";
     karwaTouchActivity(currentUserData.role || "serviceProvider").catch(error => console.warn("تعذر تحديث آخر نشاط للخدمة", error));
-    renderServiceWallet();
+    renderServiceWallet();syncServiceGovernorateControls();renderProviderRequests(providerRequests);
     const role = currentUserData.role;
     if (role === activeRole) return;
     activeRole = role;

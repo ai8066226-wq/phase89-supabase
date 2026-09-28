@@ -1,0 +1,23 @@
+.monthly-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 16px;direction:rtl}
+.monthly-dates>div{display:grid;gap:5px;min-width:0;padding:13px 15px;border:1px solid #d8e7eb;border-radius:15px;background:#f7fbfc}
+.monthly-dates small{color:#657b8b;font-size:11px;font-weight:800}
+.monthly-dates strong{color:#11364b;font-size:14px;line-height:1.4}
+.monthly-renew-hint{margin:8px 0 0;color:#5f7483;font-size:11px;line-height:1.65}
+@media(max-width:370px){.monthly-dates{grid-template-columns:1fr}}
+
+.monthly-transfer-destination{display:grid;gap:5px;padding:13px 15px;margin:10px 0 14px;border:1px solid #c9e1de;border-radius:14px;background:#eff9f6}.monthly-transfer-destination small{font-size:11px;color:#55707a}.monthly-transfer-destination strong{font:800 16px/1.5 system-ui,sans-serif;text-align:right;overflow-wrap:anywhere;color:#064f4d}.monthly-transfer-destination span{font-size:11px;color:#456872}
+/* Play checkout is the single purchase surface in the current Android client. */
+#driverSettingsWallet .unified-topup-grid > div:first-child,
+#serviceWalletSection .unified-topup-grid,
+#serviceWalletSection #serviceTopupMethodsDisabled,
+#serviceWalletSection #serviceTopupMethodsDisabled + h3,
+#serviceWalletSection #serviceTopupRequestsList { display: none !important; }
+#topupMethodsAdminForm,#topupCardGeneratorForm { display: none !important; }
+.play-subscription-card { margin: 16px 0; padding: 18px; border: 1px solid #b9d9eb; border-radius: 20px; background: linear-gradient(145deg,#f0f8ff,#fff); color: #153047; box-shadow: 0 10px 30px rgba(16,48,71,.08); text-align: right; }
+.play-subscription-card h3,.play-subscription-card h4 { margin: 10px 0 7px; color: #153047; font-size: 1.13rem; }
+.play-subscription-card p { margin: 6px 0 12px; line-height: 1.65; }
+.play-subscription-card > strong { display: block; font-size: 1.3rem; }
+.play-subscription-card > small { display: block; margin: 5px 0 14px; color: #587085; }
+.play-subscription-badge { display: inline-block; border-radius: 999px; padding: 5px 11px; background: #deebff; color: #214879; font-weight: 800; }
+.play-subscription-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.play-subscription-actions button { flex: 1 1 145px; min-height: 45px; }

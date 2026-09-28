@@ -2497,7 +2497,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 .karwa-whatsapp-link.private{border-color:#d6e4ea;background:#f8fbfc;color:#244a5e}.karwa-whatsapp-link:active{transform:translateY(1px)}
 @media(max-width:520px){.karwa-whatsapp-actions{grid-template-columns:1fr}}
 </style>
-  <link rel="stylesheet" href="./amrni-design.css?v=119">
+  <link rel="stylesheet" href="./amrni-design.css?v=118">
 </head>
 
 <body class="customer-page">
@@ -2519,7 +2519,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           <span class="nav-icon">▤</span>طلباتي
         </button>
         <button class="nav-button" data-view="wallet">
-          <span class="nav-icon">▣</span>الاشتراك
+          <span class="nav-icon">▣</span>الأسعار
         </button>
         <button class="nav-button" data-view="profile">
           <span class="nav-icon">●</span>حسابي
@@ -2818,7 +2818,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               </section>
               <dl class="customer-info-grid">
                 <div><dt>موقعك</dt><dd id="customerSettingsLocation">تحديد الموقع…</dd></div>
-                <div><dt>الاشتراك</dt><dd id="customerSettingsBalance">الاشتراك مطلوب</dd></div>
+                <div><dt>رسوم الاستخدام</dt><dd id="customerSettingsBalance">دون شحن</dd></div>
                 <div><dt>الطلبات</dt><dd id="customerSettingsOrders">0</dd></div>
                 <div><dt>قيد التنفيذ</dt><dd id="customerSettingsActiveOrders">0</dd></div>
               </dl>
@@ -2862,7 +2862,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <div class="customer-settings-actions">
                 <button type="button" class="customer-settings-action primary" id="customerSettingsServices">الخدمات والحجز</button>
                 <button type="button" class="customer-settings-action" data-customer-settings-view="orders">طلباتي</button>
-                <button type="button" class="customer-settings-action" data-customer-settings-view="wallet">الاشتراك</button>
+                <button type="button" class="customer-settings-action" data-customer-settings-view="wallet">الأسعار</button>
                 <button type="button" class="customer-settings-action" id="customerSettingsAddresses">العناوين المحفوظة</button>
                 <button type="button" class="customer-settings-action" id="customerSettingsSupport">المساعدة والدعم</button>
                 <button type="button" class="customer-settings-action" data-customer-settings-view="profile">الملف الشخصي</button>
@@ -2889,31 +2889,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
         </section>
 
         <section class="view" id="wallet">
-          <div class="page-heading">
-            <h1>الاشتراك الشهري</h1>
-            <p>اطّلع على حالة اشتراكك وجدّده بأمان عبر Google Play.</p>
-          </div>
-
-          <div class="wallet-card">
-            <p>حالة اشتراك آمرني</p>
-            <div class="balance" id="subscriptionStatus" style="font-size:clamp(28px,5vw,42px)">الاشتراك مطلوب</div>
-            <small class="wallet-note">السعر في Google Play: <b id="subscriptionPrice">يُحدد في Google Play</b></small>
-            <small class="wallet-note" id="subscriptionNotice">يلزم اشتراك صالح لإنشاء الطلبات واستخدام خدمات آمرني.</small>
-          </div>
-
-          <div class="wallet-grid wallet-topup-grid">
-            <div class="card topup-card">
-              <h2>تفاصيل الاشتراك</h2>
-              <div class="topup-destination"><span>▶</span><div><small>بداية الاشتراك</small><strong id="subscriptionStartedAt">—</strong><small>تاريخ انتهاء الفترة الحالية: <b id="subscriptionExpiresAt">—</b></small></div></div>
-              <p class="muted">يتم الدفع والتجديد وإدارة وسيلة الدفع من Google Play. عند انتهاء الاشتراك تتوقف العمليات الجديدة حتى يتم التجديد، مع عدم قطع رحلة جارية بالفعل.</p>
-              <div class="referral-actions"><button class="primary-button" id="subscriptionButton" type="button">الاشتراك الشهري عبر Google Play</button><button class="secondary-button" id="subscriptionRestore" type="button">استعادة / تحديث الاشتراك</button></div>
-            </div>
-            <div class="card referral-card">
-              <h2>تسعير واضح للخدمات</h2>
-              <p class="muted">لا توجد رسوم ثابتة تُخصم من رصيد داخلي عند إنشاء الطلب. اشتراك Google Play هو ترخيص استخدام المنصة، بينما أجرة الرحلة أو الخدمة تبقى مستقلة حسب الطلب.</p>
-              <div class="referral-code-box"><small>التكسي</small><strong>حسب الكابتن</strong><span>يحدد كل كابتن سعر الكيلومتر الخاص به، وتُحسب الأجرة النهائية عند قبوله الرحلة.</span></div>
-            </div>
-          </div>
+          <div class="page-heading"><h1>الأسعار والدفع</h1><p>اطّلع على طريقة حساب أجرة الرحلة أو الخدمة قبل تأكيد طلبك.</p></div>
+          <div class="wallet-card"><p>استخدام تطبيق آمرني للعميل</p><div class="balance" style="font-size:clamp(28px,5vw,42px)">دون شحن</div><small class="wallet-note">لا تحتاج إلى رصيد أو اشتراك لإنشاء طلب جديد.</small></div>
+          <div class="wallet-grid wallet-topup-grid"><div class="card referral-card"><h2>أجرة واضحة قبل الرحلة</h2><p class="muted">تُعرض أجرة الرحلة والتوصيل بحسب تفاصيل الطلب. يحدد كابتن التكسي سعر الكيلومتر الخاص به، ويظهر المبلغ النهائي عند قبوله.</p><div class="referral-code-box"><small>رسوم استخدام المنصة للعميل</small><strong>0 د.ع</strong><span>تُدفع أجرة الرحلة أو الخدمة وفق تفاصيل الطلب، دون شحن حساب العميل.</span></div></div></div>
         </section>
 
         <section class="view" id="profile">
@@ -3002,7 +2980,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
       <span>▤</span>طلباتي
     </button>
     <button data-view="wallet">
-      <span>▣</span>الاشتراك
+      <span>▣</span>الأسعار
     </button>
     <button data-view="profile">
       <span>●</span>حسابي
@@ -3084,7 +3062,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="modal-backdrop" id="supportModal" role="dialog" aria-modal="true">
     <div class="modal">
       <h2>كيف نساعدك؟</h2>
-      <p>أرسل تذكرة دعم مرتبطة بحسابك، ويمكن للإدارة متابعتها.</p><div class="field"><label>موضوع المشكلة</label><select id="supportCategory"><option>مشكلة في رحلة</option><option>الدفع والاشتراك</option><option>الكابتن</option><option>اقتراح أو ملاحظة</option></select></div><div class="field"><label>التفاصيل</label><textarea id="supportMessage" maxlength="500" placeholder="اكتب تفاصيل المشكلة"></textarea></div>
+      <p>أرسل تذكرة دعم مرتبطة بحسابك، ويمكن للإدارة متابعتها.</p><div class="field"><label>موضوع المشكلة</label><select id="supportCategory"><option>مشكلة في رحلة</option><option>الدفع والأجرة</option><option>الكابتن</option><option>اقتراح أو ملاحظة</option></select></div><div class="field"><label>التفاصيل</label><textarea id="supportMessage" maxlength="500" placeholder="اكتب تفاصيل المشكلة"></textarea></div>
 
       <div class="payment-card">
         <span>💬</span>
@@ -3156,8 +3134,8 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script src="./native-notifications.js?v=117"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./iraq-governorates.js?v=117"></script>
-  <script type="module" src="./app.js?v=117"></script>
-  <script src="./pwa.js?v=117"></script>
+  <script type="module" src="./app.js?v=121"></script>
+  <script src="./pwa.js?v=121"></script>
 
 <script id="phase20-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
