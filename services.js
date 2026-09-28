@@ -31,8 +31,8 @@ import {
 } from "./supabase-compat.js?v=120";
 import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=120";
 import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
-import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=120";
-import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=121";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=122";
+import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=122";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -137,7 +137,7 @@ function syncServiceSubscriptionUi(){
   if(byId("serviceSubscriptionPrice"))byId("serviceSubscriptionPrice").textContent=`${monthlyPrice(pricingSettings).toLocaleString("ar-IQ")} د.ع`;
   if(byId("serviceSubscriptionStarted"))byId("serviceSubscriptionStarted").textContent=subscriptionDate(info.started);
   if(byId("serviceSubscriptionExpires"))byId("serviceSubscriptionExpires").textContent=subscriptionDate(info.expires);
-  if(byId("serviceSubscriptionNotice"))byId("serviceSubscriptionNotice").textContent=info.active?"يمكنك استقبال الطلبات وقبولها خلال فترة اشتراكك، دون رسوم عن كل طلب.":"يمكنك إعداد نشاطك الآن؛ يبدأ استقبال الطلبات بعد تفعيل اشتراكك. العميل لا يحتاج إلى شحن رصيد.";
+  if(byId("serviceSubscriptionNotice"))byId("serviceSubscriptionNotice").textContent=info.active?"يمكنك قبول طلبات نشاطك خلال فترة اشتراكك، دون رسوم عن كل طلب.":"ستظهر طلبات العملاء في قائمتك، ويُتاح قبولها بعد تفعيل الاشتراك. العميل لا يحتاج إلى شحن رصيد.";
   renderGooglePlaySubscription({panelId:"servicePlaySubscription",statusId:"serviceSubscriptionStatus",priceId:"serviceSubscriptionPrice",startedId:"serviceSubscriptionStarted",expiresId:"serviceSubscriptionExpires",getUser:()=>currentUser,getData:()=>currentUserData,updateData:patch=>{currentUserData={...(currentUserData||{}),...patch};renderProviderRequests(providerRequests);syncServiceGovernorateControls();},toast});
   if(byId("serviceTransferLabel"))byId("serviceTransferLabel").textContent=pricingSettings?.topupTransferLabel||"وسيلة التحويل";
   if(byId("serviceTransferId"))byId("serviceTransferId").textContent=pricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
@@ -148,7 +148,7 @@ function syncServiceSubscriptionUi(){
 }
 function requireServiceSubscription(){
   if(subscriptionInfo(currentUserData||{}).active)return true;
-  toast("اشتراك الخدمة الشهري غير نشط. جدّده لنشر النشاط أو قبول طلب جديد.");
+  toast("يمكنك رؤية الطلب، لكن قبوله يتطلب تفعيل اشتراك نشاطك.");
   byId("serviceWalletSection")?.scrollIntoView({behavior:"smooth",block:"start"});
   return false;
 }
@@ -1182,7 +1182,6 @@ const requestStatusLabels = {
 };
 
 function renderProviderRequests(requests) {
-  requests = requests.filter(request => subscriptionInfo(currentUserData||{}).active || request.status !== "pending");
   const pending = requests.filter(request => request.status === "pending").length;
   byId("requestsMetric").textContent = requests.length;
   const metricCard = byId("requestsMetricCard");
@@ -1200,7 +1199,7 @@ function renderProviderRequests(requests) {
         const deliveryAvailable = request.itemDeliveryAvailable === true || request.deliveryRequested === true || Number(request.itemDeliveryFee || request.deliveryFee || 0) > 0;
         const deliveryStatus = request.deliveryStatus || (request.deliveryRequested ? "awaitingCaptain" : "notRequested");
         const actions = status === "pending"
-          ? `<div class="request-actions"><button class="button primary" type="button" data-request-action="accepted" data-request-id="${request.firestoreId}">قبول الطلب</button><button class="button danger" type="button" data-request-action="rejected" data-request-id="${request.firestoreId}">رفض</button></div>`
+          ? `<div class="request-actions"><button class="button primary" type="button" data-request-action="accepted" data-request-id="${request.firestoreId}">${subscriptionInfo(currentUserData||{}).active?"قبول الطلب":"فعّل الاشتراك للقبول"}</button><button class="button danger" type="button" data-request-action="rejected" data-request-id="${request.firestoreId}">رفض</button></div>`
           : status === "accepted"
             ? `<div class="request-actions">${deliveryStatus !== "awaitingCustomerChoice" ? `<button class="button primary" type="button" data-request-action="completed" data-request-id="${request.firestoreId}">تم إكمال الخدمة</button>` : ""}<button class="button danger" type="button" data-request-action="cancelled" data-request-id="${request.firestoreId}">إلغاء الطلب</button></div>`
             : "";

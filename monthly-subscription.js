@@ -26,7 +26,7 @@ export function subscriptionError(error){
   if(message.includes("SUBSCRIPTION_CARD_AMOUNT_MISMATCH"))return "قيمة الكرت لا تطابق سعر الاشتراك الشهري الحالي.";
   if(message.includes("INVALID_TOPUP_CARD"))return "رمز الكرت غير صحيح أو غير موجود.";
   if(message.includes("MONTHLY_PRICE_INVALID"))return "سعر الاشتراك غير مضبوط. راجع الإدارة.";
-  if(message.includes("SUBSCRIPTION_REQUIRED"))return "انتهى اشتراكك الشهري. جدّده لاستقبال الطلبات الجديدة.";
+  if(message.includes("SUBSCRIPTION_REQUIRED"))return "انتهى اشتراكك الشهري. جدّده لتتمكن من قبول الطلبات الجديدة.";
   if(message.includes("TOPUP_ALREADY_REVIEWED"))return "سبق اتخاذ قرار بشأن هذا الطلب.";
   return "تعذر إتمام الاشتراك الآن. تحقق من الاتصال وحاول مجددًا.";
 }

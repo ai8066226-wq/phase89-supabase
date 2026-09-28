@@ -1,5 +1,5 @@
 import { karwaVerifyGooglePlaySubscription } from "./supabase-compat.js?v=120";
-import { subscriptionInfo, subscriptionDate } from "./monthly-subscription.js?v=120";
+import { subscriptionInfo, subscriptionDate } from "./monthly-subscription.js?v=122";
 
 const PRODUCT_ID = "amrni_monthly_access";
 let context = null;
@@ -49,7 +49,7 @@ async function verify(detail) {
       subscriptionExpiresAt: result.expiresAt,
       subscriptionAutoRenewing: result.autoRenewing === true
     });
-    context.toast(result.entitled ? "تم تفعيل الاشتراك؛ يمكنك الآن استقبال الطلبات." : "تم تحديث الاشتراك، واستلام الطلبات متوقف حتى يتفعّل.");
+    context.toast(result.entitled ? "تم تفعيل الاشتراك؛ يمكنك الآن قبول الطلبات." : "يمكنك رؤية الطلبات، ويُتاح قبولها بعد التفعيل.");
   } catch (error) {
     console.error("تعذر التحقق من اشتراك Google Play", error);
     context.toast("تعذر التحقق من عملية Google Play. تأكد من الاتصال وأعد استعادة الشراء.");

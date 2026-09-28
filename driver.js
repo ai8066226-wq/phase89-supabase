@@ -33,8 +33,8 @@ import {
   karwaDriverAutoComplete,
 } from "./supabase-compat.js?v=120";
 import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
-import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=120";
-import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=121";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=122";
+import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=122";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -197,15 +197,14 @@ function canDriverHandleOrder(order, driver = state.driverData) {
 
 function orderMeetsDriverDispatchConditions(order, now = Date.now()) {
   if (!order || order.cancelled || Number(order.statusIndex || 0) >= 4 || order.driverId) return false;
-  if(!subscriptionInfo(state.userData||{},now).active)return false;
+  if (!state.driverData?.online) return false;
   if (!driverGovernorateEnabled(state.driverData?.city)) return false;
   if (!canDriverHandleOrder(order)) return false;
   if (!orderWithinRequestRadius(order)) return false;
   if (order.type === "serviceDelivery" && order.serviceCity && String(order.serviceCity).trim() !== String(state.driverData?.city || "").trim()) return false;
   const candidates=Array.isArray(order.dispatchCandidateIds)?order.dispatchCandidateIds:[];
-  if(!candidates.length)return false;
-  const rank=candidates.indexOf(state.user?.uid);
-  if(rank<0)return false;
+  const listedRank=candidates.indexOf(state.user?.uid);
+  const rank=listedRank<0?candidates.length:listedRank;
   const started=driverTimestampMillis(order.dispatchStartedAt);
   return !started||now>=started+rank*Math.max(5,Number(order.dispatchWaveSeconds||12))*1000;
 }
@@ -335,7 +334,7 @@ function renderDriverWallet(){
   if(byId("driverSubscriptionPrice"))byId("driverSubscriptionPrice").textContent=money(monthlyPrice(driverPricingSettings));
   if(byId("driverSubscriptionStarted"))byId("driverSubscriptionStarted").textContent=subscriptionDate(info.started);
   if(byId("driverSubscriptionExpires"))byId("driverSubscriptionExpires").textContent=subscriptionDate(info.expires);
-  if(byId("driverSubscriptionNotice"))byId("driverSubscriptionNotice").textContent=info.active?"يمكنك استقبال الطلبات دون خصم رسوم عن كل طلب. أجرة الرحلة مستقلة حسب تسعيرتك.":"اشترك لشهر كامل لاستقبال الطلبات الجديدة. يمكنك متابعة رحلة بدأت قبل انتهاء الاشتراك.";
+  if(byId("driverSubscriptionNotice"))byId("driverSubscriptionNotice").textContent=info.active?"يمكنك قبول الطلبات دون خصم رسوم عن كل طلب. أجرة الرحلة مستقلة حسب تسعيرتك.":"سترى الطلبات القريبة على الخريطة، ويُتاح قبولها بعد تفعيل الاشتراك. يمكنك متابعة رحلة بدأت سابقًا.";
   renderGooglePlaySubscription({panelId:"driverPlaySubscription",statusId:"driverSubscriptionStatus",priceId:"driverSubscriptionPrice",startedId:"driverSubscriptionStarted",expiresId:"driverSubscriptionExpires",getUser:()=>state.user,getData:()=>state.userData,updateData:patch=>{state.userData={...(state.userData||{}),...patch};applyDriverGovernorateAvailability();renderOrders();},toast});
   if(byId("driverTransferLabel"))byId("driverTransferLabel").textContent=driverPricingSettings?.topupTransferLabel||"وسيلة التحويل";
   if(byId("driverTransferId"))byId("driverTransferId").textContent=driverPricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
@@ -347,7 +346,7 @@ function renderDriverWallet(){
 }
 function requireDriverSubscription(){
   if(subscriptionInfo(state.userData||{}).active)return true;
-  toast("اشتراكك الشهري غير نشط. جدّده لاستقبال الطلبات الجديدة.");
+  toast("يمكنك رؤية الطلب، لكن قبوله يتطلب تفعيل اشتراكك الشهري.");
   setDriverSettingsOpen(true);
   return false;
 }
@@ -1572,7 +1571,9 @@ function renderDriverOffer(available,mine){
   byId("driverOfferDestination").textContent=orderOfferAddress(order,true);
   byId("driverOfferDetails").textContent=[order.title,order.type==="parcel"?order.parcelDetails?.notes:""].filter(Boolean).join(" • ")||"تفاصيل الطلب متاحة بعد القبول";
   byId("driverOfferTrip").textContent=`${Number(order.distanceKm||0).toFixed(1)} كم • نحو ${Math.round(Number(order.durationMin||0))} دقيقة`;
-  byId("driverOfferFee").textContent="قبول الطلب مشمول بالاشتراك";
+  const subscribed=subscriptionInfo(state.userData||{}).active;
+  byId("driverOfferFee").textContent=subscribed?"قبول الطلب مشمول بالاشتراك":"فعّل اشتراكك لقبول هذا الطلب";
+  byId("driverOfferAccept").textContent=subscribed?"قبول الطلب":"فعّل الاشتراك للقبول";
   byId("driverOfferAccept").dataset.id=order.firestoreId;
   sheet.dataset.orderId=order.firestoreId;
   sheet.hidden=false;view?.classList.add("driver-has-offer");
@@ -1593,7 +1594,7 @@ function orderCard(order, mode) {
   const statusIndex = Number(order.statusIndex || 0);
   const statusClass = order.cancelled ? "cancelled" : statusIndex >= 4 ? "complete" : "active";
   const action = mode === "available"
-    ? `<button class="primary" data-action="accept" data-id="${order.firestoreId}" ${state.driverData?.online ? "" : "disabled"}>قبول الطلب</button>`
+    ? `<button class="primary" data-action="accept" data-id="${order.firestoreId}" ${state.driverData?.online ? "" : "disabled"}>${subscriptionInfo(state.userData||{}).active?"قبول الطلب":"فعّل الاشتراك للقبول"}</button>`
     : statusIndex < 4 && !order.cancelled
       ? `<button class="primary" data-action="advance" data-id="${order.firestoreId}">${escapeHtml(driverStatusLabel(order, statusIndex + 1))}</button><button class="danger" data-action="cancel" data-id="${order.firestoreId}">إلغاء الطلب</button>`
       : "";
@@ -1787,7 +1788,7 @@ byId("onlineSwitch").addEventListener("click", async () => {
   const next = !state.driverData.online;
   try {
     await updateDoc(doc(db, "drivers", state.user.uid), { online: next, updatedAt: serverTimestamp() });
-    toast(next ? "أنت متصل وجاهز للطلبات" : "تم إيقاف استقبال الطلبات");
+    toast(next ? (subscriptionInfo(state.userData||{}).active ? "أنت متصل وجاهز لقبول الطلبات" : "أنت متصل؛ ستظهر الطلبات القريبة ويمكن قبولها بعد التفعيل") : "تم إيقاف ظهور الطلبات الجديدة");
   } catch (error) {
     console.error(error);
     toast("تعذر تحديث حالة الاتصال");

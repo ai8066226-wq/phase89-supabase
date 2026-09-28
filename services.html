@@ -132,7 +132,7 @@
 @media(max-width:520px){.karwa-whatsapp-actions{grid-template-columns:1fr}}
 </style>
   <link rel="stylesheet" href="./amrni-design.css?v=118">
-  <link rel="stylesheet" href="./monthly-subscription.css?v=121">
+  <link rel="stylesheet" href="./monthly-subscription.css?v=122">
 </head>
 <body class="partner-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="./index.html" aria-label="آمرني - الصفحة الرئيسية"><span class="brand-mark">آ</span><span>آمرني<small>بوابة الخدمات الأخرى</small></span></a><div class="account"><span id="accountName"></span><button class="button danger hidden" id="logoutBtn" type="button">تسجيل الخروج</button></div></div></header>
@@ -185,7 +185,7 @@
     <section class="card card-body provider-ratings" id="providerRatingsSection"><div class="card-head"><div><h2>تقييمات العملاء</h2><p class="muted">متوسط التقييم وآخر الآراء بعد اكتمال الطلبات.</p></div><div class="provider-rating-summary"><strong class="provider-rating-score" id="providerRatingAverage">—</strong><span class="provider-rating-stars" id="providerRatingStars">☆☆☆☆☆</span></div></div><div class="provider-rating-list" id="providerRatingsList"><div class="empty">لا توجد تقييمات بعد.</div></div></section>
     <section class="card card-body unified-wallet" id="serviceWalletSection" aria-labelledby="serviceWalletTitle">
       <div class="unified-wallet-head"><div><span class="eyebrow">الحساب التجاري</span><h2 id="serviceWalletTitle" style="margin:8px 0 0">اشتراك مزود الخدمة</h2></div><span class="status bad" id="serviceSubscriptionStatus">غير مشترك</span></div>
-      <div class="unified-wallet-balance"><small>سعر الاشتراك الشهري</small><strong id="serviceSubscriptionPrice">يحدده Google Play</strong><span id="serviceSubscriptionNotice">أعدّ نشاطك الآن؛ يبدأ استقبال الطلبات بعد تفعيل الاشتراك. العميل لا يحتاج إلى شحن.</span></div>
+      <div class="unified-wallet-balance"><small>سعر الاشتراك الشهري</small><strong id="serviceSubscriptionPrice">يحدده Google Play</strong><span id="serviceSubscriptionNotice">تظهر طلبات نشاطك قبل الاشتراك؛ يتاح قبولها بعد التفعيل. العميل لا يحتاج إلى شحن.</span></div>
       <div class="monthly-dates"><div><small>تاريخ بداية الاشتراك</small><strong id="serviceSubscriptionStarted">—</strong></div><div><small>تاريخ انتهاء الاشتراك</small><strong id="serviceSubscriptionExpires">—</strong></div></div>
       <div class="play-subscription-card" id="servicePlaySubscription"><span class="play-subscription-badge">Google Play</span><h3>اشتراك النشاط الشهري</h3><p data-play-trial>تجربة مجانية لمدة ١٤ يومًا للحسابات المؤهلة؛ يُعرض السعر الشهري قبل الشراء.</p><strong data-play-price>يحدده Google Play</strong><small data-play-platform>افتح تطبيق آمرني على Android للاشتراك</small><div class="play-subscription-actions"><button class="button primary" type="button" data-play-action>الاشتراك عبر Google Play</button><button class="button" type="button" data-play-restore>استعادة الشراء</button></div></div>
       <div class="unified-topup-grid"><div id="serviceTransferTopupMethod"><h3>الاشتراك بالتحويل</h3><p class="muted">أرسل مرجع التحويل لتراجع الإدارة الدفع وتفعّل شهر اشتراك.</p><div class="monthly-transfer-destination"><small id="serviceTransferLabel">وسيلة التحويل</small><strong id="serviceTransferId" dir="ltr">—</strong><span id="serviceTransferHolder">المستفيد: إدارة آمرني</span></div><form id="serviceTopupForm" class="form-grid"><div class="field"><label for="serviceTopupAmount">المبلغ المطلوب (د.ع)</label><input id="serviceTopupAmount" type="number" value="5000" readonly></div><div class="field"><label for="serviceTopupReference">مرجع التحويل</label><input id="serviceTopupReference" maxlength="80" minlength="3" required placeholder="رقم العملية أو إيصال التحويل"></div><button class="button primary" id="serviceTopupSubmit" type="submit">إرسال طلب الاشتراك</button></form></div><div id="serviceCardTopupMethod"><h3>الاشتراك بالكرت</h3><p class="muted">رمز اشتراك لمرة واحدة بقيمة الشهر المحددة.</p><form id="serviceTopupCardRedeemForm" class="form-grid"><div class="field full"><label for="serviceTopupCardCode">رقم الكرت</label><input id="serviceTopupCardCode" inputmode="numeric" pattern="[0-9 ]{16,20}" maxlength="20" required placeholder="رمز من 16 رقمًا"></div><button class="button primary" id="serviceRedeemTopupCard" type="submit">تفعيل شهر بالكرت</button></form></div></div>
@@ -234,7 +234,7 @@
   <script src="./service-themes.js?v=81"></script>
   <script src="./service-image-library.js?v=89"></script>
   <script src="./iraq-governorates.js?v=117"></script>
-  <script type="module" src="./services.js?v=121"></script>
-  <script src="./pwa.js?v=121"></script>
+  <script type="module" src="./services.js?v=122"></script>
+  <script src="./pwa.js?v=122"></script>
 </body>
 </html>
