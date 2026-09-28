@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b6f75">
-  <meta name="description" content="بوابة كابتن آمرني لاستلام الطلبات وتحديث الرحلات">
-  <title>آمرني | بوابة الكابتن</title>
+  <meta name="description" content="بوابة كابتن مَسار لاستلام الطلبات وتحديث الرحلات">
+  <title>مَسار | بوابة الكابتن</title>
   <link rel="stylesheet" href="./portal.css?v=85">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
@@ -352,13 +352,13 @@ body.driver-map-mode{background:#edf3f6}
 </style>
   <link rel="stylesheet" href="./amrni-design.css?v=118">
   <link rel="stylesheet" href="./driver-offers.css?v=119">
-  <link rel="stylesheet" href="./monthly-subscription.css?v=122">
+  <link rel="stylesheet" href="./monthly-subscription.css?v=123">
 </head>
 <body class="driver-page">
   <header class="topbar">
     <a class="brand" href="./index.html">
-      <span class="logo">آ</span>
-      <span><strong>آمرني</strong><small>بوابة الكابتن</small></span>
+      <span class="logo">م</span>
+      <span><strong>مَسار</strong><small>بوابة الكابتن</small></span>
     </a>
     <div class="top-actions">
       
@@ -406,7 +406,7 @@ body.driver-map-mode{background:#edf3f6}
 
   <main class="shell hidden" id="applicationView">
     <section class="hero">
-      <div><h1 id="applicationHeroTitle">انضم إلى كباتن آمرني</h1><p id="applicationHeroText">أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.</p></div>
+      <div><h1 id="applicationHeroTitle">انضم إلى كباتن مَسار</h1><p id="applicationHeroText">أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.</p></div>
       <span class="role-badge" id="applicationHeroBadge">طلب انضمام</span>
     </section>
 
@@ -512,7 +512,7 @@ body.driver-map-mode{background:#edf3f6}
                 <option value="القادسية">القادسية (الديوانية)</option>
                 <option value="حلبجة">حلبجة</option>
               </select>
-              <small class="muted" id="driverGovernorateAvailability">تعمل آمرني في المحافظات التي تفعلها الإدارة.</small>
+              <small class="muted" id="driverGovernorateAvailability">تعمل مَسار في المحافظات التي تفعلها الإدارة.</small>
             </div>
           </div>
           <button class="primary wide" id="submitApplication" type="submit">إرسال طلب الانضمام</button>
@@ -531,7 +531,7 @@ body.driver-map-mode{background:#edf3f6}
 
   <main class="shell hidden" id="driverView">
     <section class="hero">
-      <div><h1>مرحبًا كابتن <span id="captainName">آمرني</span></h1><p>استلم الطلبات وحدّث حالة الرحلة مباشرةً.</p></div>
+      <div><h1>مرحبًا كابتن <span id="captainName">مَسار</span></h1><p>استلم الطلبات وحدّث حالة الرحلة مباشرةً.</p></div>
       <span class="role-badge">حساب كابتن معتمد</span>
     </section>
 
@@ -615,7 +615,7 @@ body.driver-map-mode{background:#edf3f6}
     <button type="button" class="driver-notification-toggle" id="driverNotificationsToggle" aria-controls="driverNotificationsPanel" aria-expanded="false" aria-label="إشعارات الكابتن" title="الإشعارات"><span class="bell" aria-hidden="true">🔔</span><b class="driver-notification-badge" id="driverNotificationsBadge" hidden>0</b></button>
     <div class="driver-notifications-scrim" id="driverNotificationsScrim" aria-hidden="true"></div>
     <aside class="driver-notifications-panel" id="driverNotificationsPanel" role="dialog" aria-modal="true" aria-label="مركز إشعارات الكابتن" aria-hidden="true">
-      <div class="driver-notifications-header"><div><small>آمرني للكباتن</small><strong>مركز الإشعارات</strong></div><button type="button" class="driver-notifications-close" id="driverNotificationsClose" aria-label="إغلاق الإشعارات">×</button></div>
+      <div class="driver-notifications-header"><div><small>مَسار للكباتن</small><strong>مركز الإشعارات</strong></div><button type="button" class="driver-notifications-close" id="driverNotificationsClose" aria-label="إغلاق الإشعارات">×</button></div>
       <div class="driver-notifications-toolbar"><span id="driverNotificationsSummary">لا توجد إشعارات جديدة</span><div class="driver-notifications-actions"><button type="button" class="driver-notifications-mark" id="driverNotificationsMarkAll">تحديد الكل كمقروء</button><button type="button" class="driver-notifications-mark danger" id="driverNotificationsClear">حذف الكل</button></div></div>
       <div class="driver-notifications-list" id="driverNotificationsList" aria-live="polite"><div class="driver-notification-empty"><span aria-hidden="true">🔔</span><strong>لا توجد إشعارات</strong><small>ستظهر الطلبات الجديدة وتحديثات الرحلات وتنبيهات الإدارة هنا.</small></div></div>
     </aside>
@@ -624,13 +624,13 @@ body.driver-map-mode{background:#edf3f6}
     <div class="driver-settings-scrim" id="driverSettingsScrim" aria-hidden="true"></div>
     <aside class="driver-settings-panel" id="driverSettingsPanel" role="dialog" aria-modal="true" aria-label="إعدادات ومعلومات الكابتن" aria-hidden="true">
       <div class="driver-settings-header">
-        <div><small>آمرني للكباتن</small><strong>الحساب والإعدادات</strong></div>
+        <div><small>مَسار للكباتن</small><strong>الحساب والإعدادات</strong></div>
         <button type="button" class="driver-settings-close" id="driverSettingsClose" aria-label="إغلاق الإعدادات">×</button>
       </div>
       <div class="driver-settings-body">
         <section class="driver-profile-card" aria-label="معلومات الكابتن">
-          <div class="driver-settings-avatar" id="driverSettingsAvatar">آ</div>
-          <div class="driver-profile-copy"><strong id="driverSettingsName">كابتن آمرني</strong><small id="driverSettingsEmail">—</small></div>
+          <div class="driver-settings-avatar" id="driverSettingsAvatar">م</div>
+          <div class="driver-profile-copy"><strong id="driverSettingsName">كابتن مَسار</strong><small id="driverSettingsEmail">—</small></div>
           <span class="driver-verified">✓ كابتن معتمد</span>
         </section>
         <dl class="driver-info-grid">
@@ -645,10 +645,10 @@ body.driver-map-mode{background:#edf3f6}
           <div class="unified-wallet-head"><div><small>حساب الكابتن</small><h3 id="driverWalletTitle">الاشتراك الشهري وتسعيرتي</h3></div><span class="status-chip pending" id="driverSubscriptionStatus">غير مشترك</span></div>
           <div class="unified-wallet-balance"><small>سعر الاشتراك الشهري</small><strong id="driverSubscriptionPrice">يحدده Google Play</strong><span id="driverSubscriptionNotice">تظهر لك الطلبات القريبة على الخريطة، ويُتاح قبولها بعد تفعيل الاشتراك.</span></div>
           <div class="monthly-dates"><div><small>تاريخ بدء الاشتراك</small><strong id="driverSubscriptionStarted">—</strong></div><div><small>تاريخ انتهاء الاشتراك</small><strong id="driverSubscriptionExpires">—</strong></div></div>
-          <div class="play-subscription-card" id="driverPlaySubscription"><span class="play-subscription-badge">Google Play</span><h4>اشتراك الكابتن الشهري</h4><p data-play-trial>تجربة مجانية لمدة ١٤ يومًا للحسابات المؤهلة؛ يُعرض السعر الشهري قبل الشراء.</p><strong data-play-price>يحدده Google Play</strong><small data-play-platform>افتح تطبيق آمرني على Android للاشتراك</small><div class="play-subscription-actions"><button class="driver-settings-action primary" type="button" data-play-action>الاشتراك عبر Google Play</button><button class="driver-settings-action" type="button" data-play-restore>استعادة الشراء</button></div></div>
+          <div class="play-subscription-card" id="driverPlaySubscription"><span class="play-subscription-badge">Google Play</span><h4>اشتراك الكابتن الشهري</h4><p data-play-trial>تجربة مجانية لمدة ١٤ يومًا للحسابات المؤهلة؛ يُعرض السعر الشهري قبل الشراء.</p><strong data-play-price>يحدده Google Play</strong><small data-play-platform>افتح تطبيق مَسار على Android للاشتراك</small><div class="play-subscription-actions"><button class="driver-settings-action primary" type="button" data-play-action>الاشتراك عبر Google Play</button><button class="driver-settings-action" type="button" data-play-restore>استعادة الشراء</button></div></div>
           <div class="unified-topup-grid">
             <div><h4>تجديد الاشتراك لشهر</h4>
-              <div id="driverTransferTopupMethod"><p class="muted unified-wallet-help">حوّل قيمة الاشتراك الشهرية ثم أرسل مرجع العملية. تبدأ صلاحية الاشتراك بعد اعتماد الإدارة.</p><div class="monthly-transfer-destination"><small id="driverTransferLabel">وسيلة التحويل</small><strong id="driverTransferId" dir="ltr">—</strong><span id="driverTransferHolder">المستفيد: إدارة آمرني</span></div><form class="unified-topup-form" id="driverTopupForm"><div class="field"><label for="driverTopupAmount">المبلغ الشهري (د.ع)</label><input id="driverTopupAmount" type="number" value="5000" readonly></div><div class="field"><label for="driverTopupReference">رقم أو مرجع التحويل</label><input id="driverTopupReference" maxlength="80" required></div><button class="driver-settings-action primary" id="driverTopupSubmit" type="submit">إرسال طلب الاشتراك</button></form></div>
+              <div id="driverTransferTopupMethod"><p class="muted unified-wallet-help">حوّل قيمة الاشتراك الشهرية ثم أرسل مرجع العملية. تبدأ صلاحية الاشتراك بعد اعتماد الإدارة.</p><div class="monthly-transfer-destination"><small id="driverTransferLabel">وسيلة التحويل</small><strong id="driverTransferId" dir="ltr">—</strong><span id="driverTransferHolder">المستفيد: إدارة مَسار</span></div><form class="unified-topup-form" id="driverTopupForm"><div class="field"><label for="driverTopupAmount">المبلغ الشهري (د.ع)</label><input id="driverTopupAmount" type="number" value="5000" readonly></div><div class="field"><label for="driverTopupReference">رقم أو مرجع التحويل</label><input id="driverTopupReference" maxlength="80" required></div><button class="driver-settings-action primary" id="driverTopupSubmit" type="submit">إرسال طلب الاشتراك</button></form></div>
               <div id="driverCardTopupMethod"><p class="muted unified-wallet-help">استخدم كرت اشتراك بقيمة الشهر المحددة أعلاه. كل كرت صالح مرة واحدة.</p><form class="unified-topup-form" id="driverTopupCardRedeemForm"><div class="field"><label for="driverTopupCardCode">رمز كرت الاشتراك</label><input id="driverTopupCardCode" inputmode="numeric" pattern="[0-9 ]{16,19}" maxlength="19" autocomplete="off" required></div><button class="driver-settings-action primary" id="driverRedeemTopupCard" type="submit">تفعيل الاشتراك بالكرت</button></form></div>
               <p id="driverTopupMethodsDisabled" class="topup-method-off" hidden>طرق الاشتراك متوقفة مؤقتًا من الإدارة.</p>
               <div class="unified-topup-history-wrap"><h4>طلبات الاشتراك</h4><div id="driverTopupRequestsList" class="unified-topup-history"></div></div>
@@ -712,6 +712,7 @@ body.driver-map-mode{background:#edf3f6}
           <button type="button" class="driver-settings-action primary" id="driverSettingsOperations">الطلبات وأدوات العمل</button>
           
           <button type="button" class="driver-settings-action danger" id="driverSettingsLogout">تسجيل الخروج</button>
+          <a class="driver-settings-action" href="./delete-account.html">طلب حذف الحساب والبيانات</a>
         </div>
       </div>
     </aside>
@@ -732,7 +733,7 @@ body.driver-map-mode{background:#edf3f6}
   <div id="verificationCodeModal" class="verification-code-modal hidden" role="dialog" aria-modal="true" aria-labelledby="verificationCodeTitle" aria-describedby="verificationCodeDescription" aria-hidden="true">
     <section class="verification-code-sheet">
       <div class="verification-code-accent"></div>
-      <div class="verification-code-brand"><span>آ</span> آمرني الآمن</div>
+      <div class="verification-code-brand"><span>م</span> مَسار الآمن</div>
       <button id="verificationCodeClose" class="verification-code-close" type="button" aria-label="إغلاق بطاقة رمز التحقق">×</button>
       <div class="verification-code-icon" id="verificationCodeIcon" aria-hidden="true">🔐</div>
       <span class="verification-code-context" id="verificationCodeContext">تأكيد آمن</span>
@@ -746,7 +747,7 @@ body.driver-map-mode{background:#edf3f6}
       </div>
       <p class="verification-code-error" id="verificationCodeError" aria-live="polite"></p>
       <div class="verification-code-actions"><button class="verification-code-submit" id="verificationCodeSubmit" type="button">تأكيد الرمز والمتابعة</button><button class="verification-code-cancel" id="verificationCodeCancel" type="button">رجوع</button></div>
-      <small class="verification-code-trust">بطاقة تحقق داخل تطبيق آمرني — لا يتم عرض عنوان الموقع</small>
+      <small class="verification-code-trust">بطاقة تحقق داخل تطبيق مَسار — لا يتم عرض عنوان الموقع</small>
     </section>
   </div>
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
@@ -754,8 +755,8 @@ body.driver-map-mode{background:#edf3f6}
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
   <script src="./precise-location.js?v=85"></script>
   <script src="./iraq-governorates.js?v=117"></script>
-  <script type="module" src="./driver.js?v=122"></script>
-  <script src="./pwa.js?v=122"></script>
+  <script type="module" src="./driver.js?v=123"></script>
+  <script src="./pwa.js?v=123"></script>
 <script id="phase20-driver-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{
   const view=document.getElementById("driverView");

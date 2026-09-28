@@ -67,7 +67,7 @@ async function submitReplacementRequest(db, user, userData, info) {
   await setDoc(doc(db, "deviceChangeRequests", user.uid), {
     userId: user.uid,
     accountRole: String(userData?.role || "customer"),
-    accountName: String(userData?.name || user.displayName || "مستخدم آمرني").slice(0,80),
+    accountName: String(userData?.name || user.displayName || "مستخدم مَسار").slice(0,80),
     email: String(userData?.email || user.email || "").slice(0,160),
     newDeviceKey: info.key,
     newDeviceLabel: info.label,
@@ -182,7 +182,7 @@ export async function enforceDeviceSession(db, user, userData) {
           return {
             ok: false,
             reason: "device-in-use",
-            message: "هذا الهاتف مرتبط بحساب آمرني آخر ولا يمكن استخدامه لحساب ثانٍ."
+            message: "هذا الهاتف مرتبط بحساب مَسار آخر ولا يمكن استخدامه لحساب ثانٍ."
           };
         }
         throw error;
@@ -201,7 +201,7 @@ export async function enforceDeviceSession(db, user, userData) {
       return {
         ok: false,
         reason: "device-in-use",
-        message: "هذا الهاتف مرتبط بحساب آمرني آخر ولا يمكن ربط حساب ثانٍ به."
+        message: "هذا الهاتف مرتبط بحساب مَسار آخر ولا يمكن ربط حساب ثانٍ به."
       };
     }
     throw error;

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#102b42"><title>طلب حذف الحساب والبيانات | مَسار</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f1f6f7;color:#143248;font:16px/1.7 Tahoma,Arial,sans-serif}
+    main{max-width:690px;margin:auto;padding:32px 16px 64px}.top{display:flex;align-items:center;gap:14px;margin-bottom:22px;text-decoration:none;color:inherit}
+    .top img{width:52px;height:52px;border-radius:15px}.top strong{font-size:22px}.card{background:#fff;border:1px solid #d8e7e9;border-radius:24px;padding:clamp(20px,5vw,36px);box-shadow:0 16px 42px #102b4212}
+    .eyebrow{color:#087b75;font-weight:800;font-size:13px}h1{line-height:1.3;font-size:clamp(25px,6vw,34px);margin:8px 0 12px}h2{font-size:18px;margin:24px 0 8px}p{margin:10px 0;color:#526779}label{display:block;font-weight:700;margin:16px 0 6px}
+    input,textarea{width:100%;font:inherit;border:1px solid #b8cfd3;border-radius:12px;padding:12px;background:#fff;color:#143248}textarea{min-height:88px;resize:vertical}
+    input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #5dd5c5;outline-offset:2px}.check{display:flex;gap:10px;align-items:flex-start}.check input{width:20px;height:20px;margin:5px 0 0;flex:none}
+    button{font:inherit;font-weight:800;color:#fff;background:#0b6f71;border:0;border-radius:13px;padding:13px 22px;cursor:pointer;width:100%;margin-top:17px}button:disabled{opacity:.6;cursor:wait}
+    .message{min-height:28px;color:#a23c35;font-weight:700}.message.ok{color:#087b75}.note{background:#ecf7f5;padding:16px;border-radius:15px;border:1px solid #c8e7e2}a{color:#087b75}
+  </style>
+</head>
+<body><main>
+  <a class="top" href="./index.html"><img src="./karwa-icon-192.png" alt=""><strong>مَسار</strong></a>
+  <article class="card"><span class="eyebrow">الخصوصية وإدارة الحساب</span><h1>طلب حذف الحساب والبيانات</h1>
+    <p>أرسل طلبًا مرتبطًا بحسابك إلى فريق مَسار. ستُراجع الإدارة الطلب وتحذف الحساب والبيانات المرتبطة به وفق سياسة الخصوصية والالتزامات القانونية. إرسال الطلب لا يلغي اشتراك Google Play تلقائيًا؛ يمكنك إلغاء التجديد من المتجر.</p>
+    <p class="note">يتطلب التحقق تسجيل الدخول إلى الحساب الذي تريد حذفه. يمكنك أيضًا فتح هذه الصفحة من إعدادات التطبيق. إذا فقدت الوصول إلى حسابك، تواصل مع الدعم عبر معلومات الاتصال المنشورة في صفحة المتجر.</p>
+    <form id="requestForm">
+      <div id="signInFields"><h2>التحقق من الحساب</h2><label for="email">البريد الإلكتروني</label><input id="email" type="email" autocomplete="email" required><label for="password">كلمة المرور</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <p id="signedIn" hidden></p><label for="reason">ملاحظة للفريق (اختيارية)</label><textarea id="reason" maxlength="500" placeholder="اذكر أي تفاصيل تساعدنا على معالجة طلبك"></textarea>
+      <label class="check"><input id="confirm" type="checkbox" required><span>أؤكد أنني أطلب حذف حسابي وبياناتي المرتبطة به.</span></label>
+      <button id="submitButton" type="submit">إرسال طلب الحذف</button><p id="message" class="message" role="status" aria-live="polite"></p>
+    </form>
+    <p><a href="./privacy.html">اقرأ سياسة الخصوصية</a> · <a href="https://play.google.com/store/account/subscriptions" rel="noopener">إدارة الاشتراكات في Google Play</a></p>
+  </article>
+</main><script type="module" src="./delete-account.js?v=123"></script></body></html>

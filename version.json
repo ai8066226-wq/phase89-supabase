@@ -1,8 +1,8 @@
 {
   "phase": 96,
-  "version": "2.9.5",
+  "version": "3.0.0",
   "webBasePhase": 87,
-  "updateMode": "orders-visible-before-subscription-acceptance-gated-v122",
+  "updateMode": "masar-play-release-v123",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -74,12 +74,13 @@
   "iraqGovernorates": "19-canonical-governorates-including-halabja-with-mosul-nineveh-and-diwaniyah-qadisiyah-aliases-v113",
   "governorateAvailability": "admin-realtime-enable-disable-registration-publishing-marketplace-and-acceptance-server-enforced-v113",
   "adminSections": "command-center-single-open-collapsible-accessible-panels-v113",
-  "brand": "amrni-previous-icon-layout-navy-teal-gold-palette-v115",
+  "brand": "مَسار",
   "dialogs": "professional-accessible-confirm-prompt-alert-all-portals-android-fallback-v116",
   "billingModel": "google_play_monthly_driver_provider_customer_free",
   "subscriptionEnforcement": "acceptance-only-server-enforced-v122",
   "driverPricing": "captain-specific-rate-per-km-server-finalized-v120",
   "interface": "captain-map-offer-bottom-sheet-arabic-v119",
   "googlePlayProductId": "amrni_monthly_access",
-  "googlePlayTrialDays": 14
+  "googlePlayTrialDays": 14,
+  "packageName": "com.razi.masar"
 }

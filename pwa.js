@@ -1,5 +1,5 @@
 let deferredInstall=null;
-const KARWA_BUILD={phase:96,version:"2.9.5"};
+const KARWA_BUILD={phase:96,version:"3.0.0"};
 const karwaIsNative=!!window.KarwaNative;
 let karwaLastVersionCheck=0;
 
@@ -11,7 +11,7 @@ function networkBanner(){
     b.style.cssText="position:fixed;z-index:99999;top:0;left:0;right:0;padding:9px 16px;text-align:center;font:600 13px system-ui;background:#fff3cd;color:#664d03;display:none";
     document.body.appendChild(b);
   }
-  b.textContent=navigator.onLine?"تم استعادة الاتصال بالإنترنت":"أنت غير متصل بالإنترنت — سيستخدم آمرني النسخة المحلية حتى عودة الشبكة";
+  b.textContent=navigator.onLine?"تم استعادة الاتصال بالإنترنت":"أنت غير متصل بالإنترنت — سيستخدم مَسار النسخة المحلية حتى عودة الشبكة";
   b.style.display=navigator.onLine?"none":"block";
 }
 
@@ -21,7 +21,7 @@ function updateBanner(){
   b=document.createElement("div");
   b.id="karwaUpdateBanner";
   b.style.cssText="position:fixed;z-index:100000;left:14px;right:14px;bottom:18px;max-width:520px;margin:auto;background:#0b1015;color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 16px 50px rgba(0,0,0,.28);border-radius:16px;padding:12px 14px;display:none;direction:rtl;font:600 13px system-ui";
-  b.innerHTML='<strong>يتوفر تحديث جديد لآمرني</strong><span style="display:block;opacity:.75;margin-top:3px">سيُستخدم تلقائيًا عند فتح الصفحة لاحقًا.</span>';
+  b.innerHTML='<strong>يتوفر تحديث جديد لمَسار</strong><span style="display:block;opacity:.75;margin-top:3px">سيُستخدم تلقائيًا عند فتح الصفحة لاحقًا.</span>';
   document.body.appendChild(b);
   return b;
 }
@@ -91,7 +91,7 @@ window.installKarwa=async()=>{
 };
 
 if(!karwaIsNative&&location.protocol!=="file:"&&"serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=118",{updateViaCache:"none"}).then(reg=>reg.update()).catch(console.error));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=123",{updateViaCache:"none"}).then(reg=>reg.update()).catch(console.error));
 }
 
 window.KarwaUpdate={check:()=>checkKarwaUpdate(true),build:KARWA_BUILD,native:karwaIsNative};

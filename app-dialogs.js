@@ -35,7 +35,7 @@
     layer.innerHTML = `
       <section class="amrni-dialog-card" role="dialog" aria-modal="true" aria-labelledby="amrniDialogTitle" aria-describedby="amrniDialogMessage">
         <header class="amrni-dialog-head">
-          <div class="amrni-dialog-brand"><span class="amrni-dialog-brand-mark">آ</span><span>آمرني الآمن</span></div>
+          <div class="amrni-dialog-brand"><span class="amrni-dialog-brand-mark">آ</span><span>مَسار الآمن</span></div>
           <button class="amrni-dialog-close" type="button" aria-label="إغلاق">×</button>
         </header>
         <div class="amrni-dialog-body">

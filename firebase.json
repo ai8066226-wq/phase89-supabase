@@ -7,7 +7,16 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "README*",
+      "DEPLOY*",
+      "**/*.md",
+      "**/*.txt",
+      "**/*.sql",
+      "supabase/**",
+      "firestore.rules",
+      "storage.rules",
+      "karwa-app-icon-source.png"
     ],
     "headers": [
       {

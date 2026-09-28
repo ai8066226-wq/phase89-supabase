@@ -48,7 +48,7 @@ async function registerDriverPushToken(user){
 window.addEventListener("karwa-native-push-token",()=>{if(auth.currentUser)registerDriverPushToken(auth.currentUser)});
 function driverNativePermissionGranted(){try{if(window.KarwaNative?.notificationPermissionGranted)return !!window.KarwaNative.notificationPermissionGranted()}catch{}return "Notification" in window&&Notification.permission==="granted"}
 async function requestDriverDevicePermission(){try{if(window.KarwaNative?.requestNotificationPermission){window.KarwaNative.requestNotificationPermission();await new Promise(r=>setTimeout(r,650));return driverNativePermissionGranted()}}catch{}if("Notification" in window){try{return (await Notification.requestPermission())==="granted"}catch{}}return false}
-window.addEventListener("karwa-native-push-received",event=>{const x=event.detail||{};addDriverNotification({id:`native:${x.tag||Date.now()}:${x.title||"karwa"}`,type:x.type==="wallet"?"wallet":x.type==="driver"||x.type==="order"?"order":"system",title:x.title||"آمرني",message:x.body||"لديك تحديث جديد",target:x.route?.includes("driver")?"available":"",device:false})});
+window.addEventListener("karwa-native-push-received",event=>{const x=event.detail||{};addDriverNotification({id:`native:${x.tag||Date.now()}:${x.title||"karwa"}`,type:x.type==="wallet"?"wallet":x.type==="driver"||x.type==="order"?"order":"system",title:x.title||"مَسار",message:x.body||"لديك تحديث جديد",target:x.route?.includes("driver")?"available":"",device:false})});
 
 
 function firestoreErrorKey(error) {
@@ -75,7 +75,7 @@ function driverSupabaseMessage(error, action = "تنفيذ العملية") {
   if (e.named === "OTP_INVALID") return "رمز التحقق غير صحيح.";
   if (e.code === "unauthenticated") return "انتهت جلسة تسجيل الدخول. سجّل الدخول من جديد.";
   if (e.code === "not-found") return "تعذر العثور على بيانات الطلب أو حساب الكابتن.";
-  if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الاتصال بخادم آمرني. تحقق من الإنترنت ثم أعد المحاولة.";
+  if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الاتصال بخادم مَسار. تحقق من الإنترنت ثم أعد المحاولة.";
   if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصالك بالإنترنت.`;
   return `تعذر ${action}. حاول مجددًا أو تواصل مع الدعم.`;
 }
@@ -338,7 +338,7 @@ function renderDriverWallet(){
   renderGooglePlaySubscription({panelId:"driverPlaySubscription",statusId:"driverSubscriptionStatus",priceId:"driverSubscriptionPrice",startedId:"driverSubscriptionStarted",expiresId:"driverSubscriptionExpires",getUser:()=>state.user,getData:()=>state.userData,updateData:patch=>{state.userData={...(state.userData||{}),...patch};applyDriverGovernorateAvailability();renderOrders();},toast});
   if(byId("driverTransferLabel"))byId("driverTransferLabel").textContent=driverPricingSettings?.topupTransferLabel||"وسيلة التحويل";
   if(byId("driverTransferId"))byId("driverTransferId").textContent=driverPricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
-  if(byId("driverTransferHolder"))byId("driverTransferHolder").textContent=`المستفيد: ${driverPricingSettings?.topupCardHolder||"إدارة آمرني"}`;
+  if(byId("driverTransferHolder"))byId("driverTransferHolder").textContent=`المستفيد: ${driverPricingSettings?.topupCardHolder||"إدارة مَسار"}`;
   if(byId("driverTopupAmount"))byId("driverTopupAmount").value=String(monthlyPrice(driverPricingSettings));
   renderDriverTopupMethods();
   const rate=Math.max(100,Math.min(10000,Number(state.driverData?.ratePerKm||800)));
@@ -416,7 +416,7 @@ function driverCancellationMeta(reason) {
     cancelledBy: "driver",
     cancelledByRole: "driver",
     cancelledByUserId: state.user?.uid || "",
-    cancelledByName: state.userData?.name || state.user?.displayName || state.driverData?.name || "كابتن آمرني",
+    cancelledByName: state.userData?.name || state.user?.displayName || state.driverData?.name || "كابتن مَسار",
     cancelledByEmail: state.user?.email || "",
     cancelledAt: serverTimestamp(),
     assignmentStatus: "cancelled",
@@ -464,17 +464,17 @@ function renderDriverNotifications(){
 }
 function showDriverDeviceNotification(title,message){
   if(!state.deviceNotificationsEnabled)return;
-  try{if(window.KarwaNative?.notify){window.KarwaNative.notify(String(title||"آمرني"),String(message||"لديك تحديث جديد"),"driver","./driver.html");return}}catch(_){}
+  try{if(window.KarwaNative?.notify){window.KarwaNative.notify(String(title||"مَسار"),String(message||"لديك تحديث جديد"),"driver","./driver.html");return}}catch(_){}
   if(!("Notification" in window)||Notification.permission!=="granted")return;
   try{const notification=new Notification(title,{body:message,icon:"./karwa-icon-192.png",badge:"./karwa-icon-192.png",tag:`karwa-driver-${Date.now()}`});notification.onclick=()=>{window.focus();notification.close();};}catch(_){}
   try{navigator.vibrate?.([220,100,220]);}catch(_){}
 }
 function addDriverNotification({id,type="system",title,message="",target="",device=true}){
   if(!state.user||!id||state.notifications.some(item=>item.id===String(id)))return false;
-  state.notifications.unshift({id:String(id),type:DRIVER_NOTIFICATION_TYPES.has(type)?type:"system",title:String(title||"إشعار آمرني").slice(0,120),message:String(message||"").slice(0,320),target:String(target||""),createdAt:Date.now(),read:false});
+  state.notifications.unshift({id:String(id),type:DRIVER_NOTIFICATION_TYPES.has(type)?type:"system",title:String(title||"إشعار مَسار").slice(0,120),message:String(message||"").slice(0,320),target:String(target||""),createdAt:Date.now(),read:false});
   state.notifications=state.notifications.slice(0,50);
   saveDriverNotifications();renderDriverNotifications();
-  if(device)showDriverDeviceNotification(String(title||"آمرني"),String(message||"لديك تحديث جديد"));
+  if(device)showDriverDeviceNotification(String(title||"مَسار"),String(message||"لديك تحديث جديد"));
   return true;
 }
 function markDriverNotificationRead(id){
@@ -693,7 +693,7 @@ function applyDriverNightLabels() {
 
 function updateDriverSettingsInfo() {
   const data = state.driverData || {};
-  const name = data.name || state.userData?.name || state.user?.displayName || "كابتن آمرني";
+  const name = data.name || state.userData?.name || state.user?.displayName || "كابتن مَسار";
   const ratingCount = state.ratings.length;
   const rating = ratingCount
     ? state.ratings.reduce((total, item) => total + Number(item.score || 0), 0) / ratingCount
@@ -899,7 +899,7 @@ async function autoCompleteTaxiFromDriver(order){
     await karwaDriverAutoComplete(order.firestoreId);
     state.navigationCompletedOrderId=String(order.firestoreId); window.setTimeout(()=>drawPickupRoute(true,"arrived"),0);
     toast("تم تأكيد وصولك أنت والعميل إلى الوجهة عبر GPS وإكمال الرحلة تلقائيًا.");
-    addDriverNotification({id:`auto-arrival:${order.firestoreId}`,type:"trip",title:"تم إكمال الرحلة تلقائيًا",message:"تم تأكيد وصول الطرفين إلى الوجهة عبر GPS. رسوم آمرني محتسبة مرة واحدة فقط.",target:""}); state.driverAutoArrivalSince=0;
+    addDriverNotification({id:`auto-arrival:${order.firestoreId}`,type:"trip",title:"تم إكمال الرحلة تلقائيًا",message:"تم تأكيد وصول الطرفين إلى الوجهة عبر GPS. رسوم مَسار محتسبة مرة واحدة فقط.",target:""}); state.driverAutoArrivalSince=0;
   }catch(error){const message=String(error?.message||"");const quiet=["TRACKING_MISSING","TRACKING_STALE","NOT_AT_DESTINATION","NOT_ELIGIBLE","FEES_PENDING"].some(key=>message.includes(key));if(!quiet)console.warn("تعذر الإكمال التلقائي للرحلة",error);}
   finally{state.autoArrivalCompleting=false;}
 }
@@ -1012,8 +1012,8 @@ function handleDriverLocationError(error) {
   console.warn("driver precise location", error);
   const code=String(error?.code||"");
   if(code==="PRECISE_PERMISSION_REQUIRED"||code==="PERMISSION_DENIED"||error?.code===1){
-    toast("فعّل «الموقع الدقيق» لآمرني حتى يظهر موقعك الحقيقي");
-    window.KarwaGeo?.promptPreciseSettings?.("الكابتن يحتاج الموقع الدقيق للملاحة والطلبات وبلاغات الطريق. فعّل «استخدام الموقع الدقيق» ثم عد إلى آمرني.");
+    toast("فعّل «الموقع الدقيق» لمَسار حتى يظهر موقعك الحقيقي");
+    window.KarwaGeo?.promptPreciseSettings?.("الكابتن يحتاج الموقع الدقيق للملاحة والطلبات وبلاغات الطريق. فعّل «استخدام الموقع الدقيق» ثم عد إلى مَسار.");
     return;
   }
   if(code==="GPS_DISABLED"){toast("شغّل GPS للحصول على موقع دقيق");try{window.KarwaNative?.openLocationSettings?.();}catch{}return;}
@@ -1039,7 +1039,7 @@ function showOwnPosition(position) {
   const acc=Math.round(position.coords.accuracy||0);
   const excellent=acc>0&&acc<=15, precise=acc>0&&acc<=30;
   setLocationStatus(excellent?"GPS ممتاز":(precise?"GPS دقيق":"GPS مقبول"), "approved");
-  byId("locationHint").textContent = excellent?`دقة ممتازة • ${acc} م`:precise?`دقة عالية • ${acc} م`:`دقة الموقع ${acc} م — سيواصل آمرني تحسينها تلقائيًا.`;
+  byId("locationHint").textContent = excellent?`دقة ممتازة • ${acc} م`:precise?`دقة عالية • ${acc} م`:`دقة الموقع ${acc} م — سيواصل مَسار تحسينها تلقائيًا.`;
   drawPickupRoute();
   checkRoadReportProximity(position);
   evaluateDriverAutoArrival();
@@ -1095,7 +1095,7 @@ function startLocationSharing() {
     handleDriverLocationError(error);
     const code=String(error?.code||"");
     byId("locationHint").textContent = (code==="PRECISE_PERMISSION_REQUIRED"||code==="PERMISSION_DENIED"||error?.code===1)
-      ? "فعّل الموقع الدقيق من إعدادات آمرني ثم فعّل الاتصال مجددًا."
+      ? "فعّل الموقع الدقيق من إعدادات مَسار ثم فعّل الاتصال مجددًا."
       : (code==="GPS_DISABLED"?"GPS متوقف — شغّل الموقع في الهاتف.":"تعذر قراءة GPS بدقة كافية.");
     if ((code==="PRECISE_PERMISSION_REQUIRED"||code==="PERMISSION_DENIED"||error?.code===1) && state.user) {
       updateDoc(doc(db, "drivers", state.user.uid), { online: false, updatedAt: serverTimestamp() }).catch(() => {});
@@ -1167,7 +1167,7 @@ function configureDirectRegistrationUI() {
     byId("submitApplication").disabled = false;
     byId("submitApplication").textContent = "إنشاء الحساب وإرسال طلب الموافقة";
   } else {
-    byId("applicationHeroTitle").textContent = "انضم إلى كباتن آمرني";
+    byId("applicationHeroTitle").textContent = "انضم إلى كباتن مَسار";
     byId("applicationHeroText").textContent = "أكمل بياناتك، ثم يُرسل طلبك إلى الإدارة للموافقة.";
     byId("applicationHeroBadge").textContent = "طلب انضمام";
   }
@@ -1320,7 +1320,7 @@ function renderCaptainRestaurantMeals() {
 function updateVehicleApplicationFields() {
   const serviceSelect = byId("serviceType");
   const vehicleSelect = byId("vehicleType");
-  // الدراجة في آمرني مخصصة للتوصيل فقط. إذا اختارها المستخدم نثبت نوع الخدمة على توصيل تلقائيًا.
+  // الدراجة في مَسار مخصصة للتوصيل فقط. إذا اختارها المستخدم نثبت نوع الخدمة على توصيل تلقائيًا.
   if (vehicleSelect?.value === "دراجة" && serviceSelect && serviceSelect.value !== "other") serviceSelect.value = "delivery";
   const serviceType = serviceSelect?.value || "taxi";
   const other = serviceType === "other";
@@ -1531,7 +1531,7 @@ byId("applicationForm").addEventListener("submit", async event => {
       try { await deleteUser(createdCredential.user); } catch (rollbackError) { console.warn("تعذر حذف حساب التسجيل غير المكتمل", rollbackError); }
     }
     const deviceMessage = error?.message === "DEVICE_NATIVE_REQUIRED" || error?.code === "device/native-required"
-      ? "إنشاء حساب كابتن جديد متاح من تطبيق آمرني على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
+      ? "إنشاء حساب كابتن جديد متاح من تطبيق مَسار على Android فقط حتى يتم ربط الحساب بهذا الهاتف."
       : (directSignup && String(error?.code||"").includes("permission-denied") ? "هذا الهاتف مرتبط بحساب آخر. إذا غيّرت هاتفك، اطلب نقل الحساب من الإدارة." : "");
     toast(error?.message==="GOVERNORATE_DISABLED"?"التسجيل أو إعادة الإرسال متوقف حاليًا في هذه المحافظة. اختر محافظة فعالة أو راجع الإدارة.":deviceMessage || authMessage(error));
   } finally {
@@ -1611,11 +1611,11 @@ function orderCard(order, mode) {
       ${order.type === "parcel" && order.parcelDetails ? `<div class="order-meta delivery-addresses"><span>👤 المستلم: ${escapeHtml(order.parcelDetails.recipientName || "غير محدد")}</span><span>☎️ ${escapeHtml(order.parcelDetails.recipientPhone || "غير محدد")}</span>${order.parcelDetails.notes ? `<span>📝 ${escapeHtml(order.parcelDetails.notes)}</span>` : ""}</div>` : ""}
       ${order.customerEditedAt ? `<div class="notice" style="margin-top:8px"><strong>✏️ عدّل العميل تفاصيل الطلب</strong><span>اعتمد العناوين والملاحظات الظاهرة حاليًا؛ هذه أحدث نسخة.</span></div>` : ""}
       <div class="order-bottom">
-        <div class="order-meta"><span>${escapeHtml(order.id)}</span><span>👤 ${escapeHtml(order.customerName || "عميل آمرني")}</span><span>${escapeHtml(order.payment || "نقدًا")}</span>${mode === "available" ? `<span>🗓️ ${escapeHtml(formatOrderCreatedAt(order))}</span>` : ""}${mode === "available" && Number.isFinite(distanceToOrder(order)) ? `<span>يبعد ${distanceToOrder(order).toFixed(1)} كم</span>` : ""}</div>
+        <div class="order-meta"><span>${escapeHtml(order.id)}</span><span>👤 ${escapeHtml(order.customerName || "عميل مَسار")}</span><span>${escapeHtml(order.payment || "نقدًا")}</span>${mode === "available" ? `<span>🗓️ ${escapeHtml(formatOrderCreatedAt(order))}</span>` : ""}${mode === "available" && Number.isFinite(distanceToOrder(order)) ? `<span>يبعد ${distanceToOrder(order).toFixed(1)} كم</span>` : ""}</div>
         ${order.distanceKm ? `<div class="order-meta"><span>المشوار ${Number(order.distanceKm).toFixed(1)} كم</span><span>≈ ${Math.round(Number(order.durationMin||0))} دقيقة</span><span>${order.type==="ride"&&mode==="available"?`تسعيرتك ${money(state.driverData?.ratePerKm||800)} / كم`:`صافي الكابتن ${money(order.driverEarnings)}`}</span></div>` : ""}
         <span class="order-price">${order.type==="ride"&&mode==="available"?`≈ ${money(Number(order.distanceKm||0)*Number(state.driverData?.ratePerKm||800))}`:money(order.price)}</span>
       </div>
-      ${order.type==="ride"&&statusIndex===2?`<div class="order-meta"><span>📍 إذا لم تُدخل رمز العميل، سيؤكد آمرني الوصول تلقائيًا عندما تصلان معًا إلى الوجهة عبر GPS الدقيق.</span></div>`:""}
+      ${order.type==="ride"&&statusIndex===2?`<div class="order-meta"><span>📍 إذا لم تُدخل رمز العميل، سيؤكد مَسار الوصول تلقائيًا عندما تصلان معًا إلى الوجهة عبر GPS الدقيق.</span></div>`:""}
       ${action || scanAction ? `<div class="order-actions">${scanAction}${action}</div>` : ""}
     </article>`;
 }
@@ -1679,11 +1679,11 @@ function openDriverDashboard() {
   state.viewUnsubscribes.push(()=>window.clearInterval(offerClock));
   startDriverCommunityLayers();
   window.setTimeout(() => state.map?.invalidateSize(), 120);
-  byId("captainName").textContent = state.userData?.name || state.user?.displayName || "آمرني";
+  byId("captainName").textContent = state.userData?.name || state.user?.displayName || "مَسار";
 
   const driverUnsubscribe = onSnapshot(doc(db, "drivers", state.user.uid), snapshot => {
     state.driverData = snapshot.exists() ? snapshot.data() : {
-      name: state.userData?.name || "كابتن آمرني",
+      name: state.userData?.name || "كابتن مَسار",
       phone: "",
       vehicleType: "غير محدد",
       plate: "غير محدد",
@@ -1697,6 +1697,7 @@ function openDriverDashboard() {
     }
     renderReputation();
     if (state.driverData.blocked === true) {
+      window.KarwaNative?.setDispatchConnectionEnabled?.(false);
       stopLocationSharing();
       byId("blockedReason").textContent = state.driverData.blockReason || "راجع الإدارة لمعرفة سبب إيقاف الحساب.";
       showView("blocked");
@@ -1705,6 +1706,7 @@ function openDriverDashboard() {
     showView("driver");
     byId("onlineSwitch").classList.toggle("on", state.driverData.online === true);
     byId("onlineLabel").textContent = state.driverData.online ? "متصل" : "غير متصل";
+    window.KarwaNative?.setDispatchConnectionEnabled?.(state.driverData.online === true);
     byId("vehicleSummary").textContent = `${state.driverData.vehicleType || "مركبة"} • ${state.driverData.plate || "بدون لوحة"}`;
     updateDriverSettingsInfo();
     if (state.driverData.online) startLocationSharing();
@@ -1875,6 +1877,7 @@ onAuthStateChanged(auth, user => {
   state.topupUnsubscribe?.(); state.topupUnsubscribe=null; state.topupRequests=[];
   clearViewListeners();
   if (!user) {
+    window.KarwaNative?.setDispatchConnectionEnabled?.(false);
     state.userData = null;
     state.driverData = null;
     state.notifications = [];
@@ -1972,7 +1975,7 @@ const ROAD_REPORT_VERIFY_MAX_M=120;
 function communityIcon(kind,type="report",confirmations=0,name=""){
  const meta=reportMeta[kind]||["📌","بلاغ"],badge=type==='report'&&confirmations?`<b class="confirm-badge">${confirmations}</b>`:"";
  if(type==='landmark'){
-  const label=escapeHtml(name||"معلم آمرني");
+  const label=escapeHtml(name||"معلم مَسار");
   return window.L.divIcon({className:"karwa-landmark-div-icon",html:`<div class="karwa-landmark-label" title="${label}"><span>${label}</span></div>`,iconSize:[180,34],iconAnchor:[90,17]});
  }
  return window.L.divIcon({className:"",html:`<div class="road-report-marker">${meta[0]}${badge}</div>`,iconSize:[38,38],iconAnchor:[19,19]});
@@ -2037,7 +2040,7 @@ async function submitRoadVerification(reportId,answer){
  try{
   const result=await verifyRoadReportDirect(reportId,answer);
   if(answer==='yes'){toast("تم تأكيد أن البلاغ ما زال موجودًا — شكرًا لك.");}
-  else if(result.removed){toast("أكد كابتنان زوال البلاغ — تم حذفه من خريطة آمرني.");}
+  else if(result.removed){toast("أكد كابتنان زوال البلاغ — تم حذفه من خريطة مَسار.");}
   else toast("تم تسجيل «لا». ننتظر تأكيد كابتن آخر يمر بالمكان.");
   closeRoadVerificationPrompt("answered");
  }catch(error){console.error("road verification",error);toast(roadReportTransactionMessage(error));closeRoadVerificationPrompt("error");}
@@ -2057,9 +2060,9 @@ function startDriverCommunityLayers(){if(communityLayers.started||!state.map||!s
   onSnapshot(query(collection(db,"roadReportVerifications"),where("driverId","==",state.user.uid)),snap=>{communityLayers.myVerificationRounds.clear();snap.forEach(d=>{const x=d.data(),reportId=String(x.reportId||"");if(reportId)communityLayers.myVerificationRounds.set(reportId,Math.max(0,Math.floor(Number(x.round||0))));});if(state.lastPosition)checkRoadReportProximity(state.lastPosition);},error=>console.warn("تعذر تحميل سجل تحقق البلاغات",error));
   onSnapshot(collection(db,"roadReports"),snap=>{const live=new Set(),liveData=new Map();snap.forEach(d=>{const x=d.data();if(!reportIsLive(x))return;live.add(d.id);liveData.set(d.id,x);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;const label=reportMeta[x.type]?.[1]||"بلاغ طريق",c=Number(x.confirmations||0),mine=roadReportAnsweredByMe(d.id,x),absenceCount=Number(x.absenceVoteCount||0);let m=communityLayers.reports.get(d.id);if(!m){m=window.L.marker(ll,{icon:communityIcon(x.type,"report",c)}).addTo(state.map);communityLayers.reports.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(communityIcon(x.type,"report",c));}const verifyStatus=absenceCount===1?'<br><small>كابتن واحد أفاد بزواله — بانتظار تحقق ثانٍ.</small>':`<br><small>${c?`أكده ${c} من الكباتن`:'بلاغ حديث'}</small>`;m.bindPopup(`<div dir="rtl"><b>${label}</b>${x.note?`<br>${escapeHtml(x.note)}`:""}${verifyStatus}${mine?'':`<br><button class="report-confirm" onclick="karwaConfirmRoadReport('${d.id}')">✓ ما زال موجودًا</button>`}</div>`);
   });communityLayers.reportData=liveData;for(const [id,m] of communityLayers.reports)if(!live.has(id)){state.map.removeLayer(m);communityLayers.reports.delete(id);communityLayers.proximity.delete(id);communityLayers.myVerificationRounds.delete(id);if(communityLayers.activePrompt?.reportId===id)closeRoadVerificationPrompt("removed");}if(state.lastPosition)checkRoadReportProximity(state.lastPosition);},error=>console.warn("تعذر تحميل بلاغات الطريق",error));
-  onSnapshot(collection(db,"landmarks"),snap=>{const live=new Set(),data=[];snap.forEach(d=>{const x=d.data();if(x.status==="hidden")return;data.push({...x,id:d.id});live.add(d.id);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;let m=communityLayers.landmarks.get(d.id);const landmarkName=x.name||"معلم آمرني",landmarkCategory=x.category||"معلم محلي",landmarkIcon=communityIcon(null,"landmark",0,landmarkName);if(!m){m=window.L.marker(ll,{icon:landmarkIcon,riseOnHover:true,title:landmarkName}).addTo(state.map);communityLayers.landmarks.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(landmarkIcon)}m.bindPopup(`<div dir="rtl"><b>${escapeHtml(landmarkName)}</b><br><small>${escapeHtml(landmarkCategory)} · أضيف بواسطة ${x.createdByRole==='driver'?'كابتن':'عميل'}</small></div>`)});communityLayers.landmarkData=data;driverMapSearchCache.clear();for(const [id,m] of communityLayers.landmarks)if(!live.has(id)){state.map.removeLayer(m);communityLayers.landmarks.delete(id)}});
+  onSnapshot(collection(db,"landmarks"),snap=>{const live=new Set(),data=[];snap.forEach(d=>{const x=d.data();if(x.status==="hidden")return;data.push({...x,id:d.id});live.add(d.id);const ll=[Number(x.latitude),Number(x.longitude)];if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;let m=communityLayers.landmarks.get(d.id);const landmarkName=x.name||"معلم مَسار",landmarkCategory=x.category||"معلم محلي",landmarkIcon=communityIcon(null,"landmark",0,landmarkName);if(!m){m=window.L.marker(ll,{icon:landmarkIcon,riseOnHover:true,title:landmarkName}).addTo(state.map);communityLayers.landmarks.set(d.id,m)}else{m.setLatLng(ll);m.setIcon(landmarkIcon)}m.bindPopup(`<div dir="rtl"><b>${escapeHtml(landmarkName)}</b><br><small>${escapeHtml(landmarkCategory)} · أضيف بواسطة ${x.createdByRole==='driver'?'كابتن':'عميل'}</small></div>`)});communityLayers.landmarkData=data;driverMapSearchCache.clear();for(const [id,m] of communityLayers.landmarks)if(!live.has(id)){state.map.removeLayer(m);communityLayers.landmarks.delete(id)}});
 }
-async function submitRoadReport(type){if(!state.user)return toast("سجّل الدخول أولًا");const p=state.lastPosition?.coords;if(!p||!Number.isFinite(Number(p.latitude)))return toast("فعّل GPS وانتظر تحديد موقعك");const meta=reportMeta[type];if(!meta)return;try{await addDoc(collection(db,"roadReports"),{type,note:byId("roadReportNote")?.value.trim()||"",latitude:Number(p.latitude),longitude:Number(p.longitude),reportedBy:state.user.uid,reporterName:state.driverData?.name||"كابتن آمرني",confirmedBy:[state.user.uid],confirmations:1,absenceVotes:[],absenceVoteCount:0,firstAbsentBy:"",verificationRound:0,active:true,createdAt:serverTimestamp(),createdAtISO:new Date().toISOString()});if(byId("roadReportNote"))byId("roadReportNote").value="";toast(`تم إرسال بلاغ: ${meta[1]}`)}catch(e){console.error(e);toast("تعذر حفظ البلاغ — انشر سياسات Supabase الجديدة")}}
+async function submitRoadReport(type){if(!state.user)return toast("سجّل الدخول أولًا");const p=state.lastPosition?.coords;if(!p||!Number.isFinite(Number(p.latitude)))return toast("فعّل GPS وانتظر تحديد موقعك");const meta=reportMeta[type];if(!meta)return;try{await addDoc(collection(db,"roadReports"),{type,note:byId("roadReportNote")?.value.trim()||"",latitude:Number(p.latitude),longitude:Number(p.longitude),reportedBy:state.user.uid,reporterName:state.driverData?.name||"كابتن مَسار",confirmedBy:[state.user.uid],confirmations:1,absenceVotes:[],absenceVoteCount:0,firstAbsentBy:"",verificationRound:0,active:true,createdAt:serverTimestamp(),createdAtISO:new Date().toISOString()});if(byId("roadReportNote"))byId("roadReportNote").value="";toast(`تم إرسال بلاغ: ${meta[1]}`)}catch(e){console.error(e);toast("تعذر حفظ البلاغ — انشر سياسات Supabase الجديدة")}}
 document.querySelectorAll("[data-road-report]").forEach(b=>b.addEventListener("click",()=>submitRoadReport(b.dataset.roadReport)));
 const driverMapSearchCache = new Map();
 function normalizeDriverPlaceSearch(value) { return String(value || "").trim().replace(/[أإآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/[\u064B-\u065F]/g, "").replace(/\s+/g, " ").toLowerCase(); }
@@ -2089,7 +2092,7 @@ async function searchDriverMapPlaces(queryText,options={}) {
   const needle=normalizeDriverPlaceSearch(queryText);
   const local = communityLayers.landmarkData
     .filter(item => normalizeDriverPlaceSearch(item.name).includes(needle)&&driverLocalPlaceMatchesCategory(item,category))
-    .map(item => ({ lat:item.latitude, lon:item.longitude, name:item.name, display_name:`${item.name} — معلم مضاف في آمرني`, namedetails:{"name:ar":item.name}, category:item.category||"place", osm_type:"karwa", osm_id:item.id, importance:1.4 }));
+    .map(item => ({ lat:item.latitude, lon:item.longitude, name:item.name, display_name:`${item.name} — معلم مضاف في مَسار`, namedetails:{"name:ar":item.name}, category:item.category||"place", osm_type:"karwa", osm_id:item.id, importance:1.4 }));
   const seen = new Set();
   const places = [...local, ...remote].filter(place => {
     const id = place.osm_type && place.osm_id ? `${place.osm_type}:${place.osm_id}` : `${Number(place.lat).toFixed(5)},${Number(place.lon).toFixed(5)}`;
@@ -2134,7 +2137,7 @@ function setupDriverMapPlaceTool() {
   });
   byId("driverSaveMapLandmark")?.addEventListener("click",async()=>{
     if(!state.user)return toast("سجّل الدخول أولًا");const name=byId("driverMapLandmarkName")?.value.trim();if(!name||name.length<3)return toast("اكتب اسم المعلم بوضوح");initializeDriverMap();const center=state.map.getCenter(),point=state.mapSearchSelection||{latitude:center.lat,longitude:center.lng};
-    try{await addDoc(collection(db,"landmarks"),{name,category:byId("driverMapLandmarkCategory")?.value||"place",latitude:Number(point.latitude),longitude:Number(point.longitude),createdBy:state.user.uid,createdByName:state.driverData?.name||"كابتن آمرني",createdByRole:"driver",status:"active",createdAt:serverTimestamp(),createdAtISO:new Date().toISOString()});byId("driverMapLandmarkName").value="";driverMapSearchCache.clear();selection.textContent=`تمت إضافة المعلم: ${name}`;toast("تمت إضافة المعلم إلى خريطة آمرني");}catch(error){console.error(error);toast("تعذر إضافة المعلم — تحقق من الاتصال والصلاحيات");}
+    try{await addDoc(collection(db,"landmarks"),{name,category:byId("driverMapLandmarkCategory")?.value||"place",latitude:Number(point.latitude),longitude:Number(point.longitude),createdBy:state.user.uid,createdByName:state.driverData?.name||"كابتن مَسار",createdByRole:"driver",status:"active",createdAt:serverTimestamp(),createdAtISO:new Date().toISOString()});byId("driverMapLandmarkName").value="";driverMapSearchCache.clear();selection.textContent=`تمت إضافة المعلم: ${name}`;toast("تمت إضافة المعلم إلى خريطة مَسار");}catch(error){console.error(error);toast("تعذر إضافة المعلم — تحقق من الاتصال والصلاحيات");}
   });
 }
 setupDriverMapPlaceTool();

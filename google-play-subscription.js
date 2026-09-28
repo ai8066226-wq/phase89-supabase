@@ -28,7 +28,7 @@ function show() {
   panel.querySelector("[data-play-action]").textContent = info.active ? "إدارة الاشتراك في Google Play" : "الاشتراك عبر Google Play";
   panel.querySelector("[data-play-action]").disabled = verifying;
   panel.querySelector("[data-play-restore]").disabled = verifying;
-  panel.querySelector("[data-play-platform]").textContent = nativeBilling() ? "الدفع والتجديد عبر Google Play" : "افتح تطبيق آمرني على Android للاشتراك";
+  panel.querySelector("[data-play-platform]").textContent = nativeBilling() ? "الدفع والتجديد عبر Google Play" : "افتح تطبيق مَسار على Android للاشتراك";
   if (context.statusId) document.getElementById(context.statusId).textContent = info.active ? "نشط" : info.expires ? "منتهي" : "بانتظار التفعيل";
   if (context.priceId) document.getElementById(context.priceId).textContent = playPrice;
   if (context.startedId) document.getElementById(context.startedId).textContent = subscriptionDate(info.started);

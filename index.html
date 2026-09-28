@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b6f75">
-  <meta name="description" content="آمرني — تطبيق عربي لحجز المشاوير وتوصيل الأغراض والطعام">
-  <title>آمرني | الحجز والتوصيل</title>
+  <meta name="description" content="مَسار — تطبيق عربي لحجز المشاوير وتوصيل الأغراض والطعام">
+  <title>مَسار | الحجز والتوصيل</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
 
@@ -1615,7 +1615,7 @@ body.customer-map-mode main{max-width:none;margin:0;padding:0}
 @media(prefers-reduced-motion:reduce){#customerOptionsPanel,.map-options-toggle,.map-options-scrim{transition:none}}
 </style>
 <style id="phase21-navigation-ui">
-/* واجهة ملاحة مستوحاة من تطبيقات الخرائط الحديثة مع هوية آمرني */
+/* واجهة ملاحة مستوحاة من تطبيقات الخرائط الحديثة مع هوية مَسار */
 body.customer-map-mode{--navy:#0a2540;--navy-light:#164b78;--orange:#d3401f;--orange-light:#c83c1d;--mint:#00746f;--mint-dark:#006b66;--line:#cbd6e2;--muted:#43536a;color:#0a2540}
 body.customer-map-mode .topbar{border-color:#d9e2eb;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(10,37,64,.1)}
 body.customer-map-mode .location-button small{color:#526278}body.customer-map-mode .location-button strong{color:#0a2540}
@@ -2261,7 +2261,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
     linear-gradient(155deg,#0b2944,#0b4f70 58%,#087b75 128%);
 }
 #authModal .auth-brand::before {
-  content: "منصة آمرني";
+  content: "منصة مَسار";
   margin-bottom: 22px;
   padding: 6px 10px;
   border: 1px solid rgba(255,255,255,.18);
@@ -2504,9 +2504,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">آ</div>
+        <div class="brand-logo">م</div>
         <div>
-          <strong>آمرني</strong>
+          <strong>مَسار</strong>
           <small>الحجز والتوصيل</small>
         </div>
       </div>
@@ -2545,7 +2545,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
         <div class="top-actions">
           <button class="icon-button" id="notificationButton" aria-label="الإشعارات">♢</button>
           <button class="avatar" id="accountButton" aria-label="فتح الحساب">
-            <span id="smallAvatar">آ</span>
+            <span id="smallAvatar">م</span>
           </button>
         </div>
       </header>
@@ -2797,7 +2797,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
               <div class="center-pin" id="centerPin">📍</div><div id="customerMap"></div>
               <div class="customer-map-credit" aria-label="مصادر بيانات الخريطة"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><span>·</span><a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a></div>
               <div class="map-information">
-                <strong id="mapInfoTitle">خريطة آمرني المباشرة</strong>
+                <strong id="mapInfoTitle">خريطة مَسار المباشرة</strong>
                 <small id="mapInfoText">اضغط على الخريطة لتحديد نقطة الانطلاق، ثم الوجهة.</small>
               </div>
             </div>
@@ -2807,13 +2807,13 @@ body.customer-map-mode #home>.welcome::after { display: none; }
           <div class="customer-settings-scrim" id="customerSettingsScrim" aria-hidden="true"></div>
           <aside class="customer-settings-panel" id="customerSettingsPanel" role="dialog" aria-modal="true" aria-label="معلومات وإعدادات العميل" aria-hidden="true">
             <div class="customer-settings-header">
-              <div><small>آمرني للعملاء</small><strong>الحساب والإعدادات</strong></div>
+              <div><small>مَسار للعملاء</small><strong>الحساب والإعدادات</strong></div>
               <button type="button" class="customer-settings-close" id="customerSettingsClose" aria-label="إغلاق الإعدادات">×</button>
             </div>
             <div class="customer-settings-body">
               <section class="customer-profile-card" aria-label="معلومات العميل">
                 <div class="customer-settings-avatar" id="customerSettingsAvatar">م</div>
-                <div class="customer-profile-copy"><strong id="customerSettingsName">مستخدم آمرني</strong><small id="customerSettingsEmail">—</small></div>
+                <div class="customer-profile-copy"><strong id="customerSettingsName">مستخدم مَسار</strong><small id="customerSettingsEmail">—</small></div>
                 <span class="customer-account-badge" id="customerSettingsAccountStatus">✓ حساب متصل</span>
               </section>
               <dl class="customer-info-grid">
@@ -2865,6 +2865,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
                 <button type="button" class="customer-settings-action" data-customer-settings-view="wallet">الأسعار</button>
                 <button type="button" class="customer-settings-action" id="customerSettingsAddresses">العناوين المحفوظة</button>
                 <button type="button" class="customer-settings-action" id="customerSettingsSupport">المساعدة والدعم</button>
+                <a class="customer-settings-action" href="./delete-account.html">طلب حذف الحساب والبيانات</a>
                 <button type="button" class="customer-settings-action" data-customer-settings-view="profile">الملف الشخصي</button>
                 
                 <button type="button" class="customer-settings-action danger" id="customerSettingsLogout">تسجيل الخروج</button>
@@ -2890,7 +2891,7 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 
         <section class="view" id="wallet">
           <div class="page-heading"><h1>الأسعار والدفع</h1><p>اطّلع على طريقة حساب أجرة الرحلة أو الخدمة قبل تأكيد طلبك.</p></div>
-          <div class="wallet-card"><p>استخدام تطبيق آمرني للعميل</p><div class="balance" style="font-size:clamp(28px,5vw,42px)">دون شحن</div><small class="wallet-note">لا تحتاج إلى رصيد أو اشتراك لإنشاء طلب جديد.</small></div>
+          <div class="wallet-card"><p>استخدام تطبيق مَسار للعميل</p><div class="balance" style="font-size:clamp(28px,5vw,42px)">دون شحن</div><small class="wallet-note">لا تحتاج إلى رصيد أو اشتراك لإنشاء طلب جديد.</small></div>
           <div class="wallet-grid wallet-topup-grid"><div class="card referral-card"><h2>أجرة واضحة قبل الرحلة</h2><p class="muted">تُعرض أجرة الرحلة والتوصيل بحسب تفاصيل الطلب. يحدد كابتن التكسي سعر الكيلومتر الخاص به، ويظهر المبلغ النهائي عند قبوله.</p><div class="referral-code-box"><small>رسوم استخدام المنصة للعميل</small><strong>0 د.ع</strong><span>تُدفع أجرة الرحلة أو الخدمة وفق تفاصيل الطلب، دون شحن حساب العميل.</span></div></div></div>
         </section>
 
@@ -2902,8 +2903,8 @@ body.customer-map-mode #home>.welcome::after { display: none; }
 
           <div class="profile-grid">
             <div class="card profile-main">
-              <div class="big-avatar" id="bigAvatar">آ</div>
-              <h2 id="profileName">حسابك في آمرني</h2>
+              <div class="big-avatar" id="bigAvatar">م</div>
+              <h2 id="profileName">حسابك في مَسار</h2>
               <p class="profile-email" id="profileEmail">سجّل الدخول لمزامنة بياناتك</p>
               <button class="secondary-button" id="editName">تعديل الاسم</button>
               <button class="secondary-button danger-button" id="logoutButton">تسجيل الخروج</button>
@@ -3025,9 +3026,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="modal-backdrop" id="ratingModal" role="dialog" aria-modal="true" aria-labelledby="ratingTitle">
     <div class="modal rating-modal">
       <h2 id="ratingTitle">قيّم تجربتك</h2>
-      <p id="ratingIntro">يساعد تقييمك في تحسين جودة خدمات آمرني.</p>
+      <p id="ratingIntro">يساعد تقييمك في تحسين جودة خدمات مَسار.</p>
       <div class="rating-driver-card">
-        <strong id="ratingDriverName">كابتن آمرني</strong>
+        <strong id="ratingDriverName">كابتن مَسار</strong>
         <small id="ratingOrderCode"></small>
       </div>
       <form id="ratingForm">
@@ -3090,9 +3091,9 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <div class="modal-backdrop show" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal auth-modal role-auth-modal">
       <div class="auth-brand">
-        <div class="brand-logo">آ</div>
-        <div class="auth-brand-copy"><h2 id="authTitle">مرحبًا بك في آمرني</h2><p>وجهتك الأقرب للرحلات والتوصيل والخدمات اليومية.</p></div>
-        <div class="auth-brand-points" aria-label="مزايا آمرني">
+        <div class="brand-logo">م</div>
+        <div class="auth-brand-copy"><h2 id="authTitle">مرحبًا بك في مَسار</h2><p>وجهتك الأقرب للرحلات والتوصيل والخدمات اليومية.</p></div>
+        <div class="auth-brand-points" aria-label="مزايا مَسار">
           <span><b>✓</b> تسجيل آمن وسريع</span>
           <span><b>⌖</b> تتبع مباشر للطلبات</span>
           <span><b>☆</b> خدمات موثوقة في مكان واحد</span>
@@ -3134,8 +3135,8 @@ body.customer-map-mode #home>.welcome::after { display: none; }
   <script src="./native-notifications.js?v=117"></script>
   <script src="./service-themes.js?v=81"></script>
   <script src="./iraq-governorates.js?v=117"></script>
-  <script type="module" src="./app.js?v=122"></script>
-  <script src="./pwa.js?v=122"></script>
+  <script type="module" src="./app.js?v=123"></script>
+  <script src="./pwa.js?v=123"></script>
 
 <script id="phase20-map-first-js">
 window.addEventListener("DOMContentLoaded",()=>{

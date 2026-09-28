@@ -21,3 +21,6 @@
 .play-subscription-badge { display: inline-block; border-radius: 999px; padding: 5px 11px; background: #deebff; color: #214879; font-weight: 800; }
 .play-subscription-actions { display: flex; flex-wrap: wrap; gap: 9px; }
 .play-subscription-actions button { flex: 1 1 145px; min-height: 45px; }
+
+/* Masar Play release: subscriptions are purchased in Google Play. Legacy payment history stays visible. */
+#driverSettingsWallet .unified-topup-grid,#serviceWalletSection .unified-topup-grid,#serviceTopupMethodsDisabled{display:none!important}

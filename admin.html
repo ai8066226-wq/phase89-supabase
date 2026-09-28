@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b6f75">
-  <meta name="description" content="لوحة إدارة تطبيق آمرني">
-  <title>آمرني | لوحة الإدارة</title>
+  <meta name="description" content="لوحة إدارة تطبيق مَسار">
+  <title>مَسار | لوحة الإدارة</title>
   <link rel="stylesheet" href="./portal.css?v=81">
   <meta name="theme-color" content="#0b6f75">
   <link rel="icon" href="./karwa-icon-192.png" type="image/png">
@@ -41,13 +41,13 @@
 </style>
   <link rel="stylesheet" href="./native-notifications.css?v=81">
   <link rel="stylesheet" href="./amrni-design.css?v=118">
-  <link rel="stylesheet" href="./monthly-subscription.css?v=122">
+  <link rel="stylesheet" href="./monthly-subscription.css?v=123">
 </head>
 <body class="admin-page">
   <header class="topbar">
     <a class="brand" href="./index.html">
-      <span class="logo">آ</span>
-      <span><strong>آمرني</strong><small>لوحة الإدارة</small></span>
+      <span class="logo">م</span>
+      <span><strong>مَسار</strong><small>لوحة الإدارة</small></span>
     </a>
     <div class="top-actions">
       <a class="admin-notifications-link hidden" id="adminNotificationsLink" href="#adminModules" aria-label="فتح مركز المتابعة">
@@ -63,7 +63,7 @@
   <section class="auth-wrap" id="authView">
     <div class="card auth-card">
       <h1>دخول الإدارة</h1>
-      <p>هذه الصفحة مخصصة للحسابات المخوّلة بإدارة آمرني.</p>
+      <p>هذه الصفحة مخصصة للحسابات المخوّلة بإدارة مَسار.</p>
       <form id="loginForm" action="javascript:void(0)" onsubmit="return false;">
         <div class="field">
           <label for="email">البريد الإلكتروني</label>
@@ -91,7 +91,7 @@
     <section class="hero admin-hero">
       <div>
         <span class="hero-kicker">مركز التحكم والتشغيل</span>
-        <h1>لوحة إدارة آمرني</h1>
+        <h1>لوحة إدارة مَسار</h1>
         <p>نظرة واضحة على التشغيل، الكباتن، الطلبات والأداء المالي لحظة بلحظة.</p>
       </div>
       <div class="hero-side">
@@ -107,6 +107,7 @@
         <span>الإشعارات والأقسام في مكان واحد</span>
       </div>
       <nav class="admin-module-grid" aria-label="أقسام لوحة الإدارة">
+        <a class="admin-module-card" data-tone="teal" href="#privacyRequestsPanel"><span class="module-notification" id="navPrivacyRequestsCount">0</span><span class="module-icon" aria-hidden="true">◈</span><span class="module-copy"><strong>طلبات الخصوصية</strong><small>مراجعة طلبات حذف الحساب والبيانات</small></span><span class="module-open">فتح القسم <b>←</b></span></a>
         <a class="admin-module-card" data-tone="amber" href="#topupsPanel">
           <span class="module-notification" id="navTopupsCount" aria-live="polite">0</span>
           <span class="module-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span>
@@ -211,7 +212,7 @@
       <div class="stat"><small>رحلات ملغاة</small><strong id="cancelledTripsCount">0</strong></div>
       <div class="stat"><small>كباتن متصلون</small><strong id="onlineDriversCount">0</strong></div>
       <div class="stat"><small>إجمالي المبيعات</small><strong id="grossRevenue">0 د.ع</strong></div>
-      <div class="stat"><small>رسوم آمرني الثابتة</small><strong id="commissionRevenue">0 د.ع</strong></div>
+      <div class="stat"><small>رسوم مَسار الثابتة</small><strong id="commissionRevenue">0 د.ع</strong></div>
       <div class="stat"><small>أرباح الكباتن</small><strong id="driversPayout">0 د.ع</strong></div>
       <div class="stat"><small>رصيد العملاء الفعلي</small><strong id="customerWalletBalance">0 د.ع</strong></div>
       <div class="stat"><small>رصيد الكباتن الفعلي</small><strong id="captainWalletBalance">0 د.ع</strong></div>
@@ -222,7 +223,7 @@
       <section class="admin-main-column">
         <div class="section-title compact"><div><small>الإدارة اليومية</small><h2>الخدمات والتشغيل والكباتن</h2></div></div>
         <div class="card admin-panel finance-pro" id="financePanel">
-          <div class="card-heading"><div><h2>التقرير المالي الاحترافي</h2><p class="muted">أرصدة المحافظ الفعلية، المبيعات، رسوم آمرني، الشحنات والحركة المالية حسب الفترة.</p></div><span class="status-chip approved" id="financialReportBadge">0 عملية مكتملة</span></div>
+          <div class="card-heading"><div><h2>التقرير المالي الاحترافي</h2><p class="muted">أرصدة المحافظ الفعلية، المبيعات، رسوم مَسار، الشحنات والحركة المالية حسب الفترة.</p></div><span class="status-chip approved" id="financialReportBadge">0 عملية مكتملة</span></div>
           <div class="admin-panel-body" id="financialReport">
             <div class="finance-toolbar">
               <div class="finance-toolbar-group">
@@ -262,7 +263,7 @@
         <div class="card admin-panel" id="subscriptionsPanel"><div class="card-heading"><h2>سجل المشتركين</h2><span class="status-chip pending" id="subscriptionsAttentionBadge">0 يحتاج تجديد</span></div><div class="admin-panel-body"><div class="subscription-admin-stats"><div><small>حسابات الخدمات والكباتن</small><strong id="subscriptionsTotal">0</strong></div><div><small>اشتراكات فعالة</small><strong id="subscriptionsActive">0</strong></div><div><small>تحتاج تجديدًا</small><strong id="subscriptionsExpired">0</strong></div><div><small>فترة سماح</small><strong id="subscriptionsGrace">0</strong></div></div><div class="finance-accounts-tools"><input id="subscriptionSearchInput" type="search" placeholder="بحث باسم المشترك أو الهاتف أو البريد"><select id="subscriptionRoleFilter"><option value="all">جميع المشتركين</option><option value="driver">الكباتن</option><option value="serviceProvider">مزودو الخدمات</option></select></div><small id="subscriptionFilteredCount">0 حساب</small><div id="subscriptionsList" class="subscription-admin-list"></div></div></div>
 
         <div class="card admin-panel" id="governoratesPanel">
-          <div class="card-heading"><div><h2>تشغيل الخدمة حسب المحافظة</h2><p class="muted">فعّل المحافظات التي تعمل فيها آمرني. عند إيقاف محافظة يُمنع التسجيل والنشر وقبول الطلبات فيها، ويصبح الكباتن غير متصلين وتُخفى الخدمات النشطة.</p></div><span class="status-chip approved" id="governoratesStatusBadge">19 محافظة فعالة</span></div>
+          <div class="card-heading"><div><h2>تشغيل الخدمة حسب المحافظة</h2><p class="muted">فعّل المحافظات التي تعمل فيها مَسار. عند إيقاف محافظة يُمنع التسجيل والنشر وقبول الطلبات فيها، ويصبح الكباتن غير متصلين وتُخفى الخدمات النشطة.</p></div><span class="status-chip approved" id="governoratesStatusBadge">19 محافظة فعالة</span></div>
           <div class="admin-panel-body">
             <form id="governoratesSettingsForm">
               <div class="governorate-toolbar"><span class="governorate-summary" id="governoratesSummary">الخدمة متاحة في جميع المحافظات</span><div class="governorate-toolbar-actions"><button class="secondary" id="enableAllGovernorates" type="button">تفعيل الكل</button><button class="danger" id="disableAllGovernorates" type="button">إيقاف الكل</button></div></div>
@@ -346,6 +347,11 @@
           </div>
         </div>
 
+        <div class="card admin-panel" id="privacyRequestsPanel">
+          <div class="card-heading"><div><h2>طلبات حذف الحساب والبيانات</h2><p class="muted">تحقق من صاحب الحساب ثم نفّذ الحذف من شاشة إدارة الحسابات. لا تعتبر الطلب مكتملًا قبل حذف البيانات المطلوبة.</p></div><span class="status-chip pending" id="privacyRequestsBadge">0 طلب مفتوح</span></div>
+          <div class="admin-panel-body"><div id="privacyRequestsList" class="device-admin-list"><p class="muted">لا توجد طلبات حذف مفتوحة.</p></div></div>
+        </div>
+
         <div class="card admin-panel" id="waitingOrdersPanel">
           <div class="card-heading"><h2>الطلبات الواردة لحظيًا</h2><span class="status-chip pending" id="waitingOrdersBadge">0 طلب وارد الآن</span></div>
           <div class="orders" id="ordersList"></div>
@@ -408,6 +414,6 @@
   // لا يتم تسجيل عامل خدمة جديد من لوحة الإدارة.
   try { sessionStorage.setItem("karwa_admin_no_pwa", "1"); } catch (_) {}
 </script>
-  <script type="module" src="./admin.js?v=122"></script>
+  <script type="module" src="./admin.js?v=123"></script>
 </body>
 </html>

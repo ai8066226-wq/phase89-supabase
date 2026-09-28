@@ -269,7 +269,7 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
 export async function createUserWithEmailAndPassword(_auth, email, password) {
   let phone = signupPhoneFromPage();
   if (!phone && globalThis.AmrniDialog?.prompt) {
-    phone = normalizedSignupPhone(await globalThis.AmrniDialog.prompt("أدخل رقم الهاتف المطلوب ربطه بحساب آمرني.", "", {
+    phone = normalizedSignupPhone(await globalThis.AmrniDialog.prompt("أدخل رقم الهاتف المطلوب ربطه بحساب مَسار.", "", {
       title:"رقم الهاتف", icon:"☎", label:"رقم الهاتف", placeholder:"07XXXXXXXXX",
       required:true, multiline:false, inputType:"tel", inputMode:"tel", maxLength:15,
       confirmText:"متابعة إنشاء الحساب"
@@ -725,6 +725,7 @@ export async function karwaVerifyGooglePlaySubscription(purchase = {}) {
     },
     body: JSON.stringify({
       productId: String(purchase?.productId || "amrni_monthly_access"),
+      packageName: String(purchase?.packageName || "com.razi.karwa"),
       purchaseToken: String(purchase?.purchaseToken || ""),
       orderId: String(purchase?.orderId || ""),
       purchaseState: String(purchase?.state || purchase?.purchaseState || "PURCHASED"),
