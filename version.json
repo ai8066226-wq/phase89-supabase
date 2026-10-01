@@ -1,8 +1,8 @@
 {
-  "phase": 100,
-  "version": "3.0.4",
+  "phase": 101,
+  "version": "3.0.5",
   "webBasePhase": 87,
-  "updateMode": "masar-glow-3d-nav-v127",
+  "updateMode": "masar-fx-cinematic-v128",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",

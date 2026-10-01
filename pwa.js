@@ -1,5 +1,5 @@
 let deferredInstall=null;
-const KARWA_BUILD={phase:100,version:"3.0.4"};
+const KARWA_BUILD={phase:101,version:"3.0.5"};
 const karwaIsNative=!!window.KarwaNative;
 let karwaLastVersionCheck=0;
 
@@ -91,7 +91,7 @@ window.installKarwa=async()=>{
 };
 
 if(!karwaIsNative&&location.protocol!=="file:"&&"serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=127",{updateViaCache:"none"}).then(reg=>reg.update()).catch(console.error));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=128",{updateViaCache:"none"}).then(reg=>reg.update()).catch(console.error));
 }
 
 window.KarwaUpdate={check:()=>checkKarwaUpdate(true),build:KARWA_BUILD,native:karwaIsNative};

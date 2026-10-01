@@ -18,6 +18,22 @@
       mk({ color: "#ffffff", weight: Math.max(2, w * 0.38), opacity: 0.95, className: "m-route-flow" })
     ];
     var group = L.featureGroup(layers);
+    /* رسم المسار تدريجيًا عند أول ظهور (مرة واحدة) */
+    group.on("add", function () {
+      try {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        var els = [layers[0], layers[1], layers[2]].map(function (l) { return l.getElement && l.getElement(); }).filter(Boolean);
+        els.forEach(function (el) {
+          el.setAttribute("pathLength", "1");
+          el.style.transition = "none"; el.style.strokeDasharray = "1 1.01"; el.style.strokeDashoffset = "1";
+        });
+        void (els[0] && els[0].getBoundingClientRect());
+        requestAnimationFrame(function () {
+          els.forEach(function (el) { el.style.transition = "stroke-dashoffset 1.3s cubic-bezier(.4,.1,.2,1)"; el.style.strokeDashoffset = "0"; });
+          setTimeout(function () { els.forEach(function (el) { el.style.transition = ""; el.style.strokeDasharray = ""; el.style.strokeDashoffset = ""; }); }, 1500);
+        });
+      } catch (_) {}
+    });
     group.setLatLngs = function (c) { layers.forEach(function (l) { l.setLatLngs(c); }); return group; };
     return group;
   }

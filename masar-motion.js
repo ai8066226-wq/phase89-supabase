@@ -13,10 +13,10 @@
   var ROUTE = "M28 196C72 190 70 142 112 140S154 176 186 150C218 124 190 66 212 44";
   function splashMarkup() {
     return '' +
-      '<div class="ms-bg" aria-hidden="true"></div><div class="ms-grid" aria-hidden="true"></div>' +
+      '<div class="ms-bg" aria-hidden="true"></div><span class="ms-aurora a1" aria-hidden="true"></span><span class="ms-aurora a2" aria-hidden="true"></span><span class="ms-aurora a3" aria-hidden="true"></span><div class="ms-grid" aria-hidden="true"></div><canvas class="ms-canvas" aria-hidden="true"></canvas>' +
       '<div class="ms-stage">' +
         '<div class="ms-art" aria-hidden="true">' +
-          '<span class="ms-halo"></span><span class="ms-wave ms-wave-a"></span><span class="ms-wave ms-wave-b"></span>' +
+          '<span class="ms-halo"></span><span class="ms-wave ms-wave-a"></span><span class="ms-wave ms-wave-b"></span><span class="ms-shock"></span><span class="ms-shock s2"></span>' +
           '<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" class="ms-svg">' +
             '<defs><linearGradient id="msRoute" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#f4c85a"/></linearGradient>' +
             '<linearGradient id="msTile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12b3a6"/><stop offset="1" stop-color="#075d70"/></linearGradient></defs>' +
@@ -24,15 +24,55 @@
             '<path class="ms-route" pathLength="1" d="' + ROUTE + '"/>' +
             '<circle class="ms-pin-ring" cx="28" cy="196" r="13"/><circle class="ms-pin-dot" cx="28" cy="196" r="5"/>' +
             '<g class="ms-pin-end"><circle class="ms-pin-ring2" cx="212" cy="44" r="13"/><circle cx="212" cy="44" r="6" fill="#f4c85a"/><circle cx="212" cy="44" r="2.4" fill="#fff"/></g>' +
+            '<circle r="3" fill="#a6f3e3" opacity=".35" class="ms-runner"><animateMotion dur="1.7s" begin="0.55s" fill="freeze" path="' + ROUTE + '" calcMode="spline" keyTimes="0;1" keySplines=".45 .05 .25 1"/></circle>' +
+            '<circle r="4.2" fill="#a6f3e3" opacity=".6" class="ms-runner"><animateMotion dur="1.7s" begin="0.45s" fill="freeze" path="' + ROUTE + '" calcMode="spline" keyTimes="0;1" keySplines=".45 .05 .25 1"/></circle>' +
             '<circle r="5.5" fill="#fff" class="ms-runner"><animateMotion dur="1.7s" begin="0.35s" fill="freeze" path="' + ROUTE + '" calcMode="spline" keyTimes="0;1" keySplines=".45 .05 .25 1"/></circle>' +
             '<g class="ms-tile"><rect x="88" y="88" width="64" height="64" rx="20" fill="url(#msTile)" stroke="rgba(190,250,238,.6)" stroke-width="2"/>' +
             '<text x="120" y="133" fill="#fff" font-family="Tahoma,Arial,sans-serif" font-size="38" font-weight="800" text-anchor="middle">م</text></g>' +
           '</svg>' +
         '</div>' +
         '<h1 class="ms-word">مَسار</h1>' +
-        '<p class="ms-tag">رحلات <i></i> توصيل <i></i> خدمات</p>' +
+        '<p class="ms-tag"><span>رحلات</span><i></i><span>توصيل</span><i></i><span>خدمات</span></p>' +
       '</div>' +
       '<div class="ms-progress" aria-hidden="true"><span></span></div>';
+  }
+
+  /* جسيمات متوهجة + شرارات عند ظهور الشعار (Canvas خفيف) */
+  function startParticles(host) {
+    var cv = host.querySelector(".ms-canvas"); if (!cv || !cv.getContext) return;
+    var ctx = cv.getContext("2d"), dpr = Math.min(window.devicePixelRatio || 1, 2), W = 0, H = 0, parts = [], sparks = [], last = 0, t0 = 0;
+    var N = (navigator.hardwareConcurrency || 4) <= 4 ? 34 : 60;
+    function size() { W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    size(); window.addEventListener("resize", size);
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    for (var i = 0; i < N; i++) parts.push({ x: rnd(0, W), y: rnd(0, H), r: rnd(.6, 2.2), v: rnd(6, 22), a: rnd(.15, .6), p: rnd(0, 6.28), gold: Math.random() < .22 });
+    function burst() {
+      var art = host.querySelector(".ms-art"); if (!art) return;
+      var b = art.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+      for (var k = 0; k < 46; k++) { var ang = rnd(0, 6.28), sp = rnd(70, 260); sparks.push({ x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 0, max: rnd(.7, 1.3), r: rnd(1, 2.6), gold: k % 4 === 0 }); }
+    }
+    setTimeout(burst, 1300);
+    function frame(ts) {
+      if (!host.isConnected) { window.removeEventListener("resize", size); return; }
+      if (!t0) t0 = ts; var dt = Math.min(.05, (ts - (last || ts)) / 1000); last = ts;
+      var fade = Math.min(1, (ts - t0) / 700);
+      ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = "lighter";
+      parts.forEach(function (p) {
+        p.y -= p.v * dt; p.p += dt * 1.4; if (p.y < -6) { p.y = H + 6; p.x = rnd(0, W); }
+        var tw = .55 + .45 * Math.sin(p.p), x = p.x + Math.sin(p.p * .6) * 6;
+        ctx.beginPath(); ctx.fillStyle = p.gold ? "rgba(244,200,90," + p.a * tw * fade + ")" : "rgba(130,240,222," + p.a * tw * fade + ")";
+        ctx.shadowColor = p.gold ? "#f4c85a" : "#5eead4"; ctx.shadowBlur = 8; ctx.arc(x, p.y, p.r, 0, 6.283); ctx.fill();
+      });
+      for (var j = sparks.length - 1; j >= 0; j--) {
+        var s = sparks[j]; s.life += dt; if (s.life > s.max) { sparks.splice(j, 1); continue; }
+        s.vx *= .965; s.vy = s.vy * .965 + 40 * dt; s.x += s.vx * dt; s.y += s.vy * dt;
+        var al = 1 - s.life / s.max;
+        ctx.beginPath(); ctx.fillStyle = s.gold ? "rgba(255,214,110," + al + ")" : "rgba(160,255,238," + al + ")";
+        ctx.shadowColor = s.gold ? "#f4c85a" : "#5eead4"; ctx.shadowBlur = 12; ctx.arc(s.x, s.y, s.r * (.4 + al), 0, 6.283); ctx.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
   function endSplash() {
@@ -41,7 +81,7 @@
     splash.classList.add("is-leaving");
     root.classList.remove("masar-splash-on");
     reveal();
-    killTimer = setTimeout(removeSplash, 700);
+    killTimer = setTimeout(removeSplash, 900);
   }
   function removeSplash() {
     clearTimeout(killTimer);
@@ -60,7 +100,8 @@
     document.addEventListener("keydown", function onKey(e) {
       if (splash && (e.key === "Escape" || e.key === "Enter" || e.key === " ")) { endSplash(); document.removeEventListener("keydown", onKey); }
     });
-    splashTimer = setTimeout(endSplash, 4000);
+    splashTimer = setTimeout(endSplash, 3350);
+    startParticles(splash);
     /* شبكة أمان: لا تبقى الشاشة أبدًا أكثر من 6 ثوانٍ. */
     setTimeout(function () { endSplash(); removeSplash(); root.classList.remove("masar-splash-on"); }, 7500);
   }
