@@ -246,7 +246,7 @@ const state = {
   map: null,
   baseLayer: null,
   mapTheme: readDriverPreference("karwa.driver.mapTheme", "day") === "night" ? "night" : "day",
-  mapView: readDriverPreference("karwa.driver.mapView", "2d") === "3d" ? "3d" : "2d",
+  mapView: readDriverPreference("karwa.driver.mapView", "3d") === "2d" ? "2d" : "3d",
   autoFollow: readDriverPreference("karwa.driver.autoFollow", "true") !== "false",
   markerStyle: ["arrow","car","bike"].includes(readDriverPreference("karwa.driver.markerStyle", "car")) ? readDriverPreference("karwa.driver.markerStyle", "car") : "car",
   driverHeading: null,
@@ -980,7 +980,7 @@ async function drawPickupRoute(force=false, reason="") {
     state.routeProgressIndex=0;
     state.offRouteHits=0;
     if(state.routeCasingLine)state.routeCasingLine.setLatLngs(coords);else state.routeCasingLine=window.L.polyline(coords,{color:"#ffffff",weight:14,opacity:.9,lineCap:"round",interactive:false}).addTo(state.map);
-    if(state.routeLine)state.routeLine.setLatLngs(coords);else state.routeLine=window.L.polyline(coords,{color:"#2f80ed",weight:7,opacity:.98,lineCap:"round",interactive:false}).addTo(state.map);
+    if(state.routeLine)state.routeLine.setLatLngs(coords);else state.routeLine=(window.MasarMap3D?window.MasarMap3D.glowLine(state.map,coords,{color:"#3d8bff",weight:7,opacity:0.98}):window.L.polyline(coords,{color:"#2f80ed",weight:7,opacity:0.98,lineCap:"round",interactive:false})).addTo(state.map);
     setDriverNavigationText("driverEta",`${Math.max(1,Math.round(mins))} دقيقة`);
     setDriverNavigationText("driverRemaining",km<1?`${Math.max(1,Math.round(km*1000))} م`:`${km.toFixed(1)} كم`);
     setDriverNavigationText("driverNavTarget",st>=3?"إلى الوجهة":"إلى الراكب");

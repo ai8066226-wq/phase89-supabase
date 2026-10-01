@@ -1,0 +1,57 @@
+/* مَسار — توهج المسار والتنبيهات + خريطة 3D احترافية (يُحمَّل بعد masar-motion.css) */
+:root{--m3d-tilt:44deg;--m3d-persp:820px;--m3d-bb:1.38;--m-glow:46,230,200;--m-danger:255,84,84}
+
+/* ═════ توهج المسار بين نقطتين ═════ */
+.m-route-halo{filter:blur(7px)}
+.m-route-glow{filter:blur(2.5px)}
+.m-route-core{filter:drop-shadow(0 0 3px rgba(255,255,255,.6))}
+.m-route-flow{stroke-dasharray:1 24;animation:m-flow 1.2s linear infinite}
+@keyframes m-flow{to{stroke-dashoffset:-25}}
+/* مسار الافتتاحية وشاشة الترحيب */
+.ms-route{filter:drop-shadow(0 0 4px #5eead4) drop-shadow(0 0 11px rgba(94,234,212,.85))}
+.ms-pin-ring,.ms-pin-ring2{filter:drop-shadow(0 0 6px rgba(94,234,212,.9))}
+.ms-runner{filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 14px #5eead4)}
+.masar-route-line{filter:drop-shadow(0 0 4px #5eead4) drop-shadow(0 0 12px rgba(94,234,212,.8))}
+.masar-route-ring{filter:drop-shadow(0 0 6px rgba(94,234,212,.9))}
+
+/* ═════ توهج التنبيهات ═════ */
+.toast.show{border:1px solid rgba(var(--m-glow),.6);box-shadow:0 0 0 1px rgba(var(--m-glow),.22),0 0 16px rgba(var(--m-glow),.55),0 0 40px rgba(var(--m-glow),.28),0 12px 30px rgba(0,0,0,.28);animation:m-glow-teal 2.2s ease-in-out infinite}
+.toast.show.m-toast-danger{background:#3b0f19;color:#fff;border-color:rgba(var(--m-danger),.8);box-shadow:0 0 0 1px rgba(var(--m-danger),.3),0 0 18px rgba(var(--m-danger),.7),0 0 46px rgba(var(--m-danger),.38),0 12px 30px rgba(0,0,0,.3);animation:m-glow-red 1.3s ease-in-out infinite}
+@keyframes m-glow-teal{50%{box-shadow:0 0 0 1px rgba(var(--m-glow),.35),0 0 24px rgba(var(--m-glow),.8),0 0 56px rgba(var(--m-glow),.42),0 12px 30px rgba(0,0,0,.28)}}
+@keyframes m-glow-red{50%{box-shadow:0 0 0 2px rgba(var(--m-danger),.45),0 0 28px rgba(var(--m-danger),.95),0 0 64px rgba(var(--m-danger),.55),0 12px 30px rgba(0,0,0,.3)}}
+@keyframes m-glow-icon{50%{box-shadow:0 0 26px rgba(var(--m-danger),.85)}}
+/* تنبيه المخاطر على الطريق */
+#roadReportVerifyOverlay .road-verify-card{border:1px solid rgba(var(--m-danger),.65);box-shadow:0 0 0 1px rgba(var(--m-danger),.25),0 0 22px rgba(var(--m-danger),.55),0 0 56px rgba(var(--m-danger),.3),0 22px 70px rgba(0,0,0,.3);animation:roadVerifyIn .18s ease-out,m-glow-red 1.5s ease-in-out .2s infinite}
+#roadReportVerifyOverlay .road-verify-icon{background:#fff1f1;box-shadow:0 0 18px rgba(var(--m-danger),.6);animation:m-glow-icon 1.5s ease-in-out infinite}
+#roadReportVerifyOverlay .road-verify-timer>i{background:linear-gradient(90deg,#ff5454,#ffb340);box-shadow:0 0 10px rgba(var(--m-danger),.8)}
+.road-report-marker{filter:drop-shadow(0 0 5px rgba(255,90,60,.95)) drop-shadow(0 0 12px rgba(var(--m-danger),.6));animation:m-hazard 1.6s ease-in-out infinite}
+@keyframes m-hazard{50%{filter:drop-shadow(0 0 9px rgba(255,120,60,1)) drop-shadow(0 0 22px rgba(var(--m-danger),.85))}}
+/* مركز الإشعارات والنوافذ */
+#karwaNotificationFab{box-shadow:0 0 0 1px rgba(var(--m-glow),.3),0 0 16px rgba(var(--m-glow),.5),0 12px 34px rgba(18,36,63,.18);animation:m-glow-teal 3s ease-in-out infinite}
+#karwaNotificationFab:has(.karwa-notification-badge:not([hidden])){box-shadow:0 0 0 1px rgba(var(--m-danger),.35),0 0 18px rgba(var(--m-danger),.65);animation:m-glow-red 1.6s ease-in-out infinite}
+.karwa-notification-badge{box-shadow:0 0 10px rgba(var(--m-danger),.9)}
+.kn-item.unread{border-color:rgba(var(--m-glow),.55)!important;box-shadow:0 0 0 1px rgba(8,123,117,.25),0 0 18px rgba(var(--m-glow),.32)!important}
+.amrni-dialog-layer .amrni-dialog-card{box-shadow:0 0 0 1px rgba(var(--m-glow),.35),0 0 26px rgba(var(--m-glow),.4),0 30px 80px rgba(0,0,0,.3)}
+
+/* ═════ خريطة 3D احترافية ═════ */
+#home.map-view-3d .map-card{overflow:hidden;background:#0b2a3c}
+#home.map-view-3d #customerMap,
+#driverView.map-view-3d:not(.driving-navigation-active) #driverMap{
+  inset:-44% -62% -16% -62%!important;width:auto!important;height:auto!important;
+  transform-origin:50% 56%;
+  transform:perspective(var(--m3d-persp)) rotateX(var(--m3d-tilt));
+  filter:saturate(1.14) contrast(1.05);transition:transform .6s var(--m-ease,ease),filter .3s ease}
+/* وضع القيادة: الخريطة تدور مع اتجاه المركبة وتبقى مائلة والمركبة في الثلث السفلي */
+#driverView.map-view-3d.driving-navigation-active #driverMap{
+  transform:translate(-50%,-50%) translateY(8vh) perspective(900px) rotateX(50deg) rotate(var(--driver-map-bearing,0deg));
+  filter:saturate(1.14) contrast(1.05)}
+/* أفق وضباب */
+#home.map-view-3d .map-card::after,
+#driverView.map-view-3d .layout>aside>.card:first-child::after{content:"";position:absolute;left:0;right:0;top:0;height:30%;z-index:600;pointer-events:none;background:linear-gradient(180deg,#b9dfe8 0%,rgba(205,232,238,.88) 34%,rgba(236,247,248,0) 100%)}
+#home.map-view-3d.map-theme-night .map-card::after,
+#driverView.map-view-3d.map-theme-night .layout>aside>.card:first-child::after{background:linear-gradient(180deg,#06182a 0%,rgba(8,27,43,.88) 34%,rgba(8,27,43,0) 100%)}
+/* علامات تقف عموديًا فوق الأرض المائلة */
+:is(#home,#driverView).map-view-3d :is(.karwa-map-marker,.road-report-marker,.map-search-marker,.karwa-landmark-label){scale:1 var(--m3d-bb)}
+:is(#home,#driverView).map-view-3d .karwa-live-vehicle{filter:drop-shadow(0 10px 7px rgba(3,28,42,.42))}
+@media(max-width:760px){:root{--m3d-tilt:40deg;--m3d-persp:760px}}
+@media(prefers-reduced-motion:reduce){.m-route-flow,.toast.show,.toast.show.m-toast-danger,.road-report-marker,#karwaNotificationFab,#roadReportVerifyOverlay .road-verify-card,#roadReportVerifyOverlay .road-verify-icon{animation:none!important}}

@@ -1,0 +1,144 @@
+/* مَسار — الحركة والعرض الاحترافي (يُحمَّل آخرًا في كل البوابات) */
+:root{
+  --m-ease:cubic-bezier(.2,.8,.2,1);
+  --m-spring:cubic-bezier(.34,1.45,.5,1);
+  --m-teal:#087a75;
+  --m-ring:0 0 0 4px rgba(8,122,117,.16);
+}
+html{scroll-behavior:smooth}
+*{scrollbar-width:thin;scrollbar-color:#b4c8cf transparent}
+::selection{background:rgba(8,122,117,.22)}
+
+/* ═════ الشاشة الافتتاحية ═════ */
+html.masar-splash-on{background:#061a28;overflow:hidden}
+.masar-splash{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;overflow:hidden;direction:rtl;visibility:visible;color:#fff;font-family:system-ui,"Noto Sans Arabic",Tahoma,Arial,sans-serif;transition:opacity .55s ease,transform .7s var(--m-ease),filter .55s ease;cursor:pointer}
+.masar-splash.is-leaving{opacity:0;transform:scale(1.08);filter:blur(6px);pointer-events:none}
+.ms-bg{position:absolute;inset:0;background:radial-gradient(circle at 70% 18%,rgba(18,179,166,.28),transparent 30rem),radial-gradient(circle at 12% 90%,rgba(244,200,90,.16),transparent 26rem),linear-gradient(160deg,#0a3047,#061a28 70%);animation:ms-bg 1s ease-out both}
+.ms-grid{position:absolute;inset:0;opacity:0;background-image:linear-gradient(rgba(160,229,229,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(160,229,229,.07) 1px,transparent 1px);background-size:42px 42px;-webkit-mask-image:radial-gradient(circle at 50% 45%,#000 10%,transparent 62%);mask-image:radial-gradient(circle at 50% 45%,#000 10%,transparent 62%);animation:ms-grid 2s .1s ease-out forwards}
+.ms-stage{position:relative;display:flex;flex-direction:column;align-items:center;padding:24px;text-align:center}
+.ms-art{position:relative;width:min(62vw,250px);aspect-ratio:1;display:grid;place-items:center}
+.ms-svg{position:relative;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 18px 30px rgba(0,12,20,.4))}
+.ms-halo{position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(94,234,212,.34),transparent 62%);opacity:0;animation:ms-halo 2s 1.3s ease-out forwards}
+.ms-wave{position:absolute;inset:18%;border-radius:50%;border:2px solid rgba(94,234,212,.5);opacity:0;animation:ms-wave 2s ease-out infinite}
+.ms-wave-a{animation-delay:1.5s}.ms-wave-b{animation-delay:2.2s}
+.ms-route-base{fill:none;stroke:rgba(169,229,222,.16);stroke-width:9;stroke-linecap:round}
+.ms-route{fill:none;stroke:url(#msRoute);stroke-width:5.5;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:ms-draw 1.7s .3s cubic-bezier(.45,.05,.25,1) forwards}
+.ms-pin-ring{fill:rgba(94,234,212,.14);stroke:#7ce4d0;stroke-width:3;transform-origin:28px 196px;animation:ms-pop .8s .15s var(--m-spring) both,ms-pulse 2s 1.2s ease-in-out infinite}
+.ms-pin-dot{fill:#fff}
+.ms-pin-end{transform-origin:212px 44px;animation:ms-drop .9s 1.9s var(--m-spring) both}
+.ms-pin-ring2{fill:rgba(244,200,90,.18);stroke:#f4c85a;stroke-width:3;transform-origin:212px 44px;animation:ms-pulse 2s 2.8s ease-in-out infinite}
+.ms-tile{transform-box:fill-box;transform-origin:center;animation:ms-tile 1s 1.15s var(--m-spring) both}
+.ms-word{margin:22px 0 0;font-size:clamp(38px,11vw,54px);font-weight:900;line-height:1.2;letter-spacing:0;background:linear-gradient(100deg,#fff 30%,#a6f3e3 48%,#fff 66%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:ms-word 1s 1.9s var(--m-ease) both,ms-sheen 1.6s 2.7s ease-in-out both}
+.ms-tag{margin:8px 0 0;display:flex;align-items:center;gap:10px;color:#a9cdd6;font-size:14px;font-weight:700;animation:ms-fade .9s 2.5s ease both}
+.ms-tag i{width:5px;height:5px;border-radius:50%;background:#f4c85a;display:block}
+.ms-progress{position:absolute;left:50%;bottom:max(46px,env(safe-area-inset-bottom));width:min(150px,38vw);height:3px;transform:translateX(-50%);border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;animation:ms-fade .5s .6s ease both}
+.ms-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5eead4,#f4c85a);transform-origin:right;animation:ms-bar 3.2s .6s cubic-bezier(.4,.1,.2,1) both}
+@keyframes ms-bg{from{opacity:0}to{opacity:1}}
+@keyframes ms-grid{from{opacity:0;transform:scale(1.15)}to{opacity:.55;transform:scale(1)}}
+@keyframes ms-draw{to{stroke-dashoffset:0}}
+@keyframes ms-pop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+@keyframes ms-drop{0%{opacity:0;transform:translateY(-26px) scale(.4)}100%{opacity:1;transform:none}}
+@keyframes ms-pulse{50%{transform:scale(1.28);opacity:.55}}
+@keyframes ms-tile{0%{opacity:0;transform:scale(.3) rotate(-14deg)}100%{opacity:1;transform:none}}
+@keyframes ms-halo{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:scale(1)}}
+@keyframes ms-wave{0%{opacity:.6;transform:scale(.7)}100%{opacity:0;transform:scale(1.5)}}
+@keyframes ms-word{from{opacity:0;transform:translateY(18px);filter:blur(10px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes ms-sheen{from{background-position:100% 0}to{background-position:0 0}}
+@keyframes ms-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ms-bar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* ═════ دخول التطبيق بعد الافتتاحية ═════ */
+html.masar-revealed .topbar{animation:m-drop .6s var(--m-ease) both}
+html.masar-revealed main,html.masar-revealed .layout,html.masar-revealed #authView,html.masar-revealed #auth{animation:m-fade .7s .08s ease both}
+@keyframes m-drop{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
+@keyframes m-fade{from{opacity:0}to{opacity:1}}
+@keyframes m-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes m-pop{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+
+/* ═════ الواجهات عند الفتح (تتبع انتقال العرض) ═════ */
+.m-enter{animation:m-rise .5s var(--m-ease) backwards}
+.m-enter>*{animation:m-rise .55s var(--m-ease) backwards}
+.m-enter>:nth-child(2){animation-delay:.05s}.m-enter>:nth-child(3){animation-delay:.1s}
+.m-enter>:nth-child(4){animation-delay:.15s}.m-enter>:nth-child(5){animation-delay:.2s}
+.m-enter>:nth-child(6){animation-delay:.25s}.m-enter>:nth-child(7){animation-delay:.3s}
+.m-enter>:nth-child(n+8){animation-delay:.34s}
+
+/* ═════ الأزرار ═════ */
+:is(.primary,.primary-button,.secondary,.secondary-button,.danger,.text-button,.role-auth-action,.service-button,.vehicle-button,.nav-button,.customer-settings-action,.map-pick-button,.tab,.masar-intro-primary,.masar-intro-secondary){
+  transition:transform .2s var(--m-ease),box-shadow .25s ease,background-color .2s ease,border-color .2s ease,color .2s ease,filter .2s ease;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+:is(.primary,.primary-button,.role-auth-action){position:relative}
+@media (hover:hover){
+  :is(.primary,.primary-button,.role-auth-action):not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 12px 26px rgba(8,103,112,.28)}
+  :is(.secondary,.secondary-button,.text-button):not(:disabled):hover{transform:translateY(-1px);border-color:var(--m-teal);box-shadow:0 8px 18px rgba(16,48,65,.1)}
+  .danger:not(:disabled):hover{transform:translateY(-1px);filter:brightness(1.06);box-shadow:0 10px 22px rgba(174,38,59,.25)}
+  :is(.service-button,.vehicle-button,.customer-settings-action,.map-pick-button):not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(16,48,65,.12)}
+  .nav-button:hover{transform:translateX(-2px)}
+}
+:is(.primary,.primary-button,.secondary,.secondary-button,.danger,.text-button,.role-auth-action,.service-button,.vehicle-button,.customer-settings-action,.map-pick-button,.tab,.masar-intro-primary,.masar-intro-secondary):not(:disabled):active{transform:scale(.96);filter:brightness(.97);transition-duration:.08s}
+button:disabled,[aria-disabled=true]{opacity:.55}
+.nav-button .nav-icon{transition:transform .3s var(--m-spring)}
+.nav-button.active .nav-icon{transform:scale(1.18)}
+.m-ripple-host{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+.m-ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.2;transform:scale(0);animation:m-ripple .65s ease-out forwards}
+@keyframes m-ripple{to{transform:scale(1);opacity:0}}
+
+/* ═════ البطاقات والحقول ═════ */
+:is(.card,.stat,.metric,.order-card,.admin-module-card,.role-entry-card,.service-panel,.tracking-card,.payment-card){transition:transform .3s var(--m-ease),box-shadow .3s ease,border-color .25s ease}
+@media (hover:hover){
+  :is(.role-entry-card,.admin-module-card,.order-card,.metric,.payment-card):hover{transform:translateY(-3px);border-color:rgba(8,122,117,.35);box-shadow:0 18px 38px rgba(16,48,65,.13)}
+}
+:is(.field input,.field select,.field textarea,input.field,select.field,textarea.field){transition:border-color .2s ease,box-shadow .25s ease,background-color .2s ease}
+:is(.field input,.field select,.field textarea,input.field,select.field,textarea.field):focus{border-color:var(--m-teal);box-shadow:var(--m-ring);outline:none}
+.customer-pref-switch,.customer-pref-switch *{transition:background-color .25s ease,transform .3s var(--m-spring),border-color .2s ease}
+
+/* ═════ النوافذ والتنبيهات ═════ */
+.modal-backdrop.show{animation:m-fade .25s ease both}
+.modal-backdrop.show .modal{animation:m-pop .42s var(--m-spring) both}
+@media (max-width:600px){.modal-backdrop.show .modal{animation:m-sheet .45s var(--m-ease) both}}
+@keyframes m-sheet{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.toast{transition:opacity .3s ease,transform .5s var(--m-spring)!important}
+.amrni-dialog-card{animation-duration:.45s!important;animation-timing-function:var(--m-spring)!important}
+
+/* ═════ شاشة الترحيب الأولى (first-run) ═════ */
+html.masar-splash-on .masar-first-run,html.masar-splash-on .masar-first-run *{animation-play-state:paused!important}
+.masar-intro-home>*,.masar-intro-guide>*,.masar-intro-brand{animation:m-rise .75s var(--m-ease) backwards}
+.masar-intro-brand{animation-delay:.05s}
+.masar-intro-home>:nth-child(1),.masar-intro-guide>:nth-child(1){animation-delay:.14s}
+.masar-intro-home>:nth-child(2),.masar-intro-guide>:nth-child(2){animation-delay:.22s}
+.masar-intro-home>:nth-child(3),.masar-intro-guide>:nth-child(3){animation-delay:.3s}
+.masar-intro-home>:nth-child(4),.masar-intro-guide>:nth-child(4){animation-delay:.4s}
+.masar-intro-home>:nth-child(5),.masar-intro-guide>:nth-child(5){animation-delay:.5s}
+.masar-guide-list li{animation:m-rise .6s var(--m-ease) backwards}
+.masar-guide-list li:nth-child(2){animation-delay:.08s}.masar-guide-list li:nth-child(3){animation-delay:.16s}
+.masar-intro-primary{position:relative;overflow:hidden}
+.masar-intro-primary:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(120%);animation:m-shine 3.6s 1.4s ease-in-out infinite;pointer-events:none}
+.masar-intro-primary span{display:inline-block;animation:m-nudge 1.8s 1.2s ease-in-out infinite}
+.masar-intro-art-label{animation:m-float 5s ease-in-out infinite}
+.masar-route-graphic{animation:m-float 7s ease-in-out infinite}
+@keyframes m-shine{0%,55%{transform:translateX(120%)}100%{transform:translateX(-120%)}}
+@keyframes m-nudge{50%{transform:translateX(-5px)}}
+@keyframes m-float{50%{transform:translateY(-7px)}}
+
+/* ═════ تقليل الحركة ═════ */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .masar-splash{display:none!important}
+  .m-enter,.m-enter>*,.masar-intro-home>*,.masar-intro-guide>*,.masar-intro-brand,.masar-guide-list li,.masar-intro-primary:after,.masar-intro-primary span,.masar-intro-art-label,.masar-route-graphic,html.masar-revealed .topbar,html.masar-revealed main,.modal-backdrop.show,.modal-backdrop.show .modal{animation:none!important}
+  :is(.primary,.primary-button,.secondary,.secondary-button,.danger,.role-auth-action,.service-button,.vehicle-button,.card,.order-card,.metric):hover,:is(.primary,.primary-button,.secondary,.secondary-button,.danger,.role-auth-action):active{transform:none}
+  .m-ripple-host{display:none}
+}
+
+/* ═════ أزرار الرجوع ═════ */
+.masar-back{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 16px 8px 14px;border:1px solid rgba(8,122,117,.28);border-radius:14px;color:#0b4f5c;background:rgba(255,255,255,.92);box-shadow:0 0 0 1px rgba(46,230,200,.12),0 0 14px rgba(46,230,200,.22),0 6px 16px rgba(16,48,65,.1);font:800 14px/1 system-ui,"Noto Sans Arabic",Tahoma,Arial,sans-serif;cursor:pointer;transition:transform .2s var(--m-ease),box-shadow .25s,background .2s;-webkit-tap-highlight-color:transparent}
+.masar-back span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;color:#fff;background:linear-gradient(145deg,#0c5c71,#087a75);font-size:15px;transition:transform .25s var(--m-spring)}
+.masar-back:hover{box-shadow:0 0 0 1px rgba(46,230,200,.3),0 0 22px rgba(46,230,200,.45),0 8px 20px rgba(16,48,65,.14)}
+.masar-back:hover span{transform:translateX(3px)}
+.masar-back:active{transform:scale(.95)}
+.masar-back:focus-visible{outline:3px solid #d9aa52;outline-offset:3px}
+.masar-viewbar{position:sticky;top:0;z-index:20;display:flex;margin:0 0 14px;padding:6px 0;pointer-events:none}
+.masar-viewbar .masar-back{pointer-events:auto}
+.masar-back-panel{flex:0 0 auto;min-height:40px;padding:6px 12px 6px 10px;font-size:13px}
+.masar-back-float{position:fixed;z-index:60;top:calc(76px + env(safe-area-inset-top));right:14px}
+.masar-back[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.masar-back,.masar-back span{transition:none}}

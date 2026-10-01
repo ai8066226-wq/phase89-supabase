@@ -162,7 +162,7 @@ const state = {
   map: null,
   baseLayer: null,
   mapTheme: readCustomerPreference("karwa.customer.mapTheme", "day") === "night" ? "night" : "day",
-  mapView: readCustomerPreference("karwa.customer.mapView", "2d") === "3d" ? "3d" : "2d",
+  mapView: readCustomerPreference("karwa.customer.mapView", "3d") === "2d" ? "2d" : "3d",
   autoFollow: readCustomerPreference("karwa.customer.autoFollow", "true") !== "false",
   mapSearchMarker: null,
   mapSearchSelection: null,
@@ -320,7 +320,7 @@ async function calculateBookingRoute(){
     catch(e){if(token!==state.routeRequestToken)return;const straight=haversineKm(a,b);state.routeDistanceKm=straight*1.28;state.routeDurationMin=(state.routeDistanceKm/28)*60;state.routeSource="fallback";coords=[[a.latitude,a.longitude],[b.latitude,b.longitude]];}
   }
   if(token!==state.routeRequestToken||!state.map)return;
-  if(state.bookingRouteLine)state.bookingRouteLine.setLatLngs(coords);else state.bookingRouteLine=window.L.polyline(coords,{color:"#087b75",weight:6,opacity:.92,lineCap:"round",interactive:false}).addTo(state.map);
+  if(state.bookingRouteLine)state.bookingRouteLine.setLatLngs(coords);else state.bookingRouteLine=(window.MasarMap3D?window.MasarMap3D.glowLine(state.map,coords,{color:"#10b3a4",weight:6,opacity:0.95}):window.L.polyline(coords,{color:"#087b75",weight:6,opacity:0.92,lineCap:"round",interactive:false})).addTo(state.map);
   calculateRidePrice();updateRouteSummary();
 }
 function scheduleBookingRoute(){
@@ -429,7 +429,7 @@ function initializeCustomerMap() {
   state.map.on("click", e => {
     if(state.centerPickActive)return;
     const now=performance.now(); if(now<state.mapTapLockedUntil)return; state.mapTapLockedUntil=now+180;
-    setBookingPoint(state.mapPickMode,e.latlng.lat,e.latlng.lng).catch(console.warn);
+    setBookingPoint(state.mapPickMode,...(l=>[l.lat,l.lng])(window.MasarMap3D?window.MasarMap3D.latLng(state.map,e):e.latlng)).catch(console.warn);
   });
   state.map.on("move",()=>{if(!state.centerPickActive)return;clearTimeout(state.centerPickTimer);byId("mapCenterLabel").textContent="جارٍ تحديد العنوان…";state.centerPickTimer=setTimeout(async()=>{const c=state.map.getCenter();const name=await reverseGeocode(c.lat,c.lng);byId("mapCenterLabel").textContent=name||`الموقع: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;},1250);});
   // خريطة متجهية بلا مفتاح API وبنفس نمط Bright/Dark المستخدم في صفحة الكابتن.
@@ -555,7 +555,7 @@ async function drawLiveRoute(force=false) {
   let coords=[[d.lat,d.lng],[target.latitude,target.longitude]],km=haversineKm({latitude:d.lat,longitude:d.lng},target),mins=0,source="تقديري";
   try{const vr=await valhallaRoute({latitude:d.lat,longitude:d.lng},target,5000);coords=vr.coords;km=vr.km;mins=vr.mins;source="Valhalla";}catch(e){try{const u=`https://router.project-osrm.org/route/v1/driving/${d.lng},${d.lat};${target.longitude},${target.latitude}?overview=full&geometries=geojson`;const r=await fetch(u,{signal:AbortSignal.timeout(4500)}),x=await r.json(),route=x.routes?.[0];if(!route)throw 0;coords=route.geometry.coordinates.map(([lng,lat])=>[lat,lng]);km=route.distance/1000;mins=route.duration/60;source="OSRM احتياطي";}catch(_){mins=(km*1.28/28)*60;km*=1.28;source="تقدير مباشر";}}
   if(!mins)mins=(km/28)*60;
-  if(state.routeLine)state.routeLine.setLatLngs(coords);else state.routeLine=window.L.polyline(coords,{color:"#087b75",weight:7,opacity:.94,lineCap:"round"}).addTo(state.map);
+  if(state.routeLine)state.routeLine.setLatLngs(coords);else state.routeLine=(window.MasarMap3D?window.MasarMap3D.glowLine(state.map,coords,{color:"#10b3a4",weight:7,opacity:0.95}):window.L.polyline(coords,{color:"#087b75",weight:7,opacity:0.94,lineCap:"round"})).addTo(state.map);
   byId("liveEta").textContent=`${Math.max(1,Math.round(mins))} دقيقة`; byId("liveDistance").textContent=liveDistanceText(km); byId("liveRouteSource").textContent=source;
   if(force)state.map.fitBounds(state.routeLine.getBounds(),{padding:[55,55],maxZoom:16});
 }
