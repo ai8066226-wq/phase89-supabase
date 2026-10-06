@@ -1278,9 +1278,16 @@ function renderPricingSettings(){
   const monthly=byId("monthlySubscriptionFee"),enforcement=byId("subscriptionEnforcementEnabled"),cardAmount=byId("topupCardAmount");
   if(monthly&&document.activeElement!==monthly)monthly.value=String(c.monthlySubscriptionFee||5000);
   if(enforcement&&document.activeElement!==enforcement)enforcement.checked=c.subscriptionEnforcementEnabled===true;
+  renderSubscriptionModeBanner(enforcement?.checked===true);
   if(cardAmount)cardAmount.value=String(c.monthlySubscriptionFee||5000);
   renderTopupMethodAdminControls();
 }
+function renderSubscriptionModeBanner(on){
+  const box=byId("subscriptionModeBanner");if(!box)return;
+  box.className=`subscription-mode-banner ${on?"is-on":"is-off"}`;
+  box.textContent=on?"الاشتراك مفعّل: لا يقبل الكابتن ولا مزود الخدمة الطلبات إلا بعد دفع الاشتراك عبر Google Play.":"الاشتراك متوقف: الخدمة مجانية للكباتن ومزودي الخدمات ويقبلون الطلبات دون دفع.";
+}
+byId("subscriptionEnforcementEnabled")?.addEventListener("change",event=>renderSubscriptionModeBanner(event.currentTarget.checked));
 byId("monthlySubscriptionSettingsForm")?.addEventListener("submit",async event=>{
   event.preventDefault();if(!state.user)return;
   const price=Math.round(Number(byId("monthlySubscriptionFee")?.value||0));
@@ -1290,7 +1297,7 @@ byId("monthlySubscriptionSettingsForm")?.addEventListener("submit",async event=>
   try{
     await setDoc(doc(db,"appSettings","pricing"),{monthlySubscriptionFee:price,subscriptionEnforcementEnabled:enabled,billingModel:"google_play_monthly",customerOrderFee:0,providerOrderFee:0,updatedAt:serverTimestamp(),updatedBy:state.user.uid},{merge:true});
     state.pricingSettings={...(state.pricingSettings||{}),monthlySubscriptionFee:price,subscriptionEnforcementEnabled:enabled};
-    renderPricingSettings();toast("تم حفظ اشتراك الكباتن ومزودي الخدمات.");
+    renderPricingSettings();toast(enabled?"تم تفعيل الاشتراك: الدفع عبر Google Play مطلوب الآن.":"تم إيقاف الاشتراك: الخدمة مجانية للكباتن ومزودي الخدمات.");
   }catch(error){console.error(error);toast("تعذر حفظ سياسة الاشتراك.");}finally{busy(button,false);}
 });
 function selectedGovernorateNames(){

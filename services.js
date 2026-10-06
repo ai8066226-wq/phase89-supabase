@@ -31,8 +31,8 @@ import {
 } from "./supabase-compat.js?v=120";
 import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=120";
 import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
-import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=122";
-import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=122";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError, setSubscriptionPolicy } from "./monthly-subscription.js?v=130";
+import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=130";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
 const auth = getAuth(app);
@@ -137,7 +137,7 @@ function syncServiceSubscriptionUi(){
   if(byId("serviceSubscriptionPrice"))byId("serviceSubscriptionPrice").textContent=`${monthlyPrice(pricingSettings).toLocaleString("ar-IQ")} د.ع`;
   if(byId("serviceSubscriptionStarted"))byId("serviceSubscriptionStarted").textContent=subscriptionDate(info.started);
   if(byId("serviceSubscriptionExpires"))byId("serviceSubscriptionExpires").textContent=subscriptionDate(info.expires);
-  if(byId("serviceSubscriptionNotice"))byId("serviceSubscriptionNotice").textContent=info.active?"يمكنك قبول طلبات نشاطك خلال فترة اشتراكك، دون رسوم عن كل طلب.":"ستظهر طلبات العملاء في قائمتك، ويُتاح قبولها بعد تفعيل الاشتراك. العميل لا يحتاج إلى شحن رصيد.";
+  if(byId("serviceSubscriptionNotice"))byId("serviceSubscriptionNotice").textContent=info.free?"الخدمة مجانية حاليًا بقرار الإدارة؛ يمكنك قبول طلبات نشاطك دون اشتراك.":info.active?"يمكنك قبول طلبات نشاطك خلال فترة اشتراكك، دون رسوم عن كل طلب.":"ستظهر طلبات العملاء في قائمتك، ويُتاح قبولها بعد تفعيل الاشتراك. العميل لا يحتاج إلى شحن رصيد.";
   renderGooglePlaySubscription({panelId:"servicePlaySubscription",statusId:"serviceSubscriptionStatus",priceId:"serviceSubscriptionPrice",startedId:"serviceSubscriptionStarted",expiresId:"serviceSubscriptionExpires",getUser:()=>currentUser,getData:()=>currentUserData,updateData:patch=>{currentUserData={...(currentUserData||{}),...patch};renderProviderRequests(providerRequests);syncServiceGovernorateControls();},toast});
   if(byId("serviceTransferLabel"))byId("serviceTransferLabel").textContent=pricingSettings?.topupTransferLabel||"وسيلة التحويل";
   if(byId("serviceTransferId"))byId("serviceTransferId").textContent=pricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
@@ -248,7 +248,7 @@ function renderProviderModeration(profile = currentProfile || {}) {
   syncServiceGovernorateControls();
 }
 
-const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};renderServiceWallet();syncServiceGovernorateControls();if(providerRequests.length)renderProviderRequests(providerRequests);},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
+const unsubscribeServicePricing=subscribeGlobalPricing(settings=>{pricingSettings=settings||{};setSubscriptionPolicy(pricingSettings);renderServiceWallet();syncServiceGovernorateControls();if(providerRequests.length)renderProviderRequests(providerRequests);},error=>console.warn("تعذر تحميل إعدادات التسعير والرسوم العامة",error));
 
 function showView(id) {
   views.forEach(view => byId(view)?.classList.toggle("hidden", view !== id));
@@ -930,6 +930,7 @@ byId("resubmitForm").addEventListener("submit", async event => {
   try {
     const settingsSnapshot=await getDoc(doc(db,"appSettings","pricing"));
     pricingSettings=settingsSnapshot.exists()?settingsSnapshot.data():{};
+    setSubscriptionPolicy(pricingSettings);
     syncServiceGovernorateControls();
     if(!serviceGovernorateEnabled(governorate))throw new Error("GOVERNORATE_DISABLED");
     const payload = {

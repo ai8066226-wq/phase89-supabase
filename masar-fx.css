@@ -8,9 +8,9 @@
 .m-tilt-rest{transition:transform .65s var(--m-fx-ease),box-shadow .5s ease!important}
 
 /* ═════ ظهور عند التمرير ═════ */
-.m-sr{opacity:0;transform:translateY(26px) scale(.985);filter:blur(4px)}
+.m-sr{opacity:0;transform:translateY(26px) scale(.985)}
 .m-sr-in{animation:m-sr-in .7s var(--m-fx-ease) both}
-@keyframes m-sr-in{from{opacity:0;transform:translateY(26px) scale(.985);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes m-sr-in{from{opacity:0;transform:translateY(26px) scale(.985)}to{opacity:1;transform:none}}
 
 /* ═════ الخريطة: رادار المركبة وإسقاط العلامات ═════ */
 .karwa-live-vehicle{position:relative;overflow:visible}
@@ -18,7 +18,7 @@
 .karwa-live-vehicle:after{animation-delay:1.3s;border-color:rgba(244,200,90,.55)}
 @keyframes m-radar{0%{opacity:.85;transform:scale(.55)}100%{opacity:0;transform:scale(2.3)}}
 .karwa-map-marker,.map-search-marker,.road-report-marker{animation:m-pin-drop .75s var(--m-spring,cubic-bezier(.34,1.45,.5,1)) both}
-@keyframes m-pin-drop{0%{opacity:0;translate:0 -34px;filter:blur(2px)}55%{opacity:1}100%{opacity:1;translate:0 0;filter:blur(0)}}
+@keyframes m-pin-drop{0%{opacity:0;translate:0 -34px}55%{opacity:1}100%{opacity:1;translate:0 0}}
 .m-route-in{will-change:stroke-dashoffset}
 
 /* ═════ شريط عدّ تنازلي للتنبيه + تنقّل سفلي ═════ */
@@ -33,20 +33,22 @@
 .spinner{position:relative;border:0!important;background:conic-gradient(from 0deg,rgba(8,122,117,0),#087a75 70%,#f4c85a);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));filter:drop-shadow(0 0 6px rgba(46,230,200,.55))}
 
 /* ═════ خلفية متحركة للترحيب والبوابات ═════ */
-:where(.hero,.auth-intro),body:not(.customer-map-mode) .welcome{background-size:220% 220%!important;animation:m-aurora 14s ease-in-out infinite alternate}
+@media (hover:hover) and (pointer:fine){:where(.hero,.auth-intro),body:not(.customer-map-mode) .welcome{background-size:220% 220%!important;animation:m-aurora 14s ease-in-out infinite alternate}}
 @keyframes m-aurora{from{background-position:0% 50%}to{background-position:100% 50%}}
 .role-entry-icon,.setting-icon,.nav-icon{will-change:transform}
 .role-entry-card .role-entry-icon{animation:m-bob 4.5s ease-in-out infinite}
 .role-entry-card:nth-child(2) .role-entry-icon{animation-delay:.6s}.role-entry-card:nth-child(3) .role-entry-icon{animation-delay:1.2s}
 @keyframes m-bob{50%{transform:translateY(-5px) rotate(-3deg)}}
-.masar-intro-primary{animation:m-cta 2.6s ease-in-out 1.6s infinite}
-@keyframes m-cta{50%{box-shadow:0 12px 27px rgba(80,226,196,.17),0 0 0 7px rgba(124,228,208,.16),0 0 30px rgba(124,228,208,.45)}}
+.masar-intro-primary{box-shadow:0 12px 27px rgba(80,226,196,.17),0 0 22px rgba(124,228,208,.38)}
 
 /* ═════ انتقال الواجهات: انزلاق + ضبابية ═════ */
 .view.m-enter{animation:m-view-in .6s var(--m-fx-ease) backwards}
-@keyframes m-view-in{from{opacity:0;transform:translateX(-26px) scale(.99);filter:blur(5px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes m-view-in{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
 
 @media (prefers-reduced-motion:reduce){
   .m-sr{opacity:1;transform:none;filter:none}.m-sr-in,.m-tilting{animation:none!important;transform:none!important}
   .karwa-live-vehicle:before,.karwa-live-vehicle:after,.karwa-map-marker,.map-search-marker,.road-report-marker,.toast.show:after,:where(.hero,.auth-intro),body:not(.customer-map-mode) .welcome,.role-entry-card .role-entry-icon,.masar-intro-primary,.view.m-enter{animation:none!important}
 }
+
+html.m-lite .karwa-live-vehicle:after,html.m-lite .role-entry-card .role-entry-icon,html.m-lite .masar-intro-art-label,html.m-lite .masar-route-graphic{animation:none}
+html.m-lite .m-tilting{transform:none!important}

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <script src="./masar-motion.js?v=128"></script>
+  <script src="./masar-motion.js?v=129"></script>
   <script src="./masar-glow-3d.js?v=128"></script>
   <script src="./masar-nav.js?v=127" defer></script>
   <script src="./masar-fx.js?v=128" defer></script>
@@ -46,9 +46,9 @@
   <link rel="stylesheet" href="./native-notifications.css?v=81">
   <link rel="stylesheet" href="./amrni-design.css?v=118">
   <link rel="stylesheet" href="./monthly-subscription.css?v=123">
-  <link rel="stylesheet" href="./masar-motion.css?v=128">
-  <link rel="stylesheet" href="./masar-glow-3d.css?v=128">
-  <link rel="stylesheet" href="./masar-fx.css?v=128">
+  <link rel="stylesheet" href="./masar-motion.css?v=130">
+  <link rel="stylesheet" href="./masar-glow-3d.css?v=129">
+  <link rel="stylesheet" href="./masar-fx.css?v=129">
 </head>
 <body class="admin-page">
   <header class="topbar">
@@ -265,7 +265,7 @@
         </div>
         <div class="card admin-panel" id="pricingPanel">
           <div class="card-heading"><h2>إدارة الاشتراك الشهري</h2><span class="status-chip approved">العميل مجانًا</span></div>
-          <div class="admin-panel-body"><div class="subscription-admin-intro"><div><small>العملاء</small><strong>دون اشتراك أو شحن</strong></div><div><small>مزودو الخدمات</small><strong>اشتراك شهري</strong></div><div><small>الكباتن</small><strong>اشتراك شهري</strong></div></div><p class="muted">اشتراك الكابتن والنشاط عبر Google Play، مع تجربة مجانية لمدة ١٤ يومًا للحسابات المؤهلة. يحدد Google Play السعر الشهري؛ يظهر تاريخ البداية والانتهاء بعد التحقق من الشراء. لا يحتاج العميل إلى شحن.</p><form id="monthlySubscriptionSettingsForm" class="admin-settings-form"><div class="admin-settings-grid wide-fields"><input id="monthlySubscriptionFee" type="hidden" value="5000"><p class="muted">يُحدد سعر الاشتراك الشهري والعرض التجريبي من Google Play Console.</p><label class="topup-method-switch"><div><strong>إلزام الاشتراك</strong><small>غير المفعّل يرى طلباته، ويُمنع قبوله لها حتى التفعيل.</small></div><input id="subscriptionEnforcementEnabled" type="checkbox"></label></div><button id="saveMonthlySubscriptionSettings" type="submit" class="primary">حفظ سياسة الاشتراك</button></form></div>
+          <div class="admin-panel-body"><div class="subscription-admin-intro"><div><small>العملاء</small><strong>دون اشتراك أو شحن</strong></div><div><small>مزودو الخدمات</small><strong>اشتراك شهري</strong></div><div><small>الكباتن</small><strong>اشتراك شهري</strong></div></div><p class="muted">اشتراك الكابتن والنشاط عبر Google Play، مع تجربة مجانية لمدة ١٤ يومًا للحسابات المؤهلة. يحدد Google Play السعر الشهري؛ يظهر تاريخ البداية والانتهاء بعد التحقق من الشراء. لا يحتاج العميل إلى شحن.</p><form id="monthlySubscriptionSettingsForm" class="admin-settings-form"><div class="admin-settings-grid wide-fields"><input id="monthlySubscriptionFee" type="hidden" value="5000"><p class="muted">يُحدد سعر الاشتراك الشهري والعرض التجريبي من Google Play Console.</p><label class="topup-method-switch"><div><strong>تفعيل الاشتراك (الدفع عبر Google Play)</strong><small id="subscriptionModeHint">عند التفعيل: يدفع الكابتن ومزود الخدمة اشتراكه عبر Google Play ليتمكن من قبول الطلبات. عند الإيقاف: الخدمة مجانية لهما دون اشتراك.</small></div><input id="subscriptionEnforcementEnabled" type="checkbox"></label><div class="subscription-mode-banner" id="subscriptionModeBanner" role="status"></div></div><button id="saveMonthlySubscriptionSettings" type="submit" class="primary">حفظ سياسة الاشتراك</button></form></div>
         </div>
         <div class="card admin-panel" id="subscriptionsPanel"><div class="card-heading"><h2>سجل المشتركين</h2><span class="status-chip pending" id="subscriptionsAttentionBadge">0 يحتاج تجديد</span></div><div class="admin-panel-body"><div class="subscription-admin-stats"><div><small>حسابات الخدمات والكباتن</small><strong id="subscriptionsTotal">0</strong></div><div><small>اشتراكات فعالة</small><strong id="subscriptionsActive">0</strong></div><div><small>تحتاج تجديدًا</small><strong id="subscriptionsExpired">0</strong></div><div><small>فترة سماح</small><strong id="subscriptionsGrace">0</strong></div></div><div class="finance-accounts-tools"><input id="subscriptionSearchInput" type="search" placeholder="بحث باسم المشترك أو الهاتف أو البريد"><select id="subscriptionRoleFilter"><option value="all">جميع المشتركين</option><option value="driver">الكباتن</option><option value="serviceProvider">مزودو الخدمات</option></select></div><small id="subscriptionFilteredCount">0 حساب</small><div id="subscriptionsList" class="subscription-admin-list"></div></div></div>
 
@@ -421,6 +421,6 @@
   // لا يتم تسجيل عامل خدمة جديد من لوحة الإدارة.
   try { sessionStorage.setItem("karwa_admin_no_pwa", "1"); } catch (_) {}
 </script>
-  <script type="module" src="./admin.js?v=123"></script>
+  <script type="module" src="./admin.js?v=130"></script>
 </body>
 </html>

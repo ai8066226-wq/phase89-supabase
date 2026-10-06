@@ -162,7 +162,7 @@ const state = {
   map: null,
   baseLayer: null,
   mapTheme: readCustomerPreference("karwa.customer.mapTheme", "day") === "night" ? "night" : "day",
-  mapView: readCustomerPreference("karwa.customer.mapView", "3d") === "2d" ? "2d" : "3d",
+  mapView: readCustomerPreference("karwa.customer.mapView", window.MASAR_LITE ? "2d" : "3d") === "2d" ? "2d" : "3d",
   autoFollow: readCustomerPreference("karwa.customer.autoFollow", "true") !== "false",
   mapSearchMarker: null,
   mapSearchSelection: null,

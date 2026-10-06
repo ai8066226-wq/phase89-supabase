@@ -8,9 +8,6 @@
 .m-route-flow{stroke-dasharray:1 24;animation:m-flow 1.2s linear infinite}
 @keyframes m-flow{to{stroke-dashoffset:-25}}
 /* مسار الافتتاحية وشاشة الترحيب */
-.ms-route{filter:drop-shadow(0 0 4px #5eead4) drop-shadow(0 0 11px rgba(94,234,212,.85))}
-.ms-pin-ring,.ms-pin-ring2{filter:drop-shadow(0 0 6px rgba(94,234,212,.9))}
-.ms-runner{filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 14px #5eead4)}
 .masar-route-line{filter:drop-shadow(0 0 4px #5eead4) drop-shadow(0 0 12px rgba(94,234,212,.8))}
 .masar-route-ring{filter:drop-shadow(0 0 6px rgba(94,234,212,.9))}
 
@@ -24,11 +21,12 @@
 #roadReportVerifyOverlay .road-verify-card{border:1px solid rgba(var(--m-danger),.65);box-shadow:0 0 0 1px rgba(var(--m-danger),.25),0 0 22px rgba(var(--m-danger),.55),0 0 56px rgba(var(--m-danger),.3),0 22px 70px rgba(0,0,0,.3);animation:roadVerifyIn .18s ease-out,m-glow-red 1.5s ease-in-out .2s infinite}
 #roadReportVerifyOverlay .road-verify-icon{background:#fff1f1;box-shadow:0 0 18px rgba(var(--m-danger),.6);animation:m-glow-icon 1.5s ease-in-out infinite}
 #roadReportVerifyOverlay .road-verify-timer>i{background:linear-gradient(90deg,#ff5454,#ffb340);box-shadow:0 0 10px rgba(var(--m-danger),.8)}
-.road-report-marker{filter:drop-shadow(0 0 5px rgba(255,90,60,.95)) drop-shadow(0 0 12px rgba(var(--m-danger),.6));animation:m-hazard 1.6s ease-in-out infinite}
-@keyframes m-hazard{50%{filter:drop-shadow(0 0 9px rgba(255,120,60,1)) drop-shadow(0 0 22px rgba(var(--m-danger),.85))}}
+.road-report-marker{filter:drop-shadow(0 0 5px rgba(255,90,60,.95)) drop-shadow(0 0 10px rgba(var(--m-danger),.6))}
 /* مركز الإشعارات والنوافذ */
-#karwaNotificationFab{box-shadow:0 0 0 1px rgba(var(--m-glow),.3),0 0 16px rgba(var(--m-glow),.5),0 12px 34px rgba(18,36,63,.18);animation:m-glow-teal 3s ease-in-out infinite}
-#karwaNotificationFab:has(.karwa-notification-badge:not([hidden])){box-shadow:0 0 0 1px rgba(var(--m-danger),.35),0 0 18px rgba(var(--m-danger),.65);animation:m-glow-red 1.6s ease-in-out infinite}
+#karwaNotificationFab{box-shadow:0 0 0 1px rgba(var(--m-glow),.3),0 0 16px rgba(var(--m-glow),.5),0 12px 34px rgba(18,36,63,.18)}
+#karwaNotificationFab:has(.karwa-notification-badge:not([hidden])){box-shadow:0 0 0 1px rgba(var(--m-danger),.35),0 0 18px rgba(var(--m-danger),.65)}
+#karwaNotificationFab:has(.karwa-notification-badge:not([hidden])):after{content:"";position:absolute;inset:-2px;border-radius:inherit;box-shadow:0 0 26px 6px rgba(var(--m-danger),.85);opacity:0;pointer-events:none;animation:m-pulse-op 1.6s ease-in-out infinite}
+@keyframes m-pulse-op{50%{opacity:1}}
 .karwa-notification-badge{box-shadow:0 0 10px rgba(var(--m-danger),.9)}
 .kn-item.unread{border-color:rgba(var(--m-glow),.55)!important;box-shadow:0 0 0 1px rgba(8,123,117,.25),0 0 18px rgba(var(--m-glow),.32)!important}
 .amrni-dialog-layer .amrni-dialog-card{box-shadow:0 0 0 1px rgba(var(--m-glow),.35),0 0 26px rgba(var(--m-glow),.4),0 30px 80px rgba(0,0,0,.3)}
@@ -54,4 +52,11 @@
 :is(#home,#driverView).map-view-3d :is(.karwa-map-marker,.road-report-marker,.map-search-marker,.karwa-landmark-label){scale:1 var(--m3d-bb)}
 :is(#home,#driverView).map-view-3d .karwa-live-vehicle{filter:drop-shadow(0 10px 7px rgba(3,28,42,.42))}
 @media(max-width:760px){:root{--m3d-tilt:40deg;--m3d-persp:760px}}
-@media(prefers-reduced-motion:reduce){.m-route-flow,.toast.show,.toast.show.m-toast-danger,.road-report-marker,#karwaNotificationFab,#roadReportVerifyOverlay .road-verify-card,#roadReportVerifyOverlay .road-verify-icon{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.m-route-flow,.toast.show,.toast.show.m-toast-danger,.road-report-marker,#karwaNotificationFab:after,#roadReportVerifyOverlay .road-verify-card,#roadReportVerifyOverlay .road-verify-icon{animation:none!important}}
+
+/* وضع خفيف: بلا فلاتر ولا حركة مستمرة على الخريطة */
+html.m-lite .m-route-halo,html.m-lite .m-route-glow,html.m-lite .m-route-core{filter:none}
+html.m-lite .m-route-flow{animation:none;stroke-dasharray:none;opacity:.55}
+html.m-lite .toast.show,html.m-lite .toast.show.m-toast-danger{animation:none}
+html.m-lite .road-report-marker,html.m-lite .karwa-live-vehicle{filter:none}
+html.m-lite #home.map-view-3d #customerMap,html.m-lite #driverView.map-view-3d #driverMap{filter:none}

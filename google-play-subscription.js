@@ -1,5 +1,5 @@
 import { karwaVerifyGooglePlaySubscription } from "./supabase-compat.js?v=120";
-import { subscriptionInfo, subscriptionDate } from "./monthly-subscription.js?v=122";
+import { subscriptionInfo, subscriptionDate, subscriptionRequired } from "./monthly-subscription.js?v=130";
 
 const PRODUCT_ID = "amrni_monthly_access";
 let context = null;
@@ -17,6 +17,18 @@ function show() {
   const info = subscriptionInfo(context.getData() || {});
   const panel = document.getElementById(context.panelId);
   if (!panel) return;
+  if (!subscriptionRequired()) {
+    panel.querySelector("[data-play-price]").textContent = "مجاني";
+    panel.querySelector("[data-play-trial]").textContent = "الخدمة مجانية حاليًا بقرار الإدارة، ولا يلزم اشتراك لقبول الطلبات. سيُطلب الاشتراك عبر Google Play عند تفعيله من الإدارة.";
+    const free = panel.querySelector("[data-play-action]"); free.textContent = "لا يلزم اشتراك حاليًا"; free.disabled = true;
+    panel.querySelector("[data-play-restore]").disabled = true;
+    panel.querySelector("[data-play-platform]").textContent = "الخدمة مجانية حاليًا";
+    if (context.statusId) document.getElementById(context.statusId).textContent = "مجاني حاليًا";
+    if (context.priceId) document.getElementById(context.priceId).textContent = "مجاني";
+    if (context.startedId) document.getElementById(context.startedId).textContent = "—";
+    if (context.expiresId) document.getElementById(context.expiresId).textContent = "—";
+    return;
+  }
   panel.querySelector("[data-play-price]").textContent = playPrice;
   panel.querySelector("[data-play-trial]").textContent = info.active
     ? `اشتراكك صالح حتى ${subscriptionDate(info.expires)}. يمكنك إدارته أو إلغاء تجديده من Google Play.`
@@ -77,6 +89,7 @@ document.addEventListener("click", event => {
   const action = event.target.closest?.("[data-play-action], [data-play-restore]");
   if (!action || !context || !document.getElementById(context.panelId)?.contains(action)) return;
   const uid = context.getUser()?.uid;
+  if (!subscriptionRequired()) return context.toast("الخدمة مجانية حاليًا ولا يلزم اشتراك.");
   if (!uid) return context.toast("سجّل الدخول أولًا.");
   if (!nativeBilling()) return context.toast("الاشتراك واستعادة الشراء متاحان من تطبيق Android عبر Google Play.");
   if (action.matches("[data-play-restore]")) {
@@ -88,7 +101,7 @@ document.addEventListener("click", event => {
 
 function refresh() {
   const uid = context?.getUser()?.uid;
-  if (uid && nativeBilling()) window.KarwaNative.queryMonthlySubscription(uid);
+  if (uid && nativeBilling() && subscriptionRequired()) window.KarwaNative.queryMonthlySubscription(uid);
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
 window.addEventListener("online", refresh);

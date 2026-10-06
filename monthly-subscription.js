@@ -4,9 +4,19 @@ export function subscriptionTimestamp(value){
   if(Number.isFinite(Number(value.seconds)))return Number(value.seconds)*1000;
   const parsed=new Date(value).getTime();return Number.isFinite(parsed)?parsed:0;
 }
+/* سياسة الاشتراك تأتي من لوحة الإدارة (appSettings/pricing.subscriptionEnforcementEnabled).
+   عند إيقافها تكون الخدمة مجانية للكباتن ومزودي الخدمات؛ وعند تفعيلها يلزم الدفع عبر Google Play.
+   القيمة الابتدائية «مطلوب» حتى تصل الإعدادات، وهي توافق منطق الخادم بعد التحميل. */
+let policyRequired=true;
+export function setSubscriptionPolicy(settings){
+  policyRequired=settings?.subscriptionEnforcementEnabled===true;
+  return policyRequired;
+}
+export function subscriptionRequired(){return policyRequired;}
 export function subscriptionInfo(data={},now=Date.now()){
   const started=subscriptionTimestamp(data.subscriptionStartedAt);
   const expires=subscriptionTimestamp(data.subscriptionExpiresAt);
+  if(!policyRequired)return {active:true,free:true,started,expires,status:"مجاني حاليًا"};
   const active=data.subscriptionEntitled===true && expires>now && ["active","canceled","grace"].includes(String(data.subscriptionStatus||""));
   return {active,started,expires,status:active?"نشط":expires>0?"منتهي":"غير مشترك"};
 }

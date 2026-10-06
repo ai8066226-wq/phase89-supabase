@@ -33,8 +33,8 @@ import {
   karwaDriverAutoComplete,
 } from "./supabase-compat.js?v=120";
 import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
-import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError } from "./monthly-subscription.js?v=122";
-import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=122";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError, setSubscriptionPolicy } from "./monthly-subscription.js?v=130";
+import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=130";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
 const auth = getAuth(app);
@@ -246,7 +246,7 @@ const state = {
   map: null,
   baseLayer: null,
   mapTheme: readDriverPreference("karwa.driver.mapTheme", "day") === "night" ? "night" : "day",
-  mapView: readDriverPreference("karwa.driver.mapView", "3d") === "2d" ? "2d" : "3d",
+  mapView: readDriverPreference("karwa.driver.mapView", window.MASAR_LITE ? "2d" : "3d") === "2d" ? "2d" : "3d",
   autoFollow: readDriverPreference("karwa.driver.autoFollow", "true") !== "false",
   markerStyle: ["arrow","car","bike"].includes(readDriverPreference("karwa.driver.markerStyle", "car")) ? readDriverPreference("karwa.driver.markerStyle", "car") : "car",
   driverHeading: null,
@@ -334,7 +334,7 @@ function renderDriverWallet(){
   if(byId("driverSubscriptionPrice"))byId("driverSubscriptionPrice").textContent=money(monthlyPrice(driverPricingSettings));
   if(byId("driverSubscriptionStarted"))byId("driverSubscriptionStarted").textContent=subscriptionDate(info.started);
   if(byId("driverSubscriptionExpires"))byId("driverSubscriptionExpires").textContent=subscriptionDate(info.expires);
-  if(byId("driverSubscriptionNotice"))byId("driverSubscriptionNotice").textContent=info.active?"يمكنك قبول الطلبات دون خصم رسوم عن كل طلب. أجرة الرحلة مستقلة حسب تسعيرتك.":"سترى الطلبات القريبة على الخريطة، ويُتاح قبولها بعد تفعيل الاشتراك. يمكنك متابعة رحلة بدأت سابقًا.";
+  if(byId("driverSubscriptionNotice"))byId("driverSubscriptionNotice").textContent=info.free?"الخدمة مجانية حاليًا بقرار الإدارة؛ يمكنك قبول الطلبات دون اشتراك. أجرة الرحلة مستقلة حسب تسعيرتك.":info.active?"يمكنك قبول الطلبات دون خصم رسوم عن كل طلب. أجرة الرحلة مستقلة حسب تسعيرتك.":"سترى الطلبات القريبة على الخريطة، ويُتاح قبولها بعد تفعيل الاشتراك. يمكنك متابعة رحلة بدأت سابقًا.";
   renderGooglePlaySubscription({panelId:"driverPlaySubscription",statusId:"driverSubscriptionStatus",priceId:"driverSubscriptionPrice",startedId:"driverSubscriptionStarted",expiresId:"driverSubscriptionExpires",getUser:()=>state.user,getData:()=>state.userData,updateData:patch=>{state.userData={...(state.userData||{}),...patch};applyDriverGovernorateAvailability();renderOrders();},toast});
   if(byId("driverTransferLabel"))byId("driverTransferLabel").textContent=driverPricingSettings?.topupTransferLabel||"وسيلة التحويل";
   if(byId("driverTransferId"))byId("driverTransferId").textContent=driverPricingSettings?.topupTransferId||"معرّف الاستلام غير محدد";
@@ -381,7 +381,7 @@ function subscribeDriverTopups(user){
     renderDriverTopupRequests();
   },error=>console.warn("تعذر تحميل طلبات شحن الكابتن",error));
 }
-const unsubscribeDriverPricing=subscribeGlobalPricing(settings=>{driverPricingSettings=settings||{};renderDriverWallet();syncDriverGovernorateSelect();applyDriverGovernorateAvailability();},error=>console.warn("تعذر تحميل إعدادات الرسوم العامة",error));
+const unsubscribeDriverPricing=subscribeGlobalPricing(settings=>{driverPricingSettings=settings||{};setSubscriptionPolicy(driverPricingSettings);renderDriverWallet();renderOrders();syncDriverGovernorateSelect();applyDriverGovernorateAvailability();},error=>console.warn("تعذر تحميل إعدادات الرسوم العامة",error));
 byId("driverCity")?.addEventListener("change",()=>syncDriverGovernorateSelect(byId("driverCity")?.value));
 
 const money = value => Number(value || 0).toLocaleString("ar-IQ") + " د.ع";
