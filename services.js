@@ -31,7 +31,7 @@ import {
 } from "./supabase-compat.js?v=120";
 import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "./supabase-compat.js?v=120";
 import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
-import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError, setSubscriptionPolicy } from "./monthly-subscription.js?v=130";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError, setSubscriptionPolicy, subscriptionRequired } from "./monthly-subscription.js?v=130";
 import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=130";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-services-portal-v4");
@@ -123,12 +123,13 @@ function signupBonusFields(){return {bonusBalance:0,bonusExpiresAt:null,welcomeB
 function serviceTransferTopupEnabled(){return pricingSettings?.topupTransferEnabled!==false&&Boolean(String(pricingSettings?.topupTransferId||"").trim());}
 function serviceCardTopupEnabled(){return pricingSettings?.topupCardEnabled!==false;}
 function renderServiceTopupMethods(){
-  const transfer=serviceTransferTopupEnabled(),card=serviceCardTopupEnabled();
-  if(byId("serviceTransferTopupMethod"))byId("serviceTransferTopupMethod").hidden=!transfer;
-  if(byId("serviceCardTopupMethod"))byId("serviceCardTopupMethod").hidden=!card;
-  if(byId("serviceTopupMethodsDisabled"))byId("serviceTopupMethodsDisabled").hidden=transfer||card;
-  [byId("serviceTopupCardCode"),byId("serviceRedeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
-  updateServiceTopupFormState();
+  // من v130: التفعيل الجديد عبر Google Play فقط. تبقى السجلات القديمة للعرض دون تقديم وسيلة دفع بديلة.
+  const required=subscriptionRequired();
+  if(byId("serviceTransferTopupMethod"))byId("serviceTransferTopupMethod").hidden=true;
+  if(byId("serviceCardTopupMethod"))byId("serviceCardTopupMethod").hidden=true;
+  const note=byId("serviceTopupMethodsDisabled");
+  if(note){note.hidden=false;note.textContent=required?"تفعيل الاشتراك الجديد يتم حصراً عبر Google Play.":"الخدمة مجانية حاليًا بقرار الإدارة، ولا يلزم دفع اشتراك.";}
+  [byId("serviceTopupCardCode"),byId("serviceRedeemTopupCard"),byId("serviceTopupReference"),byId("serviceTopupSubmit")].forEach(el=>{if(el)el.disabled=true;});
 }
 function syncServiceSubscriptionUi(){
   const info=subscriptionInfo(currentUserData||{});

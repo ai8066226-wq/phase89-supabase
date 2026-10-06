@@ -33,7 +33,7 @@ import {
   karwaDriverAutoComplete,
 } from "./supabase-compat.js?v=120";
 import { requireNativeRegistrationDevice, addDeviceRegistrationWrites, enforceDeviceSession } from "./device-binding.js?v=120";
-import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError, setSubscriptionPolicy } from "./monthly-subscription.js?v=130";
+import { subscriptionInfo, subscriptionDate, monthlyPrice, subscriptionError, setSubscriptionPolicy, subscriptionRequired } from "./monthly-subscription.js?v=130";
 import { renderGooglePlaySubscription } from "./google-play-subscription.js?v=130";
 
 const app = initializeApp({ backend: "supabase", project: "karwa" }, "karwa-driver-portal");
@@ -56,8 +56,8 @@ function firestoreErrorKey(error) {
   const message = String(error?.message || "").toUpperCase();
   const details = typeof error?.details === "string" ? error.details.toUpperCase() : String(error?.details?.message || error?.details?.code || "").toUpperCase();
   const haystack = `${message} ${details}`;
-  const known = ["ORDER_TAKEN","DRIVER_NOT_AVAILABLE","DRIVER_ONLY","NOT_IN_DISPATCH_ROUND","OFFER_WAIT_TURN","OUTSIDE_REQUEST_RADIUS","INSUFFICIENT_WALLET","LOCATION_REQUIRED","ORDER_NOT_FOUND","NOT_ASSIGNED","INVALID_TRANSITION","OTP_INVALID","SUBSCRIPTION_REQUIRED","DRIVER_PROFILE_MISSING","UNAUTHENTICATED","LOCATION_STALE","LOCATION_TOO_OLD"];
-  return { code, named: known.find(key => haystack.includes(key)), raw: haystack, serverCode: (haystack.match(/\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/)||[])[0]||"" };
+  const known = ["ORDER_TAKEN","DRIVER_NOT_AVAILABLE","DRIVER_ONLY","NOT_IN_DISPATCH_ROUND","OFFER_WAIT_TURN","OUTSIDE_REQUEST_RADIUS","INSUFFICIENT_WALLET","LOCATION_REQUIRED","ORDER_NOT_FOUND","NOT_ASSIGNED","INVALID_TRANSITION","OTP_INVALID"];
+  return { code, named: known.find(key => haystack.includes(key)), raw: haystack };
 }
 
 function driverSupabaseMessage(error, action = "تنفيذ العملية") {
@@ -73,12 +73,9 @@ function driverSupabaseMessage(error, action = "تنفيذ العملية") {
   if (e.named === "NOT_ASSIGNED") return "هذه الرحلة غير مسندة إلى حساب الكابتن الحالي.";
   if (e.named === "INVALID_TRANSITION") return "لا يمكن نقل الرحلة إلى الحالة التالية من حالتها الحالية.";
   if (e.named === "OTP_INVALID") return "رمز التحقق غير صحيح.";
-  if (e.named === "SUBSCRIPTION_REQUIRED") return "الخادم ما زال يشترط الاشتراك. اطلب من الإدارة تشغيل تحديث قاعدة البيانات v130 وإيقاف الاشتراك، أو فعّل اشتراكك عبر Google Play.";
-  if (e.named === "DRIVER_PROFILE_MISSING") return "ملف الكابتن غير مكتمل. افتح الخيارات وأكمل بيانات الحساب ثم أعد المحاولة.";
   if (e.code === "unauthenticated") return "انتهت جلسة تسجيل الدخول. سجّل الدخول من جديد.";
   if (e.code === "not-found") return "تعذر العثور على بيانات الطلب أو حساب الكابتن.";
   if (e.code === "unavailable" || e.code === "deadline-exceeded" || e.raw.includes("NETWORK") || !navigator.onLine) return "تعذر الاتصال بخادم مَسار. تحقق من الإنترنت ثم أعد المحاولة.";
-  if (e.serverCode) return `تعذر ${action} (${e.serverCode}). أرسل هذا الرمز للدعم.`;
   if (e.code === "internal" || e.code === "unknown") return `حدث خطأ أثناء ${action}. حاول مجددًا وتحقق من اتصالك بالإنترنت.`;
   return `تعذر ${action}. حاول مجددًا أو تواصل مع الدعم.`;
 }
@@ -324,12 +321,13 @@ function driverSignupBonusFields(){return {bonusBalance:0,bonusExpiresAt:null,we
 function driverTransferTopupEnabled(){return driverPricingSettings?.topupTransferEnabled!==false&&Boolean(String(driverPricingSettings?.topupTransferId||"").trim());}
 function driverCardTopupEnabled(){return driverPricingSettings?.topupCardEnabled!==false;}
 function renderDriverTopupMethods(){
-  const transfer=driverTransferTopupEnabled(),card=driverCardTopupEnabled();
-  if(byId("driverTransferTopupMethod"))byId("driverTransferTopupMethod").hidden=!transfer;
-  if(byId("driverCardTopupMethod"))byId("driverCardTopupMethod").hidden=!card;
-  if(byId("driverTopupMethodsDisabled"))byId("driverTopupMethodsDisabled").hidden=transfer||card;
-  [byId("driverTopupCardCode"),byId("driverRedeemTopupCard")].forEach(el=>{if(el)el.disabled=!card;});
-  updateDriverTopupFormState();
+  // من v130: التفعيل الجديد عبر Google Play فقط. تبقى السجلات القديمة للعرض دون تقديم وسيلة دفع بديلة.
+  const required=subscriptionRequired();
+  if(byId("driverTransferTopupMethod"))byId("driverTransferTopupMethod").hidden=true;
+  if(byId("driverCardTopupMethod"))byId("driverCardTopupMethod").hidden=true;
+  const note=byId("driverTopupMethodsDisabled");
+  if(note){note.hidden=false;note.textContent=required?"تفعيل الاشتراك الجديد يتم حصراً عبر Google Play.":"الخدمة مجانية حاليًا بقرار الإدارة، ولا يلزم دفع اشتراك.";}
+  [byId("driverTopupCardCode"),byId("driverRedeemTopupCard"),byId("driverTopupAmount"),byId("driverTopupReference"),byId("driverTopupSubmit")].forEach(el=>{if(el)el.disabled=true;});
 }
 function renderDriverWallet(){
   const info=subscriptionInfo(state.userData||{});

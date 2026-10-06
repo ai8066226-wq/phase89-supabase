@@ -2,7 +2,7 @@
   "phase": 103,
   "version": "3.0.7",
   "webBasePhase": 87,
-  "updateMode": "masar-subscription-admin-switch-v131",
+  "updateMode": "masar-subscription-admin-switch-v130",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
