@@ -91,7 +91,7 @@ window.installKarwa=async()=>{
 };
 
 if(!karwaIsNative&&location.protocol!=="file:"&&"serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=130",{updateViaCache:"none"}).then(reg=>reg.update()).catch(console.error));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=131",{updateViaCache:"none"}).then(reg=>reg.update()).catch(console.error));
 }
 
 window.KarwaUpdate={check:()=>checkKarwaUpdate(true),build:KARWA_BUILD,native:karwaIsNative};

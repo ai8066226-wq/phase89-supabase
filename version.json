@@ -2,7 +2,7 @@
   "phase": 103,
   "version": "3.0.7",
   "webBasePhase": 87,
-  "updateMode": "masar-subscription-admin-switch-v130",
+  "updateMode": "masar-subscription-admin-switch-v131",
   "hosting": "github-pages",
   "notifications": "admin-all-request-types-instant-realtime-deletable-v104",
   "location": "native-gps-precise-permission-best-fix-20m-target-35m-acceptable",
@@ -66,8 +66,8 @@
   "moderationNotifications": "realtime-provider-warning-and-block-reason-v109",
   "verificationCodeUi": "four-digit-professional-in-app-card-arabic-english-digits-paste-no-appassets-origin-v110",
   "accountInactivity": "admin-last-sign-in-plus-app-activity-role-category-and-30-60-90-180-365-day-filters-v111",
-  "accountDeletion": "admin-only-confirmed-auth-database-storage-related-data-complete-purge-v111",
-  "accountDeletionSecurity": "verified-admin-jwt-no-self-or-admin-deletion-server-secret-never-client-v111",
+  "accountDeletion": "admin-complete-purge-plus-orphan-record-cleanup-v131",
+  "accountDeletionSecurity": "verified-admin-jwt-no-self-or-admin-deletion-missing-auth-tolerated-v131",
   "serviceImageInputValidation": "jpg-jpeg-png-picker-plus-signature-validation-v112",
   "serviceImageCategoryPaths": "owner-category-cover-items-v112",
   "serviceImageCompression": "automatic-client-webp-maximum-102400-bytes-with-original-and-final-size-preview-v112",
@@ -82,5 +82,6 @@
   "interface": "captain-map-offer-bottom-sheet-arabic-v119",
   "googlePlayProductId": "amrni_monthly_access",
   "googlePlayTrialDays": 14,
-  "packageName": "com.razi.masar"
+  "packageName": "com.razi.masar",
+  "adminDeleteRefresh": "instant-local-prune-plus-realtime-refresh-v131"
 }

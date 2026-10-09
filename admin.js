@@ -1897,6 +1897,31 @@ function closeAccountDeleteModal() {
   pendingAccountDeletion = null;
   byId("accountDeleteError").textContent = "";
 }
+function adminRecordBelongsToAccount(item, uid) {
+  if (!item || !uid) return false;
+  const id = String(uid);
+  return [item.firestoreId, item.id, item.userId, item.ownerId, item.providerId, item.driverId]
+    .some(value => String(value || "") === id);
+}
+function removeDeletedAccountFromAdminState(uid) {
+  const id = String(uid || "");
+  if (!id) return;
+  state.accountDirectory = state.accountDirectory.filter(item => item.id !== id);
+  state.users = state.users.filter(item => !adminRecordBelongsToAccount(item, id));
+  state.drivers = state.drivers.filter(item => !adminRecordBelongsToAccount(item, id));
+  state.applications = state.applications.filter(item => !adminRecordBelongsToAccount(item, id));
+  state.serviceApplications = state.serviceApplications.filter(item => !adminRecordBelongsToAccount(item, id));
+  state.serviceProfiles = state.serviceProfiles.filter(item => !adminRecordBelongsToAccount(item, id));
+  state.restaurants = state.restaurants.filter(item => !adminRecordBelongsToAccount(item, id));
+  renderAccountDirectory();
+  renderMetrics();
+  renderSubscriptions();
+  renderDrivers();
+  renderApplications();
+  renderServiceApplications();
+  renderAdminAreaMap();
+  renderPrivacyRequests();
+}
 byId("accountDeleteClose")?.addEventListener("click", closeAccountDeleteModal);
 byId("accountDeleteCancel")?.addEventListener("click", closeAccountDeleteModal);
 byId("accountDeleteModal")?.addEventListener("click", event => { if (event.target === event.currentTarget) closeAccountDeleteModal(); });
@@ -1915,15 +1940,14 @@ byId("accountDeleteForm")?.addEventListener("submit", async event => {
   byId("accountDeleteError").textContent = "";
   try {
     await karwaAdminAccountAction("delete", { userId: target.id, confirmation: phrase });
-    state.accountDirectory = state.accountDirectory.filter(account => account.id !== target.id);
+    removeDeletedAccountFromAdminState(target.id);
     closeAccountDeleteModal();
-    renderAccountDirectory();
-    toast("تم حذف الحساب نهائيًا مع بياناته وملفاته المرتبطة");
-    window.setTimeout(() => loadAccountDirectory({quiet:true}).catch(()=>{}), 900);
+    toast("تم حذف الحساب نهائيًا مع بياناته وسجلاته القديمة المرتبطة");
+    window.setTimeout(() => loadAccountDirectory({quiet:true}).catch(()=>{}), 700);
   } catch (error) {
     console.error("Account deletion failed", error);
     const message = String(error?.message || "");
-    byId("accountDeleteError").textContent = message.includes("ADMIN_SELF_DELETE_FORBIDDEN") ? "لا يمكن للمدير حذف حسابه أثناء استخدام لوحة الإدارة." : message.includes("ADMIN_ACCOUNT_DELETE_FORBIDDEN") ? "لا يمكن حذف حساب إدارة بهذه الأداة." : "تعذر إكمال الحذف. لم يتم حذف حساب المصادقة، أعد المحاولة بعد التحقق من الاتصال.";
+    byId("accountDeleteError").textContent = message.includes("ADMIN_SELF_DELETE_FORBIDDEN") ? "لا يمكن للمدير حذف حسابه أثناء استخدام لوحة الإدارة." : message.includes("ADMIN_ACCOUNT_DELETE_FORBIDDEN") ? "لا يمكن حذف حساب إدارة بهذه الأداة." : message.includes("ACCOUNT_NOT_FOUND") ? "هذا سجل قديم بدون حساب تسجيل دخول. حدّث الصفحة ثم أعد الحذف؛ الخادم المصحح ينظف السجلات اليتيمة أيضًا." : "تعذر إكمال الحذف. تحقق من الاتصال ثم أعد المحاولة.";
   } finally {
     busy(button, false);
   }

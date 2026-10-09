@@ -283,7 +283,7 @@
         <div class="card admin-panel" id="topupsPanel">
           <div class="card-heading"><h2>اشتراكات الكباتن ومزودي الخدمات</h2><span class="status-chip pending" id="pendingTopupsBadge">0 بانتظار المراجعة</span></div>
           <p class="muted admin-panel-intro">الشراء الجديد عبر Google Play. تبقى طلبات التحويل والبطاقات السابقة في السجل لمراجعتها.</p>
-          <form id="topupMethodsAdminForm" class="topup-method-control" hidden aria-hidden="true">
+          <form id="topupMethodsAdminForm" class="topup-method-control">
             <div class="topup-method-switches">
               <label class="topup-method-switch"><div><strong>طريقة التحويل اليدوي</strong><small>اعتماد التحويل يمدّد الاشتراك شهرًا</small></div><input id="topupTransferEnabled" type="checkbox" checked></label>
               <label class="topup-method-switch"><div><strong>كروت الاشتراك الرقمية</strong><small>رمز 16 رقمًا، صالح للاستخدام مرة واحدة فقط</small></div><input id="topupCardEnabled" type="checkbox" checked></label>
@@ -292,8 +292,8 @@
             <div class="topup-method-actions"><span class="topup-method-summary" id="topupMethodsSummary">الطريقتان تعملان</span><button class="primary" id="saveTopupMethods" type="submit">حفظ طرق الاشتراك</button></div>
           </form>
           <div class="topup-card-manager" id="adminTopupCardManager">
-            <div class="topup-card-manager-head"><div><h3>سجل كروت الاشتراك السابقة</h3><p>تُحفظ البطاقات القديمة للمراجعة فقط، وتفعيل الاشتراكات الجديدة يتم عبر Google Play.</p></div><span class="status-chip approved" id="topupCardMethodStatus">مفعّل</span></div>
-            <form id="topupCardGeneratorForm" class="topup-card-generate" hidden aria-hidden="true"><label>سعر الشهر (د.ع)<input id="topupCardAmount" type="number" value="5000" readonly></label><button class="primary" id="generateTopupCard" type="submit">توليد كرت اشتراك</button></form>
+            <div class="topup-card-manager-head"><div><h3>سجل كروت الاشتراك السابقة</h3><p>تُحفظ البطاقات القديمة للمراجعة، وتبدأ الاشتراكات الجديدة من Google Play.</p></div><span class="status-chip approved" id="topupCardMethodStatus">مفعّل</span></div>
+            <form id="topupCardGeneratorForm" class="topup-card-generate"><label>سعر الشهر (د.ع)<input id="topupCardAmount" type="number" value="5000" readonly></label><button class="primary" id="generateTopupCard" type="submit">توليد كرت اشتراك</button></form>
             <div class="generated-topup-card" id="generatedTopupCard" hidden><small>انسخ الرقم الآن — لن يُخزّن كنص قابل للاسترجاع</small><strong id="generatedTopupCardCode">0000 0000 0000 0000</strong><b id="generatedTopupCardAmount">0 د.ع</b><button type="button" id="copyGeneratedTopupCard">نسخ رقم الكرت</button></div>
             <div><h4 style="margin:2px 0 8px">آخر البطاقات</h4><div class="topup-card-history" id="topupCardsAdminList"><p class="muted">لا توجد بطاقات مولدة بعد.</p></div></div>
           </div>
